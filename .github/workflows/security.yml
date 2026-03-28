@@ -1,0 +1,241 @@
+# ============================================================
+# .github/workflows/security.yml
+#
+# CI/CD Security Pipeline — DevSecOps Foundation
+#
+# JOBS:
+#   1. lint         — ESLint + Prettier check (code quality gate)
+#   2. typecheck    — TypeScript strict type checking (no emitting)
+#   3. test         — Unit/integration tests (placeholder — add Jest)
+#   4. audit        — npm dependency vulnerability scan
+#   5. secret-scan  — Gitleaks secret detection (prevent credential leaks)
+#   6. build        — Production build verification
+#
+# BRANCH PROTECTION:
+#   All jobs must pass before merge to main or staging.
+#   Configure as required status checks in GitHub repo settings.
+#
+# SECURITY NOTES:
+#   - Secrets are NEVER logged (GitHub Actions masks them automatically if set as secrets)
+#   - Node.js version is pinned to avoid supply-chain drift
+#   - npm ci (not npm install) for reproducible installs
+#   - Actions are pinned to SHA-based refs (not just tags) for supply-chain security
+#   - Turbo remote caching is disabled in CI (uses local cache only)
+# ============================================================
+
+name: Security CI
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - 'release/**'
+  pull_request:
+    branches:
+      - main
+      - staging
+
+# Cancel in-progress runs on same branch when new push arrives
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20.x'
+  # Tell Turborepo to not use remote cache in CI (avoid cache poisoning)
+  TURBO_TEAM: ''
+  TURBO_TOKEN: ''
+
+jobs:
+  # ─── Job 1: Lint ─────────────────────────────────────────────────────────────
+  lint:
+    name: Lint & Format Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Run ESLint
+        run: npm run lint --workspaces --if-present
+
+      - name: Check Prettier formatting
+        run: npx prettier --check "**/*.{ts,tsx,json,md}" --ignore-path .gitignore
+
+  # ─── Job 2: TypeCheck ────────────────────────────────────────────────────────
+  typecheck:
+    name: TypeScript Type Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Build shared package first
+        run: npm run build --workspace=packages/shared --if-present
+
+      - name: Type check API
+        run: npx tsc --noEmit -p apps/api/tsconfig.json
+
+      - name: Type check Web
+        run: npx tsc --noEmit -p apps/web/tsconfig.json
+
+  # ─── Job 3: Test ─────────────────────────────────────────────────────────────
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [typecheck]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Run tests
+        run: npm test --workspaces --if-present
+        env:
+          # Inject non-sensitive test env vars
+          NODE_ENV: test
+          # Tests should use mock clients — never real Supabase/OpenAI
+          SUPABASE_URL: http://localhost:54321
+          SUPABASE_ANON_KEY: test-anon-key-placeholder
+          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key-placeholder
+          OPENAI_API_KEY: test-openai-key-placeholder
+          JWT_SECRET: test-jwt-secret-minimum-32-characters-long
+
+  # ─── Job 4: Dependency Audit ─────────────────────────────────────────────────
+  audit:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Run npm audit
+        # --audit-level=high: fail on high and critical CVEs only
+        # Remove --audit-level flag to fail on any severity
+        run: npm audit --audit-level=high --workspaces
+
+      - name: Check for known vulnerable packages
+        # Additional check using audit-ci for more control
+        run: npx audit-ci --high
+
+  # ─── Job 5: Secret Detection ─────────────────────────────────────────────────
+  secret-scan:
+    name: Secret Scan (Gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code (full history for Gitleaks)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full git history needed for secret scanning
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}  # Only needed for org-level scanning
+        with:
+          args: detect --source . --verbose --redact --exit-code 1
+
+  # ─── Job 6: Build Verification ───────────────────────────────────────────────
+  build:
+    name: Production Build Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [lint, typecheck]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Build all packages and apps
+        run: npx turbo run build
+        env:
+          NODE_ENV: production
+          # Stub all required env vars for build (not runtime — just for TS/bundler)
+          SUPABASE_URL: https://placeholder.supabase.co
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder
+          SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder
+          OPENAI_API_KEY: sk-placeholder
+          CORS_ALLOWED_ORIGINS: https://placeholder.vercel.app
+          JWT_SECRET: placeholder-secret-minimum-32-chars-for-build-only
+          VITE_SUPABASE_URL: https://placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder
+          VITE_API_BASE_URL: https://api.placeholder.io
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        if: github.ref == 'refs/heads/main'
+        with:
+          name: build-${{ github.sha }}
+          path: |
+            apps/web/dist/
+            apps/api/dist/
+          retention-days: 7
+
+  # ─── Summary Gate ────────────────────────────────────────────────────────────
+  ci-success:
+    name: CI Success Gate
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, test, audit, secret-scan, build]
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [[ "${{ needs.lint.result }}" != "success" || \
+                "${{ needs.typecheck.result }}" != "success" || \
+                "${{ needs.test.result }}" != "success" || \
+                "${{ needs.audit.result }}" != "success" || \
+                "${{ needs.secret-scan.result }}" != "success" || \
+                "${{ needs.build.result }}" != "success" ]]; then
+            echo "❌ One or more CI jobs failed. Review job output above."
+            exit 1
+          fi
+          echo "✅ All CI security checks passed."

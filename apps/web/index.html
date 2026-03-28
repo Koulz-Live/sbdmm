@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!--
+      SECURITY: No inline scripts, no unsafe-eval.
+      CSP is enforced via HTTP headers (set in vercel.json + Helmet middleware).
+      This file is intentionally minimal — all meta CSP tags would conflict
+      with the strict header-based policy.
+    -->
+
+    <!-- Prevent browsers from guessing MIME types -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+
+    <!-- Prevent the page from being embedded in iframes -->
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+
+    <!-- Referrer policy -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+    <!-- Disable DNS prefetch to prevent data leakage to third-party DNS -->
+    <meta http-equiv="x-dns-prefetch-control" content="off" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <title>5PL Marketplace</title>
+    <meta name="description" content="AI-enabled 5PL logistics marketplace platform" />
+
+    <!--
+      robots: noindex for non-production environments.
+      Production robots.txt is served separately.
+    -->
+  </head>
+  <body>
+    <div id="root"></div>
+    <!--
+      SECURITY: The script tag below is the ONLY script allowed.
+      main.tsx bootstraps React. No other scripts should be added here.
+      All third-party scripts must go through the CSP allowlist.
+    -->
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

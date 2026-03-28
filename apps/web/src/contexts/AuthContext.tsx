@@ -1,0 +1,149 @@
+/**
+ * Auth Context — Frontend
+ *
+ * SECURITY DESIGN:
+ * - Auth state comes exclusively from Supabase — never from localStorage manually
+ * - User profile (role, tenant_id) is loaded from the backend API after auth
+ *   to ensure we have the authoritative server-side values
+ * - Route protection is enforced in ProtectedRoute — this context provides state
+ * - NEVER store the access token in React state or context — use Supabase session
+ * - Role is only used for UI decisions (show/hide UI elements)
+ *   ALL authorization is re-enforced server-side on every API call
+ *
+ * IMPORTANT: Frontend role checks are for UX only — not security.
+ * The backend is the authoritative authorization enforcer.
+ */
+
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  type ReactNode,
+} from 'react';
+import { type User, type Session } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabaseClient';
+import { api } from '../lib/apiClient';
+import type { UserProfile } from '@sbdmm/shared';
+
+interface AuthState {
+  user: User | null;
+  profile: UserProfile | null;
+  session: Session | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+}
+
+interface AuthContextValue extends AuthState {
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }): React.JSX.Element {
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    profile: null,
+    session: null,
+    isLoading: true,
+    isAuthenticated: false,
+  });
+
+  /**
+   * loadProfile — Fetches the authoritative user profile from the backend.
+   * Called after successful authentication.
+   */
+  const loadProfile = useCallback(async (): Promise<void> => {
+    try {
+      const result = await api.get<UserProfile>('/api/v1/auth/profile');
+      if (result.success && result.data) {
+        setState((prev) => ({ ...prev, profile: result.data ?? null }));
+      }
+    } catch {
+      // Profile load failure is not fatal — user can retry or re-auth
+      console.warn('[AUTH] Could not load user profile');
+    }
+  }, []);
+
+  // Listen for Supabase auth state changes
+  useEffect(() => {
+    // Get initial session
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      setState((prev) => ({
+        ...prev,
+        session,
+        user: session?.user ?? null,
+        isAuthenticated: !!session,
+        isLoading: false,
+      }));
+
+      if (session) {
+        void loadProfile();
+      }
+    });
+
+    // Subscribe to auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setState((prev) => ({
+          ...prev,
+          session,
+          user: session?.user ?? null,
+          isAuthenticated: !!session,
+          isLoading: false,
+        }));
+
+        if (event === 'SIGNED_IN' && session) {
+          await loadProfile();
+        }
+
+        if (event === 'SIGNED_OUT') {
+          setState((prev) => ({ ...prev, profile: null }));
+        }
+      },
+    );
+
+    return () => subscription.unsubscribe();
+  }, [loadProfile]);
+
+  const signIn = useCallback(
+    async (email: string, password: string): Promise<{ error: string | null }> => {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        // SECURITY: Return a generic message — don't reveal whether email exists
+        return { error: 'Invalid email or password. Please try again.' };
+      }
+      return { error: null };
+    },
+    [],
+  );
+
+  const signOut = useCallback(async (): Promise<void> => {
+    await supabase.auth.signOut();
+    // State is cleared by the onAuthStateChange listener
+  }, []);
+
+  const refreshProfile = useCallback(async (): Promise<void> => {
+    await loadProfile();
+  }, [loadProfile]);
+
+  return (
+    <AuthContext.Provider
+      value={{ ...state, signIn, signOut, refreshProfile }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return ctx;
+}

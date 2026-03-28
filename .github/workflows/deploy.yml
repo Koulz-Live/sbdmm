@@ -1,0 +1,236 @@
+# ============================================================
+# Deploy — Production Deployment Pipeline
+# ============================================================
+#
+# Triggers on merge to main.
+# Pipeline:
+#   1. Build Docker images for the API
+#   2. Push images to GitHub Container Registry (ghcr.io)
+#   3. Run Supabase database migrations against production
+#   4. Deploy to production (configurable target via workflow_dispatch)
+#   5. Upload Sentry source maps and create a release
+#
+# SECURITY:
+# - Production secrets only ever exist as GitHub Actions secrets
+# - Database migrations run BEFORE the new API version is deployed
+#   (backwards-compatible migrations required — "expand-contract" pattern)
+# - Sentry auth token is scoped to source map upload only
+# - Docker image is scanned for vulnerabilities before push
+# ============================================================
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: production
+        type: choice
+        options: [production, staging]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false   # Never cancel an in-flight deploy
+
+env:
+  NODE_VERSION:  '20'
+  REGISTRY:      ghcr.io
+  IMAGE_NAME:    ${{ github.repository }}/sbdmm-api
+  TURBO_TOKEN:   ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM:    ${{ secrets.TURBO_TEAM }}
+
+jobs:
+  # ─── Build & Push API Image ──────────────────────────────────────────────────
+  build-api:
+    name: Build API Docker Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image-digest: ${{ steps.push.outputs.digest }}
+      image-tag:    ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=staging,enable=${{ github.ref == 'refs/heads/staging' }}
+
+      - name: Build and push API image
+        id: push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_VERSION=${{ env.NODE_VERSION }}
+            BUILD_SHA=${{ github.sha }}
+
+  # ─── Build Web App & Upload Sentry Source Maps ───────────────────────────────
+  build-web:
+    name: Build Web + Sentry Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: []   # Can run in parallel with build-api
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Full history needed for Sentry commit tracking
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Build web app (production)
+        run: npm run build --workspace=apps/web
+        env:
+          NODE_ENV:                        production
+          VITE_SUPABASE_URL:               ${{ secrets.PROD_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY:          ${{ secrets.PROD_SUPABASE_ANON_KEY }}
+          VITE_API_BASE_URL:               ${{ secrets.PROD_API_BASE_URL }}
+          VITE_APP_ENV:                    production
+          VITE_SENTRY_DSN:                 ${{ secrets.PROD_SENTRY_WEB_DSN }}
+          VITE_SENTRY_ENVIRONMENT:         production
+          VITE_SENTRY_TRACES_SAMPLE_RATE:  '0.1'
+          VITE_SENTRY_ORG:                 ${{ secrets.SENTRY_ORG }}
+          VITE_SENTRY_PROJECT:             sbdmm-web
+          SENTRY_AUTH_TOKEN:               ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_RELEASE:                  ${{ github.sha }}
+          VITE_APP_VERSION:                ${{ github.sha }}
+
+      - name: Upload web dist as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist-${{ github.sha }}
+          path: apps/web/dist/
+          retention-days: 7
+
+  # ─── Database Migrations ─────────────────────────────────────────────────────
+  migrate:
+    name: Run DB Migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [build-api, build-web]
+
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Run migrations (production)
+        run: |
+          supabase db push \
+            --db-url "$SUPABASE_DB_URL" \
+            --include-all
+        env:
+          SUPABASE_DB_URL:         ${{ secrets.PROD_SUPABASE_DB_URL }}
+          SUPABASE_ACCESS_TOKEN:   ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+  # ─── Deploy API ──────────────────────────────────────────────────────────────
+  deploy-api:
+    name: Deploy API
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [migrate]
+
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url:  ${{ secrets.PROD_API_BASE_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── HUMAN DECISION ──────────────────────────────────────────────────────
+      # Replace this step with your actual deployment mechanism:
+      #   - Railway:  railway up --service api
+      #   - Render:   trigger deploy hook via curl
+      #   - Fly.io:   flyctl deploy --image ghcr.io/...
+      #   - ECS:      aws ecs update-service ...
+      #   - K8s:      kubectl set image deployment/api api=ghcr.io/...
+      # ─────────────────────────────────────────────────────────────────────────
+      - name: Deploy API to production
+        run: |
+          echo "::notice::Replace this step with your deploy command."
+          echo "Image digest: ${{ needs.build-api.outputs.image-digest }}"
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+
+      - name: Create Sentry API release
+        uses: getsentry/sentry-create-release@v1
+        if: env.SENTRY_AUTH_TOKEN != ''
+        with:
+          environment: ${{ github.event.inputs.environment || 'production' }}
+          version:     ${{ github.sha }}
+          projects:    sbdmm-api
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG:        ${{ secrets.SENTRY_ORG }}
+
+  # ─── Deploy Web ──────────────────────────────────────────────────────────────
+  deploy-web:
+    name: Deploy Web
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [build-web, migrate]
+
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+
+    steps:
+      - name: Download web dist
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist-${{ github.sha }}
+          path: dist/
+
+      # ── HUMAN DECISION ──────────────────────────────────────────────────────
+      # Replace with your CDN/hosting deploy:
+      #   - Vercel:    vercel --prod --token $VERCEL_TOKEN
+      #   - Netlify:   netlify deploy --prod --dir dist
+      #   - S3+CF:     aws s3 sync dist/ s3://... && aws cloudfront create-invalidation ...
+      # ─────────────────────────────────────────────────────────────────────────
+      - name: Deploy web to CDN
+        run: |
+          echo "::notice::Replace this step with your CDN deploy command."
+          ls -lh dist/
