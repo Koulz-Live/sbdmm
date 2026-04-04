@@ -85,7 +85,7 @@ CREATE TYPE audit_outcome AS ENUM (
 -- SECURITY: tenant_id is the partition key for all tenant data.
 -- Super admin can see all tenants. Other roles see only their own tenant.
 CREATE TABLE IF NOT EXISTS public.tenants (
-  id              uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name            text NOT NULL,
   slug            text NOT NULL UNIQUE,
   status          tenant_status NOT NULL DEFAULT 'pending_verification',
@@ -124,7 +124,7 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
 
 -- ─── Vendor Profiles ─────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.vendors (
-  id                          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id                   uuid NOT NULL REFERENCES public.tenants(id),
   user_id                     uuid REFERENCES public.user_profiles(id),
   company_name                text NOT NULL,
@@ -146,7 +146,7 @@ CREATE TABLE IF NOT EXISTS public.vendors (
 
 -- ─── Orders ───────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.orders (
-  id                      uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id               uuid NOT NULL REFERENCES public.tenants(id),
   title                   text NOT NULL,
   status                  order_status NOT NULL DEFAULT 'draft',
@@ -171,7 +171,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
 
 -- ─── Quotes ───────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.quotes (
-  id                      uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id               uuid NOT NULL REFERENCES public.tenants(id),
   order_id                uuid NOT NULL REFERENCES public.orders(id),
   provider_id             uuid NOT NULL REFERENCES public.user_profiles(id),
@@ -190,7 +190,7 @@ CREATE TABLE IF NOT EXISTS public.quotes (
 -- ─── Route Optimization Requests ─────────────────────────────────────────────
 -- Records AI-assisted route optimization requests and their outputs
 CREATE TABLE IF NOT EXISTS public.route_optimization_requests (
-  id              uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id       uuid NOT NULL REFERENCES public.tenants(id),
   order_id        uuid REFERENCES public.orders(id),
   input_data      jsonb NOT NULL,           -- Sanitized input sent to AI
@@ -209,7 +209,7 @@ CREATE TABLE IF NOT EXISTS public.route_optimization_requests (
 -- Actual files are stored in Supabase Storage with tenant-scoped bucket policies.
 -- HUMAN DECISION: Implement virus scanning on all uploaded documents.
 CREATE TABLE IF NOT EXISTS public.trade_documents (
-  id                  uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id           uuid NOT NULL REFERENCES public.tenants(id),
   order_id            uuid REFERENCES public.orders(id),
   vendor_id           uuid REFERENCES public.vendors(id),
@@ -231,7 +231,7 @@ CREATE TABLE IF NOT EXISTS public.trade_documents (
 -- Platform-level and tenant-level compliance rules.
 -- NULL tenant_id = global rule applies to all tenants.
 CREATE TABLE IF NOT EXISTS public.compliance_rules (
-  id                    uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id             uuid REFERENCES public.tenants(id),  -- NULL = global rule
   rule_type             compliance_rule_type NOT NULL,
   name                  text NOT NULL,
@@ -246,7 +246,7 @@ CREATE TABLE IF NOT EXISTS public.compliance_rules (
 
 -- ─── Compliance Evaluations ───────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.compliance_evaluations (
-  id              uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id       uuid NOT NULL REFERENCES public.tenants(id),
   context_type    text NOT NULL,     -- 'order', 'vendor_onboarding', etc.
   context_id      uuid NOT NULL,
@@ -260,7 +260,7 @@ CREATE TABLE IF NOT EXISTS public.compliance_evaluations (
 
 -- ─── ESG Metadata ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.esg_scores (
-  id              uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id       uuid NOT NULL REFERENCES public.tenants(id),
   vendor_id       uuid NOT NULL REFERENCES public.vendors(id),
   score           numeric(5, 2) NOT NULL,
@@ -276,7 +276,7 @@ CREATE TABLE IF NOT EXISTS public.esg_scores (
 -- B2B API access registry. API keys are HASHED before storage.
 -- SECURITY: Never store raw API keys. Store only HMAC-SHA256 or bcrypt hash.
 CREATE TABLE IF NOT EXISTS public.api_credentials (
-  id                    uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id             uuid NOT NULL REFERENCES public.tenants(id),
   name                  text NOT NULL,
   description           text,
@@ -296,7 +296,7 @@ CREATE TABLE IF NOT EXISTS public.api_credentials (
 
 -- ─── Notifications ────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.notifications (
-  id              uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id       uuid NOT NULL REFERENCES public.tenants(id),
   user_id         uuid NOT NULL REFERENCES public.user_profiles(id),
   type            text NOT NULL,
@@ -313,7 +313,7 @@ CREATE TABLE IF NOT EXISTS public.notifications (
 -- No UPDATE or DELETE policies should exist on this table.
 -- For high-assurance environments, consider WAL archiving or streaming to immutable storage.
 CREATE TABLE IF NOT EXISTS public.audit_logs (
-  id              uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   event_type      text NOT NULL,
   actor_id        text NOT NULL,       -- user ID or 'system'
   tenant_id       text NOT NULL,       -- 'system' for platform-level events
