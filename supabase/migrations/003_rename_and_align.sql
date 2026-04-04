@@ -123,7 +123,7 @@ ALTER TABLE public.integrations        ENABLE ROW LEVEL SECURITY;
 -- compliance_results policies
 DROP POLICY IF EXISTS "compliance_evaluations_select_tenant" ON public.compliance_results;
 
-CREATE POLICY IF NOT EXISTS "compliance_results_select_tenant"
+CREATE POLICY "compliance_results_select_tenant"
   ON public.compliance_results
   FOR SELECT
   USING (
@@ -135,7 +135,7 @@ CREATE POLICY IF NOT EXISTS "compliance_results_select_tenant"
 -- NOTE: tenant_admin-triggered evaluations come through the API service role path
 
 -- UPDATE: manual review (approve/reject) by tenant_admin or super_admin
-CREATE POLICY IF NOT EXISTS "compliance_results_update_admin"
+CREATE POLICY "compliance_results_update_admin"
   ON public.compliance_results
   FOR UPDATE
   USING (
@@ -148,7 +148,7 @@ DROP POLICY IF EXISTS "api_credentials_select_admin"  ON public.integrations;
 DROP POLICY IF EXISTS "api_credentials_insert_admin"  ON public.integrations;
 DROP POLICY IF EXISTS "api_credentials_update_admin"  ON public.integrations;
 
-CREATE POLICY IF NOT EXISTS "integrations_select_admin"
+CREATE POLICY "integrations_select_admin"
   ON public.integrations
   FOR SELECT
   USING (
@@ -156,7 +156,7 @@ CREATE POLICY IF NOT EXISTS "integrations_select_admin"
     OR public.is_super_admin()
   );
 
-CREATE POLICY IF NOT EXISTS "integrations_insert_admin"
+CREATE POLICY "integrations_insert_admin"
   ON public.integrations
   FOR INSERT
   WITH CHECK (
@@ -164,7 +164,7 @@ CREATE POLICY IF NOT EXISTS "integrations_insert_admin"
     OR public.is_super_admin()
   );
 
-CREATE POLICY IF NOT EXISTS "integrations_update_admin"
+CREATE POLICY "integrations_update_admin"
   ON public.integrations
   FOR UPDATE
   USING (
