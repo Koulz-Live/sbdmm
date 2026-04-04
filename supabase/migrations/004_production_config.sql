@@ -43,70 +43,41 @@ END $$;
 
 -- ─── 2. Supabase Storage — Trade Documents Bucket ────────────────────────────
 --
--- SECURITY DESIGN:
--- - Bucket is PRIVATE (not publicly readable)
--- - All access goes through the API server (signed URLs)
--- - Tenant isolation enforced by storage path prefix: {tenant_id}/{document_id}
--- - The API server generates signed URLs valid for 1 hour (3600 seconds)
+-- HUMAN ACTION REQUIRED — cannot be configured via SQL migration because
+-- the migration role does not own storage.objects or storage.buckets.
 --
--- NOTE: Supabase Storage configuration is done through the Supabase Dashboard
--- or via the Management API. The SQL below inserts into `storage.buckets`
--- which is the internal storage schema — works when run via Supabase CLI migrations.
-
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'trade-documents',
-  'trade-documents',
-  false,                        -- NOT public — requires signed URL or service role
-  26214400,                     -- 25 MB in bytes (25 * 1024 * 1024)
-  ARRAY[
-    'application/pdf',
-    'image/jpeg',
-    'image/png',
-    'image/tiff'
-  ]
-)
-ON CONFLICT (id) DO UPDATE SET
-  file_size_limit    = EXCLUDED.file_size_limit,
-  allowed_mime_types = EXCLUDED.allowed_mime_types;
-
--- ─── Storage RLS Policies ─────────────────────────────────────────────────────
+-- Complete these steps in the Supabase Dashboard:
 --
--- Enforce that users can only access files under their own tenant's path.
--- Path structure: trade-documents/{tenant_id}/{document_id}/{filename}
-
--- Enable RLS on storage objects (should already be enabled but ensure it)
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
-
--- SELECT: Users can only read files in their own tenant's folder
-CREATE POLICY "trade_docs_select_own_tenant"
-  ON storage.objects
-  FOR SELECT
-  USING (
-    bucket_id = 'trade-documents'
-    AND (storage.foldername(name))[1] = public.get_my_tenant_id()::text
-  );
-
--- INSERT: Authenticated users can upload to their own tenant's folder
--- API server validates document_type and file size before the upload
-CREATE POLICY "trade_docs_insert_own_tenant"
-  ON storage.objects
-  FOR INSERT
-  WITH CHECK (
-    bucket_id = 'trade-documents'
-    AND (storage.foldername(name))[1] = public.get_my_tenant_id()::text
-    AND auth.uid() IS NOT NULL
-  );
-
--- DELETE: Only tenant_admin and super_admin can delete documents
-CREATE POLICY "trade_docs_delete_admin"
-  ON storage.objects
-  FOR DELETE
-  USING (
-    bucket_id = 'trade-documents'
-    AND (storage.foldername(name))[1] = public.get_my_tenant_id()::text
-    AND (public.is_tenant_admin() OR public.is_super_admin())
-  );
+-- (a) Create the bucket:
+--     Storage → New bucket
+--     Name: trade-documents
+--     Public: OFF  (private — all access goes through signed URLs)
+--     File size limit: 26214400 (25 MB)
+--     Allowed MIME types: application/pdf, image/jpeg, image/png, image/tiff
+--
+-- (b) Add the following RLS policies on storage.objects
+--     (Storage → Policies → storage.objects → New policy):
+--
+--     Policy 1 — SELECT (read):
+--       Name: trade_docs_select_own_tenant
+--       Expression: bucket_id = 'trade-documents'
+--         AND (storage.foldername(name))[1] = public.get_my_tenant_id()::text
+--
+--     Policy 2 — INSERT (upload):
+--       Name: trade_docs_insert_own_tenant
+--       Expression: bucket_id = 'trade-documents'
+--         AND (storage.foldername(name))[1] = public.get_my_tenant_id()::text
+--         AND auth.uid() IS NOT NULL
+--
+--     Policy 3 — DELETE:
+--       Name: trade_docs_delete_admin
+--       Expression: bucket_id = 'trade-documents'
+--         AND (storage.foldername(name))[1] = public.get_my_tenant_id()::text
+--         AND (public.is_tenant_admin() OR public.is_super_admin())
+--
+-- The API route (apps/api/src/routes/documents.ts) enforces additional
+-- server-side checks (IDOR, file type validation, magic byte check)
+-- before calling supabase.storage.from('trade-documents').upload()
 
 -- ─── 3. Notification Cleanup (pg_cron) ───────────────────────────────────────
 --
