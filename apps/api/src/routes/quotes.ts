@@ -322,4 +322,172 @@ router.post(
   },
 );
 
+// ─── PATCH /api/v1/quotes/:id/accept ──────────────────────────────────────────
+// Convenience alias — frontend calls PATCH /:id/accept (not POST /:id/action)
+// Delegates to the same logic: only buyer (order owner) or tenant_admin can accept
+router.patch(
+  '/:id/accept',
+  requireRole(['buyer', 'tenant_admin', 'super_admin']),
+  validate(quoteParamsSchema, 'params'),
+  async (req: Request, res: Response): Promise<void> => {
+    const log = createChildLogger({ request_id: req.requestId });
+    const supabase = getAdminClient();
+    const actor = req.user!;
+
+    const { data: quote, error: fetchError } = await supabase
+      .from('quotes')
+      .select('*, orders!inner(created_by, tenant_id)')
+      .eq('id', req.params['id'])
+      .eq('tenant_id', actor.tenant_id)
+      .single();
+
+    if (fetchError || !quote) throw new NotFoundError('Quote not found.');
+
+    if (quote.status !== 'pending') {
+      res.status(409).json({
+        success: false,
+        error: { code: ERROR_CODES.VALIDATION_ERROR, message: `Quote is already ${quote.status as string}.` },
+        meta: { request_id: req.requestId, timestamp: new Date().toISOString() },
+      });
+      return;
+    }
+
+    const order = quote.orders as { created_by: string; tenant_id: string } | null;
+    const isOrderOwner = order?.created_by === actor.id;
+    const isAdmin = actor.role === 'tenant_admin' || actor.role === 'super_admin';
+
+    if (!isOrderOwner && !isAdmin) {
+      res.status(403).json({
+        success: false,
+        error: { code: ERROR_CODES.FORBIDDEN, message: 'Only the order owner may accept quotes.' },
+        meta: { request_id: req.requestId, timestamp: new Date().toISOString() },
+      });
+      return;
+    }
+
+    const { data: updatedQuote, error: updateError } = await supabase
+      .from('quotes')
+      .update({ status: 'accepted', updated_at: new Date().toISOString() })
+      .eq('id', req.params['id'])
+      .select()
+      .single();
+
+    if (updateError) {
+      log.error('[QUOTES] Accept update failed', { error: updateError.message });
+      throw new AppError('Failed to accept quote.', 500);
+    }
+
+    // Auto-reject all other pending quotes on the same order
+    await supabase
+      .from('quotes')
+      .update({ status: 'rejected' })
+      .eq('order_id', quote.order_id as string)
+      .eq('status', 'pending')
+      .neq('id', req.params['id']);
+
+    // Confirm the order
+    await supabase
+      .from('orders')
+      .update({ status: 'confirmed' })
+      .eq('id', quote.order_id as string);
+
+    await writeAuditLog({
+      event_type: 'quote.accepted',
+      actor_id: actor.id,
+      tenant_id: actor.tenant_id,
+      target_type: 'quote',
+      target_id: req.params['id'] ?? '',
+      outcome: 'success',
+      details: { order_id: quote.order_id },
+      ip_address: req.ip,
+      request_id: req.requestId,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: updatedQuote,
+      meta: { request_id: req.requestId, timestamp: new Date().toISOString() },
+    });
+  },
+);
+
+// ─── PATCH /api/v1/quotes/:id/reject ──────────────────────────────────────────
+// Convenience alias — frontend calls PATCH /:id/reject (not POST /:id/action)
+// Delegates to the same logic: only buyer (order owner) or tenant_admin can reject
+router.patch(
+  '/:id/reject',
+  requireRole(['buyer', 'tenant_admin', 'super_admin']),
+  validate(quoteParamsSchema, 'params'),
+  async (req: Request, res: Response): Promise<void> => {
+    const log = createChildLogger({ request_id: req.requestId });
+    const supabase = getAdminClient();
+    const actor = req.user!;
+
+    const rejectBodySchema = z.object({ reason: z.string().max(1000).trim().optional() }).strict();
+    const bodyResult = rejectBodySchema.safeParse(req.body);
+    const reason = bodyResult.success ? bodyResult.data.reason : undefined;
+
+    const { data: quote, error: fetchError } = await supabase
+      .from('quotes')
+      .select('*, orders!inner(created_by, tenant_id)')
+      .eq('id', req.params['id'])
+      .eq('tenant_id', actor.tenant_id)
+      .single();
+
+    if (fetchError || !quote) throw new NotFoundError('Quote not found.');
+
+    if (quote.status !== 'pending') {
+      res.status(409).json({
+        success: false,
+        error: { code: ERROR_CODES.VALIDATION_ERROR, message: `Quote is already ${quote.status as string}.` },
+        meta: { request_id: req.requestId, timestamp: new Date().toISOString() },
+      });
+      return;
+    }
+
+    const order = quote.orders as { created_by: string; tenant_id: string } | null;
+    const isOrderOwner = order?.created_by === actor.id;
+    const isAdmin = actor.role === 'tenant_admin' || actor.role === 'super_admin';
+
+    if (!isOrderOwner && !isAdmin) {
+      res.status(403).json({
+        success: false,
+        error: { code: ERROR_CODES.FORBIDDEN, message: 'Only the order owner may reject quotes.' },
+        meta: { request_id: req.requestId, timestamp: new Date().toISOString() },
+      });
+      return;
+    }
+
+    const { data: updatedQuote, error: updateError } = await supabase
+      .from('quotes')
+      .update({ status: 'rejected', updated_at: new Date().toISOString() })
+      .eq('id', req.params['id'])
+      .select()
+      .single();
+
+    if (updateError) {
+      log.error('[QUOTES] Reject update failed', { error: updateError.message });
+      throw new AppError('Failed to reject quote.', 500);
+    }
+
+    await writeAuditLog({
+      event_type: 'quote.rejected',
+      actor_id: actor.id,
+      tenant_id: actor.tenant_id,
+      target_type: 'quote',
+      target_id: req.params['id'] ?? '',
+      outcome: 'success',
+      details: { ...(reason ? { reason } : {}) },
+      ip_address: req.ip,
+      request_id: req.requestId,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: updatedQuote,
+      meta: { request_id: req.requestId, timestamp: new Date().toISOString() },
+    });
+  },
+);
+
 export { router as quotesRouter };

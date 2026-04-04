@@ -155,7 +155,8 @@ router.get(
     res.status(200).json({
       success: true,
       data: {
-        signed_url: signedData.signedUrl,
+        url: signedData.signedUrl,          // Frontend reads .data.url
+        signed_url: signedData.signedUrl,   // Kept for API consumers / backwards compat
         expires_in_seconds: 60,
         file_name: doc.file_name,
       },
