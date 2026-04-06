@@ -62,25 +62,10 @@ jobs:
       - name: Typecheck all packages
         run: npm run typecheck
 
-      - name: Build API
+      - name: Build API (verify TypeScript compiles cleanly)
+        # Vercel will build both API and web via vercel.json buildCommand.
+        # We build here just to catch TS errors before touching production.
         run: npm run build --workspace=apps/api
-
-      - name: Build web app (production)
-        run: npm run build --workspace=apps/web
-        env:
-          NODE_ENV:                        production
-          VITE_SUPABASE_URL:               ${{ secrets.PROD_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY:          ${{ secrets.PROD_SUPABASE_ANON_KEY }}
-          VITE_API_BASE_URL:               ${{ secrets.PROD_API_BASE_URL }}
-          VITE_APP_ENV:                    production
-          VITE_SENTRY_DSN:                 ${{ secrets.PROD_SENTRY_WEB_DSN }}
-          VITE_SENTRY_ENVIRONMENT:         production
-          VITE_SENTRY_TRACES_SAMPLE_RATE:  '0.1'
-          VITE_SENTRY_ORG:                 ${{ secrets.SENTRY_ORG }}
-          VITE_SENTRY_PROJECT:             sbdmm-web
-          SENTRY_AUTH_TOKEN:               ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_RELEASE:                  ${{ github.sha }}
-          VITE_APP_VERSION:                ${{ github.sha }}
 
   # ─── Database Migrations ─────────────────────────────────────────────────────
   migrate:
@@ -109,51 +94,14 @@ jobs:
           SUPABASE_DB_URL:         ${{ secrets.PROD_SUPABASE_DB_URL }}
           SUPABASE_ACCESS_TOKEN:   ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
-  # ─── Deploy API (Railway) ─────────────────────────────────────────────────────
-  deploy-api:
-    name: Deploy API (Railway)
+  # ─── Deploy — Vercel (API + Web) ─────────────────────────────────────────────
+  # Vercel serves BOTH the web SPA and the Express API as a single project.
+  # vercel.json rewrites /api/*, /webhooks/*, /health → apps/api/api/index.ts
+  # All other routes → apps/web/dist/index.html (SPA fallback)
+  deploy:
+    name: Deploy (Vercel)
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [migrate]
-
-    environment:
-      name: ${{ github.event.inputs.environment || 'production' }}
-      url:  ${{ vars.PROD_API_BASE_URL }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Deploy API to Railway
-        # Railway reads railway.toml from the repo root for build/start config.
-        # RAILWAY_TOKEN is a project-scoped token from railway.app → project → settings → tokens
-        run: railway up --service sbdmm-api --detach
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-      - name: Create Sentry API release
-        uses: getsentry/sentry-create-release@v1
-        if: env.SENTRY_AUTH_TOKEN != ''
-        with:
-          environment: ${{ github.event.inputs.environment || 'production' }}
-          version:     ${{ github.sha }}
-          projects:    sbdmm-api
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG:        ${{ secrets.SENTRY_ORG }}
-
-  # ─── Deploy Web (Vercel) ──────────────────────────────────────────────────────
-  deploy-web:
-    name: Deploy Web (Vercel)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
     needs: [migrate]
 
     environment:
@@ -170,19 +118,33 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel
 
-      - name: Deploy web to Vercel (production)
-        # vercel.json at repo root configures build/output/headers/rewrites.
-        # VERCEL_TOKEN    — from vercel.com → Account Settings → Tokens
-        # VERCEL_ORG_ID   — from vercel.com → Team Settings → General → Team ID
-        # VERCEL_PROJECT_ID — from vercel.com → Project → Settings → General → Project ID
-        run: |
-          vercel pull --yes --environment=production \
-            --token=${{ secrets.VERCEL_TOKEN }}
-          vercel build --prod \
-            --token=${{ secrets.VERCEL_TOKEN }}
-          vercel deploy --prebuilt --prod \
-            --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Pull Vercel environment & project config
+        # Downloads .vercel/project.json so subsequent commands know the project
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID:     ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
+      - name: Build project via Vercel
+        # Vercel runs vercel.json buildCommand in a reproducible environment
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID:     ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deploy prebuilt output to Vercel
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID:     ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Create Sentry release
+        uses: getsentry/sentry-create-release@v1
+        if: env.SENTRY_AUTH_TOKEN != ''
+        with:
+          environment: ${{ github.event.inputs.environment || 'production' }}
+          version:     ${{ github.sha }}
+          projects:    sbdmm-web,sbdmm-api
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG:        ${{ secrets.SENTRY_ORG }}

@@ -1,12 +1,19 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
 
-  "buildCommand": "npx turbo run build",
+  "buildCommand": "npm run build --workspace=apps/web && npm run build --workspace=apps/api",
   "outputDirectory": "apps/web/dist",
   "installCommand": "npm ci",
   "framework": null,
 
-  "regions": ["iad1"],
+  "regions": ["lhr1"],
+
+  "functions": {
+    "apps/api/api/index.ts": {
+      "runtime": "nodejs20.x",
+      "maxDuration": 30
+    }
+  },
 
   "headers": [
     {
@@ -76,7 +83,23 @@
 
   "rewrites": [
     {
-      "source": "/((?!api|assets|_next|favicon.ico).*)",
+      "source": "/api/:path*",
+      "destination": "/apps/api/api/index.ts"
+    },
+    {
+      "source": "/webhooks/:path*",
+      "destination": "/apps/api/api/index.ts"
+    },
+    {
+      "source": "/health",
+      "destination": "/apps/api/api/index.ts"
+    },
+    {
+      "source": "/readiness",
+      "destination": "/apps/api/api/index.ts"
+    },
+    {
+      "source": "/((?!api|webhooks|health|readiness|assets|_next|favicon.ico).*)",
       "destination": "/index.html"
     }
   ],
