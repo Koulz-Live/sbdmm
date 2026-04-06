@@ -38,75 +38,18 @@ concurrency:
 
 env:
   NODE_VERSION:  '20'
-  REGISTRY:      ghcr.io
-  IMAGE_NAME:    ${{ github.repository }}/sbdmm-api
   TURBO_TOKEN:   ${{ secrets.TURBO_TOKEN }}
   TURBO_TEAM:    ${{ secrets.TURBO_TEAM }}
 
 jobs:
-  # ─── Build & Push API Image ──────────────────────────────────────────────────
-  build-api:
-    name: Build API Docker Image
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    permissions:
-      contents: read
-      packages: write
-
-    outputs:
-      image-digest: ${{ steps.push.outputs.digest }}
-      image-tag:    ${{ steps.meta.outputs.tags }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,prefix=sha-
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=staging,enable=${{ github.ref == 'refs/heads/staging' }}
-
-      - name: Build and push API image
-        id: push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: apps/api/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            NODE_VERSION=${{ env.NODE_VERSION }}
-            BUILD_SHA=${{ github.sha }}
-
-  # ─── Build Web App & Upload Sentry Source Maps ───────────────────────────────
-  build-web:
-    name: Build Web + Sentry Release
+  # ─── Build & Typecheck ───────────────────────────────────────────────────────
+  build:
+    name: Build & Typecheck
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: []   # Can run in parallel with build-api
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0   # Full history needed for Sentry commit tracking
 
       - uses: actions/setup-node@v4
         with:
@@ -115,6 +58,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci --prefer-offline
+
+      - name: Typecheck all packages
+        run: npm run typecheck
+
+      - name: Build API
+        run: npm run build --workspace=apps/api
 
       - name: Build web app (production)
         run: npm run build --workspace=apps/web
@@ -133,19 +82,12 @@ jobs:
           SENTRY_RELEASE:                  ${{ github.sha }}
           VITE_APP_VERSION:                ${{ github.sha }}
 
-      - name: Upload web dist as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-dist-${{ github.sha }}
-          path: apps/web/dist/
-          retention-days: 7
-
   # ─── Database Migrations ─────────────────────────────────────────────────────
   migrate:
     name: Run DB Migrations
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [build-api, build-web]
+    needs: [build]
 
     environment:
       name: ${{ github.event.inputs.environment || 'production' }}
@@ -167,34 +109,34 @@ jobs:
           SUPABASE_DB_URL:         ${{ secrets.PROD_SUPABASE_DB_URL }}
           SUPABASE_ACCESS_TOKEN:   ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
-  # ─── Deploy API ──────────────────────────────────────────────────────────────
+  # ─── Deploy API (Railway) ─────────────────────────────────────────────────────
   deploy-api:
-    name: Deploy API
+    name: Deploy API (Railway)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [migrate]
 
     environment:
       name: ${{ github.event.inputs.environment || 'production' }}
-      url:  ${{ secrets.PROD_API_BASE_URL }}
+      url:  ${{ vars.PROD_API_BASE_URL }}
 
     steps:
       - uses: actions/checkout@v4
 
-      # ── HUMAN DECISION ──────────────────────────────────────────────────────
-      # Replace this step with your actual deployment mechanism:
-      #   - Railway:  railway up --service api
-      #   - Render:   trigger deploy hook via curl
-      #   - Fly.io:   flyctl deploy --image ghcr.io/...
-      #   - ECS:      aws ecs update-service ...
-      #   - K8s:      kubectl set image deployment/api api=ghcr.io/...
-      # ─────────────────────────────────────────────────────────────────────────
-      - name: Deploy API to production
-        run: |
-          echo "::notice::Replace this step with your deploy command."
-          echo "Image digest: ${{ needs.build-api.outputs.image-digest }}"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy API to Railway
+        # Railway reads railway.toml from the repo root for build/start config.
+        # RAILWAY_TOKEN is a project-scoped token from railway.app → project → settings → tokens
+        run: railway up --service sbdmm-api --detach
         env:
-          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
       - name: Create Sentry API release
         uses: getsentry/sentry-create-release@v1
@@ -207,30 +149,40 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG:        ${{ secrets.SENTRY_ORG }}
 
-  # ─── Deploy Web ──────────────────────────────────────────────────────────────
+  # ─── Deploy Web (Vercel) ──────────────────────────────────────────────────────
   deploy-web:
-    name: Deploy Web
+    name: Deploy Web (Vercel)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [build-web, migrate]
+    needs: [migrate]
 
     environment:
       name: ${{ github.event.inputs.environment || 'production' }}
 
     steps:
-      - name: Download web dist
-        uses: actions/download-artifact@v4
-        with:
-          name: web-dist-${{ github.sha }}
-          path: dist/
+      - uses: actions/checkout@v4
 
-      # ── HUMAN DECISION ──────────────────────────────────────────────────────
-      # Replace with your CDN/hosting deploy:
-      #   - Vercel:    vercel --prod --token $VERCEL_TOKEN
-      #   - Netlify:   netlify deploy --prod --dir dist
-      #   - S3+CF:     aws s3 sync dist/ s3://... && aws cloudfront create-invalidation ...
-      # ─────────────────────────────────────────────────────────────────────────
-      - name: Deploy web to CDN
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy web to Vercel (production)
+        # vercel.json at repo root configures build/output/headers/rewrites.
+        # VERCEL_TOKEN    — from vercel.com → Account Settings → Tokens
+        # VERCEL_ORG_ID   — from vercel.com → Team Settings → General → Team ID
+        # VERCEL_PROJECT_ID — from vercel.com → Project → Settings → General → Project ID
         run: |
-          echo "::notice::Replace this step with your CDN deploy command."
-          ls -lh dist/
+          vercel pull --yes --environment=production \
+            --token=${{ secrets.VERCEL_TOKEN }}
+          vercel build --prod \
+            --token=${{ secrets.VERCEL_TOKEN }}
+          vercel deploy --prebuilt --prod \
+            --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID:     ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
