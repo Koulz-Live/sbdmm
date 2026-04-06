@@ -128,7 +128,7 @@ export async function evaluateCompliance(
     };
 
     // Persist compliance evaluation result
-    await getAdminClient().from('compliance_evaluations').insert({
+    await getAdminClient().from('compliance_results').insert({
       tenant_id: input.tenant_id,
       context_type: input.context_type,
       context_id: input.context_id,
