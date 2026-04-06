@@ -9,7 +9,7 @@
   "regions": ["lhr1"],
 
   "functions": {
-    "apps/api/api/index.ts": {
+    "api/index.ts": {
       "maxDuration": 30
     }
   },
@@ -83,19 +83,19 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "/apps/api/api/index.ts"
+      "destination": "/api/index.ts"
     },
     {
       "source": "/webhooks/:path*",
-      "destination": "/apps/api/api/index.ts"
+      "destination": "/api/index.ts"
     },
     {
       "source": "/health",
-      "destination": "/apps/api/api/index.ts"
+      "destination": "/api/index.ts"
     },
     {
       "source": "/readiness",
-      "destination": "/apps/api/api/index.ts"
+      "destination": "/api/index.ts"
     },
     {
       "source": "/((?!api|webhooks|health|readiness|assets|_next|favicon.ico).*)",
