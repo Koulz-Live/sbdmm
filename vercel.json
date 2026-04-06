@@ -16,15 +16,13 @@
     }
   ],
 
-  "rewrites": [
-    { "source": "/api/(.*)",       "destination": "/api/index.ts" },
-    { "source": "/webhooks/(.*)",  "destination": "/api/index.ts" },
-    { "source": "/health",         "destination": "/api/index.ts" },
-    { "source": "/readiness",      "destination": "/api/index.ts" },
-    {
-      "source": "/((?!api|webhooks|health|readiness|assets|favicon.ico).*)",
-      "destination": "/index.html"
-    }
+  "routes": [
+    { "src": "/api/(.*)",      "dest": "/api/index.ts" },
+    { "src": "/webhooks/(.*)", "dest": "/api/index.ts" },
+    { "src": "/health",        "dest": "/api/index.ts" },
+    { "src": "/readiness",     "dest": "/api/index.ts" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)",          "dest": "/index.html" }
   ],
 
   "headers": [
