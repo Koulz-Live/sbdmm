@@ -1,7 +1,11 @@
 /**
- * api/index.ts — Root-level Vercel Serverless Function entry point
+ * api/index.ts — Vercel Serverless Function entry point
  *
- * Vercel requires serverless functions to live in /api at the project root.
- * This file re-exports from the actual implementation inside apps/api.
+ * @vercel/node compiles this file and bundles all imports.
+ * Telemetry is skipped (no persistent process in serverless).
  */
-export { default } from '../apps/api/api/index';
+import { createApp } from '../apps/api/src/app';
+
+const app = createApp();
+
+export default app;
