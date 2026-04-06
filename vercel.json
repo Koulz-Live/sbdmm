@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
 
-  "buildCommand": "npm run build --workspace=apps/web && npm run build --workspace=apps/api",
+  "buildCommand": "node_modules/.bin/turbo run build --filter=@sbdmm/web --filter=@sbdmm/api",
   "outputDirectory": "apps/web/dist",
   "installCommand": "npm ci",
   "framework": null,

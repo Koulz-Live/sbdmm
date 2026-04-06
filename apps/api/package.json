@@ -6,10 +6,10 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "../../node_modules/.bin/tsc",
+    "build": "tsc",
     "start": "node dist/server.js",
     "lint": "eslint src/**/*.ts",
-    "typecheck": "../../node_modules/.bin/tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },
