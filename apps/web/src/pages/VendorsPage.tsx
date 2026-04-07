@@ -11,6 +11,7 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../lib/apiClient';
 import { useAuth } from '../contexts/AuthContext';
 import type { Vendor, BusinessCategory, PaginationMeta } from '@sbdmm/shared';
@@ -229,6 +230,15 @@ export default function VendorsPage(): React.JSX.Element {
                         )}
                       </div>
                     )}
+
+                    {/* View Profile — always visible */}
+                    <Link
+                      to={`/vendors/${vendor.id}`}
+                      className="btn btn-sm d-flex align-items-center justify-content-center gap-6 w-100 mt-10"
+                      style={{ background: '#f8fafc', color: '#334155', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, fontWeight: 600, padding: '7px 0', textDecoration: 'none' }}
+                    >
+                      <i className="ph ph-storefront" style={{ color: '#299E60' }} /> View Profile &amp; Catalogue
+                    </Link>
                   </div>
                 </div>
               </div>

@@ -348,3 +348,40 @@ export const ERROR_CODES = {
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
+
+// ─── Vendor Catalogue ─────────────────────────────────────────────────────────
+// A catalogue item represents a specific service or lane a provider offers.
+// This is the public-facing "product" in the logistics marketplace context.
+
+export type CatalogueItemStatus = 'active' | 'inactive' | 'draft';
+
+export type ServiceMode =
+  | 'FCL'      // Full Container Load
+  | 'LCL'      // Less than Container Load
+  | 'AIR'      // Air freight
+  | 'ROAD'     // Road / trucking
+  | 'RAIL'     // Rail freight
+  | 'COURIER'  // Express courier
+  | 'OTHER';
+
+export interface CatalogueItem {
+  id: string;
+  vendor_id: string;
+  tenant_id: string;
+  title: string;                        // e.g. "Shanghai → Rotterdam FCL 40HQ"
+  description: string | null;
+  service_mode: ServiceMode;
+  origin_region: string;                // Free text — city, country, region
+  destination_region: string;
+  transit_days_min: number;
+  transit_days_max: number;
+  base_price_amount: number | null;     // indicative price; null = quote on request
+  base_price_currency: string;
+  price_unit: string;                   // e.g. "per CBM", "per container", "per kg"
+  status: CatalogueItemStatus;
+  tags: string[];                       // e.g. ["hazmat", "reefer", "oversize"]
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+

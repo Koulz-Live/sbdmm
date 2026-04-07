@@ -272,4 +272,187 @@ router.delete(
   },
 );
 
+
+// ─── GET /api/v1/vendors/:id/catalogue ────────────────────────────────────────
+// Public within tenant — any authenticated user can browse a vendor's catalogue.
+router.get(
+  '/:id/catalogue',
+  requireRole(['tenant_admin', 'super_admin', 'buyer', 'vendor', 'logistics_provider']),
+  validate(vendorParamsSchema, 'params'),
+  async (req: Request, res: Response): Promise<void> => {
+    const log = createChildLogger({ request_id: req.requestId });
+    const supabase = getAdminClient();
+
+    // Verify vendor belongs to this tenant (IDOR guard)
+    const { data: vendor, error: vendorError } = await supabase
+      .from('vendors')
+      .select('id, tenant_id, company_name, status')
+      .eq('id', req.params['id'])
+      .eq('tenant_id', req.user!.tenant_id)
+      .single();
+
+    if (vendorError || !vendor) {
+      throw new NotFoundError('Vendor not found.');
+    }
+
+    const { data, error, count } = await supabase
+      .from('vendor_catalogue')
+      .select('*', { count: 'exact' })
+      .eq('vendor_id', req.params['id'])
+      .eq('tenant_id', req.user!.tenant_id)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      log.error('[CATALOGUE] List query failed', { error: error.message });
+      throw new AppError('Failed to retrieve catalogue.', 500);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: data ?? [],
+      meta: {
+        request_id: req.requestId,
+        timestamp: new Date().toISOString(),
+        pagination: { page: 1, per_page: count ?? 0, total: count ?? 0, total_pages: 1 },
+      },
+    });
+  },
+);
+
+// ─── POST /api/v1/vendors/:id/catalogue ───────────────────────────────────────
+// Only vendors (self) or tenant_admin can add catalogue items.
+const catalogueItemSchema = z.object({
+  title: z.string().min(3).max(200).trim(),
+  description: z.string().max(2000).trim().optional(),
+  service_mode: z.enum(['FCL', 'LCL', 'AIR', 'ROAD', 'RAIL', 'COURIER', 'OTHER']),
+  origin_region: z.string().min(2).max(100).trim(),
+  destination_region: z.string().min(2).max(100).trim(),
+  transit_days_min: z.number().int().min(1),
+  transit_days_max: z.number().int().min(1),
+  base_price_amount: z.number().positive().optional().nullable(),
+  base_price_currency: z.string().length(3).toUpperCase().default('USD'),
+  price_unit: z.string().min(1).max(50).trim().default('per shipment'),
+  tags: z.array(z.string().max(50)).max(10).default([]),
+}).strict();
+
+router.post(
+  '/:id/catalogue',
+  requireRole(['vendor', 'logistics_provider', 'tenant_admin', 'super_admin']),
+  validate(vendorParamsSchema, 'params'),
+  async (req: Request, res: Response): Promise<void> => {
+    const log = createChildLogger({ request_id: req.requestId });
+    const supabase = getAdminClient();
+    const actor = req.user!;
+
+    // Verify vendor belongs to this tenant
+    const { data: vendor, error: vendorError } = await supabase
+      .from('vendors')
+      .select('id, tenant_id')
+      .eq('id', req.params['id'])
+      .eq('tenant_id', actor.tenant_id)
+      .single();
+
+    if (vendorError || !vendor) throw new NotFoundError('Vendor not found.');
+
+    const parsed = catalogueItemSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: parsed.error.errors[0]?.message ?? 'Invalid input.' } });
+      return;
+    }
+
+    const { data: item, error: insertError } = await supabase
+      .from('vendor_catalogue')
+      .insert({
+        ...parsed.data,
+        vendor_id: req.params['id'],
+        tenant_id: actor.tenant_id,
+        created_by: actor.id,
+        status: 'active',
+      })
+      .select()
+      .single();
+
+    if (insertError || !item) {
+      log.error('[CATALOGUE] Insert failed', { error: insertError?.message });
+      throw new AppError('Failed to create catalogue item.', 500);
+    }
+
+    res.status(201).json({
+      success: true,
+      data: item,
+      meta: { request_id: req.requestId, timestamp: new Date().toISOString() },
+    });
+  },
+);
+
+// ─── PATCH /api/v1/vendors/:id/catalogue/:itemId ──────────────────────────────
+router.patch(
+  '/:id/catalogue/:itemId',
+  requireRole(['vendor', 'logistics_provider', 'tenant_admin', 'super_admin']),
+  async (req: Request, res: Response): Promise<void> => {
+    const log = createChildLogger({ request_id: req.requestId });
+    const supabase = getAdminClient();
+    const actor = req.user!;
+
+    const { data: existing, error: fetchError } = await supabase
+      .from('vendor_catalogue')
+      .select('id, tenant_id, vendor_id')
+      .eq('id', req.params['itemId'] ?? '')
+      .eq('vendor_id', req.params['id'] ?? '')
+      .eq('tenant_id', actor.tenant_id)
+      .single();
+
+    if (fetchError || !existing) throw new NotFoundError('Catalogue item not found.');
+
+    const { data: updated, error: updateError } = await supabase
+      .from('vendor_catalogue')
+      .update({ ...req.body as Record<string, unknown>, updated_at: new Date().toISOString() })
+      .eq('id', req.params['itemId'] ?? '')
+      .select()
+      .single();
+
+    if (updateError || !updated) {
+      log.error('[CATALOGUE] Update failed', { error: updateError?.message });
+      throw new AppError('Failed to update catalogue item.', 500);
+    }
+
+    res.status(200).json({ success: true, data: updated, meta: { request_id: req.requestId, timestamp: new Date().toISOString() } });
+  },
+);
+
+// ─── DELETE /api/v1/vendors/:id/catalogue/:itemId ─────────────────────────────
+router.delete(
+  '/:id/catalogue/:itemId',
+  requireRole(['vendor', 'logistics_provider', 'tenant_admin', 'super_admin']),
+  async (req: Request, res: Response): Promise<void> => {
+    const log = createChildLogger({ request_id: req.requestId });
+    const supabase = getAdminClient();
+    const actor = req.user!;
+
+    const { data: existing, error: fetchError } = await supabase
+      .from('vendor_catalogue')
+      .select('id, tenant_id')
+      .eq('id', req.params['itemId'] ?? '')
+      .eq('vendor_id', req.params['id'] ?? '')
+      .eq('tenant_id', actor.tenant_id)
+      .single();
+
+    if (fetchError || !existing) throw new NotFoundError('Catalogue item not found.');
+
+    const { error: deleteError } = await supabase
+      .from('vendor_catalogue')
+      .update({ status: 'inactive', updated_at: new Date().toISOString() })
+      .eq('id', req.params['itemId'] ?? '');
+
+    if (deleteError) {
+      log.error('[CATALOGUE] Soft-delete failed', { error: deleteError.message });
+      throw new AppError('Failed to remove catalogue item.', 500);
+    }
+
+    res.status(200).json({ success: true, data: null, meta: { request_id: req.requestId, timestamp: new Date().toISOString() } });
+  },
+);
+
+
 export { router as vendorsRouter };
