@@ -19,18 +19,23 @@ import { NavBar } from './NavBar';
 
 /** Map route paths → human-readable page titles for the top bar */
 const PAGE_TITLES: Record<string, string> = {
-  '/dashboard':  'Dashboard',
-  '/orders':     'Orders',
-  '/quotes':     'Quotes',
-  '/documents':  'Documents',
-  '/vendors':    'Vendors',
-  '/compliance': 'Compliance',
-  '/admin':      'Admin',
+  '/dashboard':          'Dashboard',
+  '/provider/dashboard': 'My Dashboard',
+  '/orders':             'Orders',
+  '/quotes':             'Quotes',
+  '/documents':          'Documents',
+  '/vendors':            'Vendors',
+  '/compliance':         'Compliance',
+  '/admin':              'Admin Panel',
 };
 
 export function AppLayout(): React.JSX.Element {
   const { pathname } = useLocation();
-  const pageTitle = PAGE_TITLES[pathname] ?? 'SBDMM';
+  // Match exact path first, then try prefix match for dynamic routes (e.g. /vendors/:id)
+  const pageTitle =
+    PAGE_TITLES[pathname] ??
+    Object.entries(PAGE_TITLES).find(([k]) => pathname.startsWith(k + '/'))?.[1] ??
+    'SBDMM';
 
   return (
     <div className="d-flex" style={{ minHeight: '100vh', background: '#f1f5f9' }}>

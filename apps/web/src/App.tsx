@@ -10,15 +10,17 @@
  * ROUTE MAP:
  *   /login                  → Public — LoginPage
  *   /unauthorized           → Public — UnauthorizedPage
- *   /                       → Public  — LandingPage (authenticated users auto-redirect to /dashboard)
- *   /dashboard              → Protected (any auth)
- *   /orders                 → Protected (any auth)
- *   /orders/:id             → Protected (any auth)
+ *   /                       → Public  — LandingPage (authenticated users auto-redirect by role)
+ *   /dashboard              → Protected (buyer | tenant_admin | super_admin)
+ *   /provider/dashboard     → Protected (vendor | logistics_provider)
+ *   /orders                 → Protected (buyer | tenant_admin | super_admin)
+ *   /orders/:id             → Protected (buyer | tenant_admin | super_admin)
  *   /quotes                 → Protected (buyer | vendor | logistics_provider | tenant_admin | super_admin)
  *   /documents              → Protected (any auth)
  *   /vendors                → Protected (buyer | tenant_admin | super_admin)
+ *   /vendors/:id            → Protected (buyer | vendor | logistics_provider | tenant_admin | super_admin)
  *   /compliance             → Protected (vendor | tenant_admin | super_admin)
- *   /admin                  → Protected (super_admin only)
+ *   /admin                  → Protected (tenant_admin | super_admin)
  */
 
 import React, { Suspense, lazy } from 'react';
@@ -30,6 +32,7 @@ import { AppLayout } from './components/AppLayout';
 const LandingPage     = lazy(() => import('./pages/LandingPage'));
 const LoginPage       = lazy(() => import('./pages/LoginPage'));
 const DashboardPage   = lazy(() => import('./pages/DashboardPage'));
+const ProviderDashboardPage = lazy(() => import('./pages/ProviderDashboardPage'));
 const UnauthorizedPage = lazy(() => import('./pages/UnauthorizedPage'));
 const OrdersPage      = lazy(() => import('./pages/OrdersPage'));
 const QuotesPage      = lazy(() => import('./pages/QuotesPage'));
@@ -56,40 +59,59 @@ export default function App(): React.JSX.Element {
         <Route path="/login"        element={<LoginPage />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
-        {/* Protected — any authenticated user, with NavBar layout */}
-        <Route element={<ProtectedRoute />}>
+        {/* Protected — buyer + admins: main dashboard, orders, documents */}
+        <Route element={<ProtectedRoute roles={['buyer', 'tenant_admin', 'super_admin']} />}>
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/orders"    element={<OrdersPage />} />
             <Route path="/orders/:id" element={<OrdersPage />} />
+          </Route>
+        </Route>
+
+        {/* Protected — vendors and logistics providers: their own dashboard */}
+        <Route element={<ProtectedRoute roles={['vendor', 'logistics_provider']} />}>
+          <Route element={<AppLayout />}>
+            <Route path="/provider/dashboard" element={<ProviderDashboardPage />} />
+          </Route>
+        </Route>
+
+        {/* Protected — documents: all authenticated users */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppLayout />}>
             <Route path="/documents" element={<DocumentsPage />} />
           </Route>
         </Route>
 
-        {/* Protected — buyers, vendors and admin-level roles */}
+        {/* Protected — quotes: all authenticated users */}
         <Route element={<ProtectedRoute roles={['buyer', 'vendor', 'logistics_provider', 'tenant_admin', 'super_admin']} />}>
           <Route element={<AppLayout />}>
             <Route path="/quotes" element={<QuotesPage />} />
           </Route>
         </Route>
 
-        {/* Protected — buyers and vendor-managing roles */}
+        {/* Protected — vendor directory: buyers and admin-level roles */}
         <Route element={<ProtectedRoute roles={['buyer', 'tenant_admin', 'super_admin']} />}>
           <Route element={<AppLayout />}>
             <Route path="/vendors" element={<VendorsPage />} />
+          </Route>
+        </Route>
+
+        {/* Protected — vendor profile: providers can view their own profile */}
+        <Route element={<ProtectedRoute roles={['buyer', 'vendor', 'logistics_provider', 'tenant_admin', 'super_admin']} />}>
+          <Route element={<AppLayout />}>
             <Route path="/vendors/:id" element={<VendorProfilePage />} />
           </Route>
         </Route>
 
-        {/* Protected — vendors + admins (vendors need to see their own compliance status) */}
-        <Route element={<ProtectedRoute roles={['vendor', 'tenant_admin', 'super_admin']} />}>
+        {/* Protected — compliance: vendors + admins */}
+        <Route element={<ProtectedRoute roles={['vendor', 'logistics_provider', 'tenant_admin', 'super_admin']} />}>
           <Route element={<AppLayout />}>
             <Route path="/compliance" element={<CompliancePage />} />
           </Route>
         </Route>
 
-        {/* Protected — super_admin only */}
-        <Route element={<ProtectedRoute roles={['super_admin']} />}>
+        {/* Protected — admin panel: tenant_admin + super_admin */}
+        <Route element={<ProtectedRoute roles={['tenant_admin', 'super_admin']} />}>
           <Route element={<AppLayout />}>
             <Route path="/admin" element={<AdminPage />} />
           </Route>

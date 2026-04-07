@@ -18,13 +18,28 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/dashboard',  label: 'Dashboard',  icon: 'ph ph-chart-line-up' },
-  { to: '/orders',     label: 'Orders',     icon: 'ph ph-package' },
-  { to: '/quotes',     label: 'Quotes',     icon: 'ph ph-chat-dots',   roles: ['buyer', 'vendor', 'logistics_provider', 'tenant_admin', 'super_admin'] },
-  { to: '/documents',  label: 'Documents',  icon: 'ph ph-file-text' },
-  { to: '/vendors',    label: 'Vendors',    icon: 'ph ph-storefront',  roles: ['buyer', 'tenant_admin', 'super_admin'] },
-  { to: '/compliance', label: 'Compliance', icon: 'ph ph-shield-check', roles: ['vendor', 'tenant_admin', 'super_admin'] },
-  { to: '/admin',      label: 'Admin',      icon: 'ph ph-gear',        roles: ['super_admin'] },
+  // ── Buyer / Admin: main dashboard
+  { to: '/dashboard',          label: 'Dashboard',    icon: 'ph ph-chart-line-up', roles: ['buyer', 'tenant_admin', 'super_admin'] },
+  // ── Provider: their own dashboard
+  { to: '/provider/dashboard', label: 'Dashboard',    icon: 'ph ph-chart-line-up', roles: ['vendor', 'logistics_provider'] },
+  // ── Buyer & admins: orders
+  { to: '/orders',             label: 'Orders',       icon: 'ph ph-package',       roles: ['buyer', 'tenant_admin', 'super_admin'] },
+  // ── Providers: open RFQs they can bid on
+  { to: '/quotes',             label: 'Open RFQs',    icon: 'ph ph-list-magnifying-glass', roles: ['vendor', 'logistics_provider'] },
+  // ── Buyer & admins: quotes
+  { to: '/quotes',             label: 'Quotes',       icon: 'ph ph-chat-dots',     roles: ['buyer', 'tenant_admin', 'super_admin'] },
+  // ── Providers: their own quote history
+  { to: '/documents',          label: 'My Quotes',    icon: 'ph ph-chat-dots',     roles: ['vendor', 'logistics_provider'] },
+  // ── Providers: their catalogue
+  { to: '/vendors/' + 'me',    label: 'My Catalogue', icon: 'ph ph-storefront',    roles: ['vendor', 'logistics_provider'] },
+  // ── Everyone: documents
+  { to: '/documents',          label: 'Documents',    icon: 'ph ph-file-text' },
+  // ── Buyer & admins: vendor directory
+  { to: '/vendors',            label: 'Vendors',      icon: 'ph ph-buildings',     roles: ['buyer', 'tenant_admin', 'super_admin'] },
+  // ── Vendor & admins: compliance
+  { to: '/compliance',         label: 'Compliance',   icon: 'ph ph-shield-check',  roles: ['vendor', 'tenant_admin', 'super_admin'] },
+  // ── Admins only
+  { to: '/admin',              label: 'Admin Panel',  icon: 'ph ph-gear',          roles: ['tenant_admin', 'super_admin'] },
 ];
 
 export function NavBar(): React.JSX.Element {

@@ -8,15 +8,29 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import type { PlatformRole } from '@sbdmm/shared';
 
 interface LocationState {
   from?: { pathname: string };
 }
 
+function getRoleHome(role: PlatformRole): string {
+  switch (role) {
+    case 'vendor':
+    case 'logistics_provider':
+      return '/provider/dashboard';
+    case 'tenant_admin':
+    case 'super_admin':
+      return '/admin';
+    default:
+      return '/dashboard'; // buyer
+  }
+}
+
 export default function LoginPage(): React.JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, isAuthenticated, isLoading } = useAuth();
+  const { signIn, isAuthenticated, isLoading, profile } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,13 +39,16 @@ export default function LoginPage(): React.JSX.Element {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const locationState = location.state as LocationState | null;
-  const from = locationState?.from?.pathname ?? '/dashboard';
+  const from = locationState?.from?.pathname;
 
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate(from, { replace: true });
+    if (isAuthenticated && profile?.role) {
+      // If user was redirected here from a specific page, honour that;
+      // otherwise send them to their role-appropriate home.
+      const destination = from ?? getRoleHome(profile.role);
+      navigate(destination, { replace: true });
     }
-  }, [isAuthenticated, navigate, from]);
+  }, [isAuthenticated, profile, navigate, from]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
@@ -46,6 +63,7 @@ export default function LoginPage(): React.JSX.Element {
       if (result.error) {
         setError(result.error);
       }
+      // Navigation is handled by the useEffect above once profile is loaded
     } finally {
       setIsSubmitting(false);
     }
