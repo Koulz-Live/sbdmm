@@ -845,6 +845,32 @@ export default function LandingPage() {
               ))}
             </div>
 
+            {/* Portals */}
+            <div className="col-6 col-md-4 col-lg-2">
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: 13, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Portals</div>
+              <Link
+                to="/login"
+                style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748b', fontSize: 13, marginBottom: 12, textDecoration: 'none' }}
+              >
+                <i className="ph ph-storefront" style={{ color: '#299E60', fontSize: 15, flexShrink: 0 }} />
+                Vendor Login
+              </Link>
+              <Link
+                to="/login?role=admin"
+                style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748b', fontSize: 13, marginBottom: 12, textDecoration: 'none' }}
+              >
+                <i className="ph ph-shield-check" style={{ color: '#299E60', fontSize: 15, flexShrink: 0 }} />
+                Admin Login
+              </Link>
+              <Link
+                to="/login"
+                style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748b', fontSize: 13, marginBottom: 12, textDecoration: 'none' }}
+              >
+                <i className="ph ph-user-circle" style={{ color: '#299E60', fontSize: 15, flexShrink: 0 }} />
+                Buyer Login
+              </Link>
+            </div>
+
             {/* Contact */}
             <div className="col-md-4 col-lg-4">
               <div style={{ fontWeight: 700, color: '#fff', fontSize: 13, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Contact</div>
