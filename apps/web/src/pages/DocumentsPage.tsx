@@ -351,10 +351,37 @@ export default function DocumentsPage(): React.JSX.Element {
               Loading documents…
             </div>
           ) : docs.length === 0 ? (
-            <div className="text-center py-5" style={{ color: '#94a3b8' }}>
-              <i className="ph ph-files" style={{ fontSize: 40, display: 'block', marginBottom: 12 }} />
-              <p className="fw-semibold mb-1" style={{ color: '#64748b' }}>No documents uploaded yet.</p>
-              <p style={{ fontSize: 13 }}>Click "Upload Document" to get started.</p>
+            <div className="text-center py-5 px-4" style={{ color: '#94a3b8' }}>
+              <div
+                className="d-inline-flex align-items-center justify-content-center rounded-circle mb-20"
+                style={{ width: 72, height: 72, background: '#f0fdf4' }}
+              >
+                <i className="ph ph-files" style={{ fontSize: 36, color: '#299E60' }} />
+              </div>
+              <h3 className="fw-bold mb-8" style={{ fontSize: 16, color: '#0f172a' }}>No documents yet</h3>
+              <p style={{ fontSize: 13, color: '#64748b', maxWidth: 360, margin: '0 auto 20px', lineHeight: 1.6 }}>
+                Upload Bills of Lading, commercial invoices, customs declarations and other trade documents to keep your shipments compliant and organised.
+              </p>
+              <div className="d-flex flex-wrap justify-content-center gap-8 mb-28" style={{ fontSize: 12 }}>
+                {[
+                  { icon: 'ph-file-pdf', label: 'Bill of Lading', color: '#0369a1' },
+                  { icon: 'ph-receipt', label: 'Commercial Invoice', color: '#6d28d9' },
+                  { icon: 'ph-certificate', label: 'Certificate of Origin', color: '#b45309' },
+                  { icon: 'ph-stamp', label: 'Customs Declaration', color: '#0f172a' },
+                ].map(({ icon, label, color }) => (
+                  <span key={label} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 12px', color, fontWeight: 500 }}>
+                    <i className={`ph ${icon} me-1`} />{label}
+                  </span>
+                ))}
+              </div>
+              <button
+                onClick={() => { setShowUpload(true); setUploadSuccess(false); setFileError(null); }}
+                className="btn d-inline-flex align-items-center gap-8"
+                style={{ background: '#299E60', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 22px', fontWeight: 600, fontSize: 14 }}
+              >
+                <i className="ph ph-upload-simple" />
+                Upload your first document
+              </button>
             </div>
           ) : (
             <div className="table-responsive">

@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import type { PlatformRole } from '@sbdmm/shared';
 
@@ -219,6 +219,12 @@ export default function LoginPage(): React.JSX.Element {
                   </>
                 )}
               </button>
+
+              <div className="text-end mt-12">
+                <Link to="/forgot-password" style={{ color: '#299E60', fontSize: 13, fontWeight: 500, textDecoration: 'none' }}>
+                  Forgot password?
+                </Link>
+              </div>
             </form>
 
             <p className="text-center mt-24 mb-0" style={{ fontSize: 13, color: '#94a3b8' }}>

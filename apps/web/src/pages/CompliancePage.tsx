@@ -206,9 +206,28 @@ export default function CompliancePage(): React.JSX.Element {
                   <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" /> Loading…
                 </div>
               ) : results.length === 0 ? (
-                <div className="text-center py-5" style={{ color: '#94a3b8' }}>
-                  <i className="ph ph-shield-check" style={{ fontSize: 40, display: 'block', marginBottom: 12 }} />
-                  <p className="fw-semibold mb-1" style={{ color: '#64748b' }}>No compliance results yet.</p>
+                <div className="text-center py-5 px-4" style={{ color: '#94a3b8' }}>
+                  <div
+                    className="d-inline-flex align-items-center justify-content-center rounded-circle mb-20"
+                    style={{ width: 72, height: 72, background: '#f0fdf4' }}
+                  >
+                    <i className="ph ph-shield-check" style={{ fontSize: 36, color: '#299E60' }} />
+                  </div>
+                  <h3 className="fw-bold mb-8" style={{ fontSize: 16, color: '#0f172a' }}>All clear — no evaluations yet</h3>
+                  <p style={{ fontSize: 13, color: '#64748b', maxWidth: 400, margin: '0 auto 20px', lineHeight: 1.6 }}>
+                    Compliance evaluations are automatically triggered when orders are created or documents are uploaded.
+                    {isAdmin && <> You can also run a manual evaluation against any order using the button above.</>}
+                  </p>
+                  {isAdmin && (
+                    <button
+                      onClick={() => setShowTrigger(true)}
+                      className="btn d-inline-flex align-items-center gap-8"
+                      style={{ background: '#299E60', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 22px', fontWeight: 600, fontSize: 14 }}
+                    >
+                      <i className="ph ph-play-circle" />
+                      Run first evaluation
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="table-responsive">

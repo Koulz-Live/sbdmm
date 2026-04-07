@@ -9,12 +9,13 @@
  *
  * ROUTE MAP:
  *   /login                  → Public — LoginPage
+ *   /forgot-password        → Public — ForgotPasswordPage
  *   /unauthorized           → Public — UnauthorizedPage
  *   /                       → Public  — LandingPage (authenticated users auto-redirect by role)
  *   /dashboard              → Protected (buyer | tenant_admin | super_admin)
  *   /provider/dashboard     → Protected (vendor | logistics_provider)
  *   /orders                 → Protected (buyer | tenant_admin | super_admin)
- *   /orders/:id             → Protected (buyer | tenant_admin | super_admin)
+ *   /orders/:id             → Protected (buyer | tenant_admin | super_admin) — OrderDetailPage
  *   /quotes                 → Protected (buyer | vendor | logistics_provider | tenant_admin | super_admin)
  *   /documents              → Protected (any auth)
  *   /vendors                → Protected (buyer | tenant_admin | super_admin)
@@ -35,6 +36,7 @@ const DashboardPage   = lazy(() => import('./pages/DashboardPage'));
 const ProviderDashboardPage = lazy(() => import('./pages/ProviderDashboardPage'));
 const UnauthorizedPage = lazy(() => import('./pages/UnauthorizedPage'));
 const OrdersPage      = lazy(() => import('./pages/OrdersPage'));
+const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage'));
 const QuotesPage      = lazy(() => import('./pages/QuotesPage'));
 const DocumentsPage   = lazy(() => import('./pages/DocumentsPage'));
 const VendorsPage       = lazy(() => import('./pages/VendorsPage'));
@@ -42,6 +44,7 @@ const VendorMePage      = lazy(() => import('./pages/VendorMePage'));
 const VendorProfilePage = lazy(() => import('./pages/VendorProfilePage'));
 const CompliancePage  = lazy(() => import('./pages/CompliancePage'));
 const AdminPage       = lazy(() => import('./pages/AdminPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 
 function PageLoader(): React.JSX.Element {
   return (
@@ -56,16 +59,17 @@ export default function App(): React.JSX.Element {
     <Suspense fallback={<PageLoader />}>
       <Routes>
         {/* Public routes — no auth required, no layout shell */}
-        <Route path="/"             element={<LandingPage />} />
-        <Route path="/login"        element={<LoginPage />} />
-        <Route path="/unauthorized" element={<UnauthorizedPage />} />
+        <Route path="/"                  element={<LandingPage />} />
+        <Route path="/login"             element={<LoginPage />} />
+        <Route path="/forgot-password"   element={<ForgotPasswordPage />} />
+        <Route path="/unauthorized"      element={<UnauthorizedPage />} />
 
         {/* Protected — buyer + admins: main dashboard, orders, documents */}
         <Route element={<ProtectedRoute roles={['buyer', 'tenant_admin', 'super_admin']} />}>
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/orders"    element={<OrdersPage />} />
-            <Route path="/orders/:id" element={<OrdersPage />} />
+            <Route path="/orders/:id" element={<OrderDetailPage />} />
           </Route>
         </Route>
 

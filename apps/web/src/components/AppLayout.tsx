@@ -16,6 +16,7 @@
 import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { NavBar } from './NavBar';
+import { NotificationsDropdown } from './NotificationsDropdown';
 
 /** Map route paths → human-readable page titles for the top bar */
 const PAGE_TITLES: Record<string, string> = {
@@ -27,6 +28,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/vendors':            'Vendors',
   '/compliance':         'Compliance',
   '/admin':              'Admin Panel',
+  '/forgot-password':    'Reset Password',
 };
 
 export function AppLayout(): React.JSX.Element {
@@ -71,13 +73,7 @@ export function AppLayout(): React.JSX.Element {
 
           {/* Quick actions */}
           <div className="d-flex align-items-center gap-12">
-            <button
-              className="position-relative"
-              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 20 }}
-              aria-label="Notifications"
-            >
-              <i className="ph ph-bell" />
-            </button>
+            <NotificationsDropdown />
             <button
               style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 20 }}
               aria-label="Settings"

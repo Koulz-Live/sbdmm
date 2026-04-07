@@ -39,6 +39,7 @@ import { documentsRouter } from './routes/documents';
 import { complianceRouter } from './routes/compliance';
 import { integrationsRouter } from './routes/integrations';
 import { adminRouter } from './routes/admin';
+import { notificationsRouter } from './routes/notifications';
 import { aiRouter } from './ai/aiProxy.route';
 import { webhookRouter } from './webhooks/webhookVerifier';
 import { logger } from './lib/logger';
@@ -96,6 +97,7 @@ export function createApp() {
   app.use('/api/v1/compliance', complianceRouter);
   app.use('/api/v1/integrations', integrationsRouter);
   app.use('/api/v1/admin', adminRouter);
+  app.use('/api/v1/notifications', notificationsRouter);
   app.use('/api/v1/ai', aiRouter);
 
   // ─── 8. 404 Handler ─────────────────────────────────────────────────────────
