@@ -10,7 +10,7 @@
  * ROUTE MAP:
  *   /login                  → Public — LoginPage
  *   /unauthorized           → Public — UnauthorizedPage
- *   /                       → Protected (any auth) → redirect to /dashboard
+ *   /                       → Public  — LandingPage (authenticated users auto-redirect to /dashboard)
  *   /dashboard              → Protected (any auth)
  *   /orders                 → Protected (any auth)
  *   /orders/:id             → Protected (any auth)
@@ -27,6 +27,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { AppLayout } from './components/AppLayout';
 
 /* Lazy-load pages for code splitting — reduces initial bundle size */
+const LandingPage     = lazy(() => import('./pages/LandingPage'));
 const LoginPage       = lazy(() => import('./pages/LoginPage'));
 const DashboardPage   = lazy(() => import('./pages/DashboardPage'));
 const UnauthorizedPage = lazy(() => import('./pages/UnauthorizedPage'));
@@ -50,14 +51,14 @@ export default function App(): React.JSX.Element {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        {/* Public routes — no layout shell */}
+        {/* Public routes — no auth required, no layout shell */}
+        <Route path="/"             element={<LandingPage />} />
         <Route path="/login"        element={<LoginPage />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
         {/* Protected — any authenticated user, with NavBar layout */}
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
-            <Route path="/"          element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/orders"    element={<OrdersPage />} />
             <Route path="/orders/:id" element={<OrdersPage />} />

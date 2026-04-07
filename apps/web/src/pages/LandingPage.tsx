@@ -1,0 +1,924 @@
+/**
+ * LandingPage — Public marketing page at /
+ *
+ * Layout mirrors the MarketPro HomePageOne template:
+ *   - Fixed top-bar → sticky nav header
+ *   - Hero banner with CTA
+ *   - Features / service modes strip
+ *   - "Why SBDMM" value-prop section
+ *   - How it works steps
+ *   - Vendor / logistics stats
+ *   - Testimonials
+ *   - CTA banner
+ *   - Footer
+ *
+ * Uses only Bootstrap 5 + Phosphor icons (already in the bundle).
+ * Zero new npm dependencies.
+ */
+
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+
+// ─── Data ─────────────────────────────────────────────────────────────────────
+
+const SERVICE_MODES = [
+  { icon: 'ph-container',        label: 'FCL',     desc: 'Full Container Load' },
+  { icon: 'ph-package',          label: 'LCL',     desc: 'Less Container Load' },
+  { icon: 'ph-airplane',         label: 'Air',     desc: 'Express Air Freight' },
+  { icon: 'ph-truck',            label: 'Road',    desc: 'Road Haulage' },
+  { icon: 'ph-train',            label: 'Rail',    desc: 'Rail Freight' },
+  { icon: 'ph-lightning',        label: 'Courier', desc: 'Courier & Express' },
+  { icon: 'ph-anchor',           label: 'Project', desc: 'Project Cargo' },
+  { icon: 'ph-warehouse',        label: 'Storage', desc: 'Bonded Warehousing' },
+];
+
+const HOW_IT_WORKS = [
+  {
+    step: '01',
+    icon: 'ph-user-plus',
+    title: 'Create your account',
+    desc: 'Sign up as a buyer or logistics provider. Your workspace is isolated by tenant — your data stays yours.',
+  },
+  {
+    step: '02',
+    icon: 'ph-storefront',
+    title: 'Browse vendor catalogues',
+    desc: 'Explore FCL, LCL, air and road services from vetted logistics providers with transparent pricing.',
+  },
+  {
+    step: '03',
+    icon: 'ph-paper-plane-tilt',
+    title: 'Request & compare quotes',
+    desc: 'Send RFQs to multiple providers, compare responses side-by-side, and accept in one click.',
+  },
+  {
+    step: '04',
+    icon: 'ph-shield-check',
+    title: 'Automated compliance checks',
+    desc: 'Every vendor is assessed against trade compliance rules before you can award them a shipment.',
+  },
+];
+
+const STATS = [
+  { value: '500+', label: 'Logistics Providers' },
+  { value: '12K+', label: 'Shipments Managed' },
+  { value: '98%',  label: 'On-Time Delivery' },
+  { value: '40+',  label: 'Countries Covered' },
+];
+
+const TESTIMONIALS = [
+  {
+    quote: 'SBDMM cut our freight procurement cycle from three weeks to three days. The compliance engine alone saved us months of manual checks.',
+    name: 'Sarah Chen',
+    title: 'Head of Supply Chain, TechFlow Asia',
+    initials: 'SC',
+    color: '#299E60',
+  },
+  {
+    quote: 'As a freight forwarder, the vendor catalogue lets us showcase our lane expertise to buyers who would never have found us otherwise.',
+    name: 'Marcus Adeyemi',
+    title: 'Director, FastLane Logistics Nigeria',
+    initials: 'MA',
+    color: '#1d4ed8',
+  },
+  {
+    quote: 'The RFQ workflow is genuinely seamless. We compare six carriers in one screen, not six email threads.',
+    name: 'Priya Nair',
+    title: 'Procurement Manager, GlobalMed',
+    initials: 'PN',
+    color: '#7e22ce',
+  },
+];
+
+const NAV_LINKS = [
+  { label: 'Features',     href: '#features' },
+  { label: 'How It Works', href: '#how-it-works' },
+  { label: 'Vendors',      href: '#vendors' },
+  { label: 'Contact',      href: '#contact' },
+];
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function TopBar() {
+  return (
+    <div
+      style={{
+        background: '#1e293b',
+        color: '#94a3b8',
+        fontSize: 12,
+        padding: '8px 0',
+      }}
+    >
+      <div
+        className="container"
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}
+      >
+        <span className="d-flex align-items-center gap-6">
+          <i className="ph ph-phone" style={{ color: '#299E60' }} />
+          +1 (800) 123-4567
+          <span style={{ margin: '0 12px', opacity: 0.3 }}>|</span>
+          <i className="ph ph-envelope" style={{ color: '#299E60' }} />
+          hello@sbdmm.com
+        </span>
+        <span className="d-flex align-items-center gap-12">
+          {['ph-linkedin-logo', 'ph-twitter-logo', 'ph-facebook-logo'].map((ic) => (
+            <a key={ic} href="#" style={{ color: '#94a3b8' }}>
+              <i className={`ph ${ic}`} />
+            </a>
+          ))}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function StickyNav({ scrolled }: { scrolled: boolean }) {
+  return (
+    <header
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 1000,
+        background: '#fff',
+        boxShadow: scrolled ? '0 2px 20px rgba(0,0,0,0.08)' : '0 1px 0 #f1f5f9',
+        transition: 'box-shadow 0.2s',
+      }}
+    >
+      <div className="container">
+        <nav
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '14px 0',
+            gap: 16,
+          }}
+        >
+          {/* Logo */}
+          <a href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: '#299E60',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#fff',
+                fontWeight: 800,
+                fontSize: 16,
+              }}
+            >
+              S
+            </span>
+            <span style={{ fontWeight: 700, fontSize: 18, color: '#1e293b', letterSpacing: '-0.02em' }}>
+              SBDMM
+            </span>
+          </a>
+
+          {/* Nav links — desktop only */}
+          <div className="d-none d-lg-flex align-items-center gap-32">
+            {NAV_LINKS.map((l) => (
+              <a
+                key={l.href}
+                href={l.href}
+                style={{ fontSize: 14, fontWeight: 500, color: '#475569', textDecoration: 'none' }}
+                onMouseEnter={(e) => ((e.target as HTMLElement).style.color = '#299E60')}
+                onMouseLeave={(e) => ((e.target as HTMLElement).style.color = '#475569')}
+              >
+                {l.label}
+              </a>
+            ))}
+          </div>
+
+          {/* CTA buttons */}
+          <div className="d-flex align-items-center gap-8">
+            <Link
+              to="/login"
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: '#334155',
+                textDecoration: 'none',
+                padding: '8px 16px',
+                borderRadius: 8,
+                border: '1px solid #e2e8f0',
+              }}
+            >
+              Sign In
+            </Link>
+            <Link
+              to="/login"
+              className="d-none d-sm-inline-flex"
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: '#fff',
+                textDecoration: 'none',
+                padding: '8px 18px',
+                borderRadius: 8,
+                background: '#299E60',
+                border: 'none',
+              }}
+            >
+              Get Started <i className="ph ph-arrow-right ms-1" />
+            </Link>
+          </div>
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+export default function LandingPage() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const [scrolled, setScrolled] = useState(false);
+
+  // Authenticated users skip the landing page → dashboard
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, isLoading, navigate]);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span className="spinner-border" style={{ color: '#299E60', width: 40, height: 40 }} />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif", color: '#1e293b', overflowX: 'hidden' }}>
+      <TopBar />
+      <StickyNav scrolled={scrolled} />
+
+      {/* ── Hero ───────────────────────────────────────────────────────── */}
+      <section
+        style={{
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #064e3b 100%)',
+          padding: '80px 0 0',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* decorative blobs */}
+        <div style={{ position: 'absolute', top: -80, right: -80, width: 400, height: 400, background: '#299E6015', borderRadius: '50%' }} />
+        <div style={{ position: 'absolute', bottom: 0, left: -60, width: 280, height: 280, background: '#1d4ed808', borderRadius: '50%' }} />
+
+        <div className="container" style={{ position: 'relative' }}>
+          <div className="row align-items-center gy-5">
+            <div className="col-lg-6">
+              {/* Eyebrow */}
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  background: '#299E6020',
+                  border: '1px solid #299E6040',
+                  color: '#6ee7b7',
+                  borderRadius: 20,
+                  padding: '4px 14px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  letterSpacing: '0.04em',
+                  marginBottom: 24,
+                  textTransform: 'uppercase',
+                }}
+              >
+                <i className="ph ph-globe-hemisphere-west" /> Global Trade & Logistics Platform
+              </span>
+
+              <h1
+                style={{
+                  fontSize: 'clamp(2rem, 4vw, 3.25rem)',
+                  fontWeight: 800,
+                  color: '#fff',
+                  lineHeight: 1.15,
+                  marginBottom: 24,
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                Smarter Freight <br />
+                <span style={{ color: '#299E60' }}>Procurement</span>, <br />
+                Built for Global Trade.
+              </h1>
+
+              <p style={{ fontSize: 17, color: '#94a3b8', lineHeight: 1.7, marginBottom: 36, maxWidth: 500 }}>
+                Connect with vetted logistics providers, compare live quotes, automate
+                compliance checks, and manage every shipment from one workspace.
+              </p>
+
+              <div className="d-flex flex-wrap gap-12 mb-48">
+                <Link
+                  to="/login"
+                  style={{
+                    background: '#299E60',
+                    color: '#fff',
+                    fontWeight: 700,
+                    fontSize: 15,
+                    padding: '14px 28px',
+                    borderRadius: 10,
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    boxShadow: '0 4px 20px rgba(41,158,96,0.4)',
+                  }}
+                >
+                  Start for Free <i className="ph ph-arrow-right" />
+                </Link>
+                <a
+                  href="#how-it-works"
+                  style={{
+                    background: 'rgba(255,255,255,0.08)',
+                    color: '#e2e8f0',
+                    fontWeight: 600,
+                    fontSize: 15,
+                    padding: '14px 28px',
+                    borderRadius: 10,
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    border: '1px solid rgba(255,255,255,0.12)',
+                  }}
+                >
+                  <i className="ph ph-play-circle" /> See How It Works
+                </a>
+              </div>
+
+              {/* Trust bar */}
+              <div className="d-flex flex-wrap gap-20" style={{ fontSize: 13, color: '#64748b' }}>
+                {['No credit card required', 'SOC 2 Type II ready', 'GDPR compliant'].map((t) => (
+                  <span key={t} className="d-flex align-items-center gap-6">
+                    <i className="ph ph-check-circle" style={{ color: '#299E60', fontSize: 16 }} />
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Hero image — platform mockup */}
+            <div className="col-lg-6 d-flex justify-content-center">
+              <div
+                style={{
+                  width: '100%',
+                  maxWidth: 540,
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 20,
+                  padding: 20,
+                  backdropFilter: 'blur(10px)',
+                }}
+              >
+                {/* Fake browser chrome */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
+                  {['#ef4444', '#f59e0b', '#10b981'].map((c) => (
+                    <span key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c }} />
+                  ))}
+                  <span style={{ flex: 1, height: 28, borderRadius: 6, background: 'rgba(255,255,255,0.06)', marginLeft: 8, display: 'flex', alignItems: 'center', paddingLeft: 12, fontSize: 11, color: '#475569' }}>
+                    sbdmm.vercel.app/dashboard
+                  </span>
+                </div>
+
+                {/* Mini dashboard preview */}
+                <div style={{ background: '#f1f5f9', borderRadius: 12, overflow: 'hidden' }}>
+                  {/* Sidebar strip */}
+                  <div style={{ display: 'flex', height: 260 }}>
+                    <div style={{ width: 48, background: '#1e293b', padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
+                      {['ph-squares-four', 'ph-package', 'ph-storefront', 'ph-file-text', 'ph-shield-check'].map((ic) => (
+                        <i key={ic} className={`ph ${ic}`} style={{ fontSize: 18, color: '#64748b' }} />
+                      ))}
+                    </div>
+                    <div style={{ flex: 1, padding: 16 }}>
+                      {/* Stat cards row */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+                        {[
+                          { label: 'Active Vendors', val: '24', color: '#299E60' },
+                          { label: 'Open Quotes', val: '8', color: '#1d4ed8' },
+                          { label: 'In Transit', val: '31', color: '#7e22ce' },
+                          { label: 'Compliance OK', val: '96%', color: '#0f766e' },
+                        ].map((s) => (
+                          <div key={s.label} style={{ background: '#fff', borderRadius: 8, padding: 10, borderLeft: `3px solid ${s.color}` }}>
+                            <div style={{ fontSize: 18, fontWeight: 700, color: s.color }}>{s.val}</div>
+                            <div style={{ fontSize: 10, color: '#64748b' }}>{s.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Fake table rows */}
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} style={{ background: '#fff', borderRadius: 6, height: 28, marginBottom: 6, padding: '0 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: i === 1 ? '#299E60' : i === 2 ? '#f59e0b' : '#3b82f6', flexShrink: 0 }} />
+                          <span style={{ height: 8, borderRadius: 4, background: '#e2e8f0', flex: 1 }} />
+                          <span style={{ height: 8, borderRadius: 4, background: '#e2e8f0', width: 40 }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Wave divider */}
+        <svg viewBox="0 0 1440 60" style={{ display: 'block', marginTop: 60 }} preserveAspectRatio="none">
+          <path d="M0,60 C360,0 1080,0 1440,60 L1440,60 L0,60 Z" fill="#f8fafc" />
+        </svg>
+      </section>
+
+      {/* ── Stats strip ────────────────────────────────────────────────── */}
+      <section style={{ background: '#f8fafc', paddingBottom: 60 }}>
+        <div className="container">
+          <div className="row gy-4">
+            {STATS.map((s) => (
+              <div key={s.label} className="col-6 col-md-3 text-center">
+                <div style={{ fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', fontWeight: 800, color: '#299E60', lineHeight: 1 }}>
+                  {s.value}
+                </div>
+                <div style={{ fontSize: 13, color: '#64748b', marginTop: 4, fontWeight: 500 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Service modes ──────────────────────────────────────────────── */}
+      <section id="features" style={{ padding: '80px 0', background: '#fff' }}>
+        <div className="container">
+          <div className="text-center mb-48">
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#299E60', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Service Modes
+            </span>
+            <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', fontWeight: 800, color: '#1e293b', marginTop: 8 }}>
+              Every mode of transport, one platform
+            </h2>
+            <p style={{ fontSize: 15, color: '#64748b', maxWidth: 540, margin: '12px auto 0' }}>
+              From 40HQ containers to next-day courier — SBDMM connects you with
+              specialists across all freight modes.
+            </p>
+          </div>
+
+          <div className="row g-3">
+            {SERVICE_MODES.map((m) => (
+              <div key={m.label} className="col-6 col-sm-4 col-lg-3">
+                <div
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 16,
+                    padding: '28px 16px',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    const el = e.currentTarget;
+                    el.style.background = '#f0fdf4';
+                    el.style.borderColor = '#299E60';
+                    el.style.transform = 'translateY(-4px)';
+                    el.style.boxShadow = '0 8px 24px rgba(41,158,96,0.12)';
+                  }}
+                  onMouseLeave={(e) => {
+                    const el = e.currentTarget;
+                    el.style.background = '#f8fafc';
+                    el.style.borderColor = '#e2e8f0';
+                    el.style.transform = '';
+                    el.style.boxShadow = '';
+                  }}
+                >
+                  <i
+                    className={`ph ${m.icon}`}
+                    style={{ fontSize: 40, color: '#299E60', display: 'block', marginBottom: 12 }}
+                  />
+                  <div style={{ fontWeight: 700, fontSize: 15, color: '#1e293b' }}>{m.label}</div>
+                  <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>{m.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── How it works ───────────────────────────────────────────────── */}
+      <section id="how-it-works" style={{ padding: '80px 0', background: '#f8fafc' }}>
+        <div className="container">
+          <div className="text-center mb-48">
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#299E60', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              How It Works
+            </span>
+            <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', fontWeight: 800, color: '#1e293b', marginTop: 8 }}>
+              From RFQ to shipment in four steps
+            </h2>
+          </div>
+
+          <div className="row g-4">
+            {HOW_IT_WORKS.map((step, i) => (
+              <div key={step.step} className="col-md-6 col-lg-3">
+                <div
+                  style={{
+                    background: '#fff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 16,
+                    padding: 28,
+                    height: '100%',
+                    position: 'relative',
+                  }}
+                >
+                  {/* Connector line on desktop */}
+                  {i < HOW_IT_WORKS.length - 1 && (
+                    <div
+                      className="d-none d-lg-block"
+                      style={{
+                        position: 'absolute',
+                        top: 36,
+                        right: -24,
+                        width: 24,
+                        height: 2,
+                        background: '#e2e8f0',
+                        zIndex: 1,
+                      }}
+                    />
+                  )}
+                  <div
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 12,
+                      background: '#f0fdf4',
+                      border: '1px solid #bbf7d0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: 16,
+                    }}
+                  >
+                    <i className={`ph ${step.icon}`} style={{ fontSize: 24, color: '#299E60' }} />
+                  </div>
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: 16,
+                      right: 20,
+                      fontSize: 36,
+                      fontWeight: 800,
+                      color: '#f1f5f9',
+                      lineHeight: 1,
+                    }}
+                  >
+                    {step.step}
+                  </span>
+                  <h5 style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 10 }}>
+                    {step.title}
+                  </h5>
+                  <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, margin: 0 }}>
+                    {step.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Value props ────────────────────────────────────────────────── */}
+      <section id="vendors" style={{ padding: '80px 0', background: '#fff' }}>
+        <div className="container">
+          <div className="row align-items-center gy-5">
+            {/* Left — content */}
+            <div className="col-lg-6">
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#299E60', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Why SBDMM
+              </span>
+              <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', fontWeight: 800, color: '#1e293b', marginTop: 8, marginBottom: 24 }}>
+                Built for the complexity of global trade
+              </h2>
+              {[
+                { icon: 'ph-shield-check', title: 'Automated Compliance', desc: 'Every vendor passes a multi-point trade compliance check — sanctions screening, AML, and document validation — before you can award them a booking.' },
+                { icon: 'ph-chart-bar', title: 'Live Quote Comparison', desc: 'Receive structured quotes from multiple carriers on a single screen. Compare on price, transit time, and service mode — not PDFs in your inbox.' },
+                { icon: 'ph-lock-simple', title: 'Tenant Isolation', desc: 'Your vendor relationships, orders, and documents are strictly isolated by tenant. Row-level security enforced at the database layer.' },
+                { icon: 'ph-files', title: 'Document Management', desc: 'Centralise Bills of Lading, packing lists, and certificates of origin. Linked to the shipment they belong to.' },
+              ].map((f) => (
+                <div key={f.title} className="d-flex gap-16 mb-24">
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      background: '#f0fdf4',
+                      border: '1px solid #bbf7d0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <i className={`ph ${f.icon}`} style={{ fontSize: 22, color: '#299E60' }} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: '#1e293b', marginBottom: 4 }}>{f.title}</div>
+                    <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>{f.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Right — feature cards */}
+            <div className="col-lg-6">
+              <div className="row g-3">
+                {[
+                  { icon: 'ph-globe', title: '40+ Countries', sub: 'Logistics network coverage', color: '#eff6ff', iconColor: '#1d4ed8' },
+                  { icon: 'ph-clock-countdown', title: 'Real-time Updates', sub: 'Live shipment tracking', color: '#fdf4ff', iconColor: '#7e22ce' },
+                  { icon: 'ph-currency-dollar', title: 'FX-Aware Pricing', sub: 'Multi-currency quotes', color: '#fff7ed', iconColor: '#c2410c' },
+                  { icon: 'ph-bell-ringing', title: 'Smart Alerts', sub: 'Compliance & delay notifications', color: '#f0fdfa', iconColor: '#0f766e' },
+                  { icon: 'ph-users-three', title: 'Team Roles', sub: 'Buyer, vendor, admin access', color: '#fefce8', iconColor: '#a16207' },
+                  { icon: 'ph-chart-line-up', title: 'Analytics', sub: 'Spend & performance insights', color: '#f0fdf4', iconColor: '#15803d' },
+                ].map((c) => (
+                  <div key={c.title} className="col-6">
+                    <div
+                      style={{
+                        background: c.color,
+                        borderRadius: 14,
+                        padding: 20,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 8,
+                      }}
+                    >
+                      <i className={`ph ${c.icon}`} style={{ fontSize: 28, color: c.iconColor }} />
+                      <div style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>{c.title}</div>
+                      <div style={{ fontSize: 12, color: '#64748b' }}>{c.sub}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Testimonials ───────────────────────────────────────────────── */}
+      <section style={{ padding: '80px 0', background: '#f8fafc' }}>
+        <div className="container">
+          <div className="text-center mb-48">
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#299E60', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Testimonials
+            </span>
+            <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', fontWeight: 800, color: '#1e293b', marginTop: 8 }}>
+              Trusted by logistics teams worldwide
+            </h2>
+          </div>
+          <div className="row g-4">
+            {TESTIMONIALS.map((t) => (
+              <div key={t.name} className="col-md-4">
+                <div
+                  style={{
+                    background: '#fff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 16,
+                    padding: 28,
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }}
+                >
+                  <div style={{ marginBottom: 16 }}>
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <i key={s} className="ph-fill ph-star" style={{ color: '#f59e0b', fontSize: 14 }} />
+                    ))}
+                  </div>
+                  <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.7, flex: 1, marginBottom: 20, fontStyle: 'italic' }}>
+                    "{t.quote}"
+                  </p>
+                  <div className="d-flex align-items-center gap-12">
+                    <div
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: '50%',
+                        background: t.color,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        fontWeight: 700,
+                        fontSize: 15,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {t.initials}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>{t.name}</div>
+                      <div style={{ fontSize: 12, color: '#94a3b8' }}>{t.title}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA Banner ─────────────────────────────────────────────────── */}
+      <section
+        style={{
+          background: 'linear-gradient(135deg, #064e3b 0%, #1e293b 100%)',
+          padding: '80px 0',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ position: 'absolute', top: -100, right: -100, width: 400, height: 400, background: '#299E6015', borderRadius: '50%' }} />
+        <div className="container text-center" style={{ position: 'relative' }}>
+          <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.5rem)', fontWeight: 800, color: '#fff', marginBottom: 16 }}>
+            Ready to modernise your freight procurement?
+          </h2>
+          <p style={{ fontSize: 16, color: '#94a3b8', marginBottom: 36, maxWidth: 520, margin: '0 auto 36px' }}>
+            Join hundreds of trade teams already using SBDMM to move goods faster, smarter, and with full compliance confidence.
+          </p>
+          <div className="d-flex flex-wrap justify-content-center gap-12">
+            <Link
+              to="/login"
+              style={{
+                background: '#299E60',
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: 15,
+                padding: '14px 32px',
+                borderRadius: 10,
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                boxShadow: '0 4px 20px rgba(41,158,96,0.4)',
+              }}
+            >
+              Get started free <i className="ph ph-arrow-right" />
+            </Link>
+            <a
+              href="#contact"
+              style={{
+                background: 'rgba(255,255,255,0.08)',
+                color: '#e2e8f0',
+                fontWeight: 600,
+                fontSize: 15,
+                padding: '14px 32px',
+                borderRadius: 10,
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                border: '1px solid rgba(255,255,255,0.15)',
+              }}
+            >
+              <i className="ph ph-chats" /> Talk to sales
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Footer ─────────────────────────────────────────────────────── */}
+      <footer id="contact" style={{ background: '#0f172a', padding: '60px 0 0' }}>
+        <div className="container">
+          <div className="row gy-5 mb-40">
+            {/* Brand */}
+            <div className="col-lg-4">
+              <a href="/" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                <span style={{ width: 36, height: 36, borderRadius: 10, background: '#299E60', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 16 }}>
+                  S
+                </span>
+                <span style={{ fontWeight: 700, fontSize: 18, color: '#fff' }}>SBDMM</span>
+              </a>
+              <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7, maxWidth: 300, marginBottom: 24 }}>
+                A multi-tenant trade and logistics management platform. Helping global trade teams procure freight smarter.
+              </p>
+              <div className="d-flex gap-12">
+                {['ph-linkedin-logo', 'ph-twitter-logo', 'ph-github-logo'].map((ic) => (
+                  <a
+                    key={ic}
+                    href="#"
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 8,
+                      background: '#1e293b',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#64748b',
+                      fontSize: 16,
+                    }}
+                  >
+                    <i className={`ph ${ic}`} />
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            {/* Links */}
+            <div className="col-6 col-md-4 col-lg-2">
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: 13, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Platform</div>
+              {['Dashboard', 'Orders', 'Vendors', 'Quotes', 'Documents', 'Compliance'].map((l) => (
+                <a key={l} href="/login" style={{ display: 'block', color: '#64748b', fontSize: 13, marginBottom: 10, textDecoration: 'none' }}>{l}</a>
+              ))}
+            </div>
+
+            <div className="col-6 col-md-4 col-lg-2">
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: 13, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Company</div>
+              {['About', 'Blog', 'Careers', 'Press', 'Partners'].map((l) => (
+                <a key={l} href="#" style={{ display: 'block', color: '#64748b', fontSize: 13, marginBottom: 10, textDecoration: 'none' }}>{l}</a>
+              ))}
+            </div>
+
+            {/* Contact */}
+            <div className="col-md-4 col-lg-4">
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: 13, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Contact</div>
+              {[
+                { icon: 'ph-envelope', text: 'hello@sbdmm.com' },
+                { icon: 'ph-phone', text: '+1 (800) 123-4567' },
+                { icon: 'ph-map-pin', text: '789 Inner Lane, California, USA' },
+              ].map((c) => (
+                <div key={c.icon} className="d-flex align-items-start gap-10 mb-14">
+                  <i className={`ph ${c.icon}`} style={{ color: '#299E60', fontSize: 16, marginTop: 1, flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, color: '#64748b' }}>{c.text}</span>
+                </div>
+              ))}
+
+              {/* Newsletter */}
+              <div style={{ marginTop: 24 }}>
+                <div style={{ fontWeight: 600, color: '#94a3b8', fontSize: 12, marginBottom: 10 }}>Stay updated</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="email"
+                    placeholder="your@email.com"
+                    style={{
+                      flex: 1,
+                      background: '#1e293b',
+                      border: '1px solid #334155',
+                      borderRadius: 8,
+                      padding: '8px 12px',
+                      fontSize: 13,
+                      color: '#e2e8f0',
+                      outline: 'none',
+                    }}
+                  />
+                  <button
+                    style={{
+                      background: '#299E60',
+                      border: 'none',
+                      borderRadius: 8,
+                      padding: '8px 14px',
+                      color: '#fff',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <i className="ph ph-paper-plane-tilt" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom bar */}
+          <div
+            style={{
+              borderTop: '1px solid #1e293b',
+              padding: '20px 0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 8,
+            }}
+          >
+            <span style={{ fontSize: 12, color: '#475569' }}>
+              © {new Date().getFullYear()} SBDMM. All rights reserved.
+            </span>
+            <div className="d-flex gap-20">
+              {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((l) => (
+                <a key={l} href="#" style={{ fontSize: 12, color: '#475569', textDecoration: 'none' }}>{l}</a>
+              ))}
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
