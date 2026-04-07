@@ -15,7 +15,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/apiClient';
-import type { Quote, QuoteStatus, PaginationMeta } from '@sbdmm/shared';
+import type { Quote, QuoteStatus, PaginationMeta, Order } from '@sbdmm/shared';
 
 interface QuoteRow extends Quote {
   order_title?: string;
@@ -60,6 +60,14 @@ function formatCurrency(amount: number, currency: string): string {
 
 // ─── Submit Quote Form ────────────────────────────────────────────────────────
 
+interface OpenOrder {
+  id: string;
+  reference_number: string;
+  origin_location: string;
+  destination_location: string;
+  cargo_type: string;
+}
+
 interface SubmitFormProps { onSuccess: () => void; onCancel: () => void; }
 
 function SubmitQuoteForm({ onSuccess, onCancel }: SubmitFormProps): React.JSX.Element {
@@ -71,6 +79,35 @@ function SubmitQuoteForm({ onSuccess, onCancel }: SubmitFormProps): React.JSX.El
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Fetch open orders that can be quoted on
+  const [openOrders, setOpenOrders] = useState<OpenOrder[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async (): Promise<void> => {
+      setLoadingOrders(true);
+      // Fetch up to 100 orders — providers see all tenant orders in pending_quote/draft status
+      const res = await api.get<{ data: Order[] }>('/api/v1/orders?page=1&per_page=100');
+      if (cancelled) return;
+      if (res.success && res.data) {
+        const pending = (res.data.data ?? []).filter(
+          o => o.status === 'pending_quote' || o.status === 'draft' || o.status === 'quoted'
+        );
+        setOpenOrders(pending.map(o => ({
+          id: o.id,
+          reference_number: o.reference_number,
+          origin_location: o.origin_location,
+          destination_location: o.destination_location,
+          cargo_type: o.cargo_type,
+        })));
+      }
+      setLoadingOrders(false);
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, []);
 
   function validate(): boolean {
     const e: Partial<SubmitQuoteForm> = {};
@@ -124,9 +161,32 @@ function SubmitQuoteForm({ onSuccess, onCancel }: SubmitFormProps): React.JSX.El
       )}
       <div className="row g-3">
         <div className="col-12">
-          <label className="form-label fw-semibold" style={{ fontSize: 13 }}>Order ID <span style={{ color: '#dc2626' }}>*</span></label>
-          <input type="text" className={inputCls} style={inputStyle} value={form.order_id}
-            onChange={e => setForm(f => ({ ...f, order_id: e.target.value }))} placeholder="UUID of the order you are quoting" />
+          <label className="form-label fw-semibold" style={{ fontSize: 13 }}>Order <span style={{ color: '#dc2626' }}>*</span></label>
+          {loadingOrders ? (
+            <div className="d-flex align-items-center gap-8" style={{ color: '#64748b', fontSize: 13 }}>
+              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
+              Loading available orders…
+            </div>
+          ) : openOrders.length === 0 ? (
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#64748b' }}>
+              <i className="ph ph-info me-2" />
+              No open orders available to quote at this time. Check back later.
+            </div>
+          ) : (
+            <select
+              className="form-select"
+              style={{ borderRadius: 8, fontSize: 14, borderColor: '#cbd5e1' }}
+              value={form.order_id}
+              onChange={e => setForm(f => ({ ...f, order_id: e.target.value }))}
+            >
+              <option value="">— Select an order —</option>
+              {openOrders.map(o => (
+                <option key={o.id} value={o.id}>
+                  {o.reference_number} · {o.origin_location} → {o.destination_location} ({o.cargo_type})
+                </option>
+              ))}
+            </select>
+          )}
           {errors.order_id && <div style={{ color: '#b91c1c', fontSize: 12, marginTop: 3 }}>{errors.order_id}</div>}
         </div>
 

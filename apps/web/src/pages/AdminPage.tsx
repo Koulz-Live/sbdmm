@@ -1,9 +1,9 @@
 /**
- * AdminPage — Super-admin platform console.
+ * AdminPage — Platform administration console.
  *
- * Accessible only to users with role = 'super_admin'.
+ * Accessible to tenant_admin and super_admin roles.
  * Route guard at the router level already blocks other roles;
- * the backend enforces super_admin on every endpoint independently.
+ * the backend enforces role checks on every endpoint independently.
  *
  * Tabs: Tenants | Users | Audit Log
  */
@@ -400,8 +400,8 @@ export default function AdminPage(): React.JSX.Element {
       <div className="mb-4">
         <h1 className="fw-bold mb-1" style={{ fontSize: 22, color: '#0f172a' }}>Platform Admin</h1>
         <p className="mb-0" style={{ fontSize: 14, color: '#64748b' }}>
-          <i className="ph ph-shield-warning me-1" style={{ color: '#b91c1c' }} />
-          Super-admin console — all actions are logged to the audit trail.
+          <i className="ph ph-shield-warning me-1" style={{ color: '#b45309' }} />
+          Admin console — all actions are audit-logged and role-scoped.
         </p>
       </div>
 

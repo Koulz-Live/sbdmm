@@ -68,10 +68,50 @@ router.get(
   },
 );
 
+// ─── GET /api/v1/vendors/me ───────────────────────────────────────────────────
+// Returns the vendor record that belongs to the authenticated vendor/provider.
+// This must be declared BEFORE /:id so Express doesn't treat "me" as a UUID.
+router.get(
+  '/me',
+  requireRole(['vendor', 'logistics_provider']),
+  async (req: Request, res: Response): Promise<void> => {
+    const log = createChildLogger({ request_id: req.requestId });
+    const supabase = getAdminClient();
+    const actor = req.user!;
+
+    // Find the vendor record onboarded by this user within their tenant
+    const { data, error } = await supabase
+      .from('vendors')
+      .select('*')
+      .eq('tenant_id', actor.tenant_id)
+      .eq('onboarded_by', actor.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error || !data) {
+      log.info('[VENDORS] /me — no vendor record found for user', { user_id: actor.id });
+      // Return 404 so the frontend can redirect to onboarding
+      res.status(404).json({
+        success: false,
+        error: { code: ERROR_CODES.NOT_FOUND, message: 'No vendor profile found for your account.' },
+        meta: { request_id: req.requestId, timestamp: new Date().toISOString() },
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      data,
+      meta: { request_id: req.requestId, timestamp: new Date().toISOString() },
+    });
+  },
+);
+
 // ─── GET /api/v1/vendors/:id ──────────────────────────────────────────────────
 router.get(
   '/:id',
-  requireRole(['tenant_admin', 'super_admin', 'buyer', 'logistics_provider']),
+  requireRole(['tenant_admin', 'super_admin', 'buyer', 'logistics_provider', 'vendor']),
   validate(vendorParamsSchema, 'params'),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });

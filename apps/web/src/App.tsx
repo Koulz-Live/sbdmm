@@ -38,6 +38,7 @@ const OrdersPage      = lazy(() => import('./pages/OrdersPage'));
 const QuotesPage      = lazy(() => import('./pages/QuotesPage'));
 const DocumentsPage   = lazy(() => import('./pages/DocumentsPage'));
 const VendorsPage       = lazy(() => import('./pages/VendorsPage'));
+const VendorMePage      = lazy(() => import('./pages/VendorMePage'));
 const VendorProfilePage = lazy(() => import('./pages/VendorProfilePage'));
 const CompliancePage  = lazy(() => import('./pages/CompliancePage'));
 const AdminPage       = lazy(() => import('./pages/AdminPage'));
@@ -93,6 +94,13 @@ export default function App(): React.JSX.Element {
         <Route element={<ProtectedRoute roles={['buyer', 'tenant_admin', 'super_admin']} />}>
           <Route element={<AppLayout />}>
             <Route path="/vendors" element={<VendorsPage />} />
+          </Route>
+        </Route>
+
+        {/* Protected — /vendors/me: resolves vendor's own profile (MUST be before /:id) */}
+        <Route element={<ProtectedRoute roles={['vendor', 'logistics_provider']} />}>
+          <Route element={<AppLayout />}>
+            <Route path="/vendors/me" element={<VendorMePage />} />
           </Route>
         </Route>
 

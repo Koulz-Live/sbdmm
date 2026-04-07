@@ -139,11 +139,11 @@ export default function ProviderDashboardPage(): React.JSX.Element {
           <div className="col-xl col-lg-6 col-md-6">
             <StatCard
               label="Open RFQs"
-              value={stats.open_quotes}
+              value={stats.pending_orders}
               icon="ph ph-list-magnifying-glass"
               iconBg="#eff6ff"
               iconColor="#2563eb"
-              sublabel="Requests you can bid on"
+              sublabel="Orders waiting for quotes"
             />
           </div>
           <div className="col-xl col-lg-6 col-md-6">
@@ -153,7 +153,7 @@ export default function ProviderDashboardPage(): React.JSX.Element {
               icon="ph ph-chat-dots"
               iconBg="#faf5ff"
               iconColor="#7c3aed"
-              sublabel="Quotes awaiting decision"
+              sublabel="Awaiting buyer decision"
             />
           </div>
           <div className="col-xl col-lg-6 col-md-6">
