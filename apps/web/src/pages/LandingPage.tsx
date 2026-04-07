@@ -27,6 +27,17 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import type { PlatformRole } from '@sbdmm/shared';
+
+function getRoleHome(role: PlatformRole): string {
+  switch (role) {
+    case 'vendor':
+    case 'logistics_provider': return '/provider/dashboard';
+    case 'tenant_admin':
+    case 'super_admin':        return '/admin';
+    default:                   return '/dashboard';
+  }
+}
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -308,16 +319,16 @@ function StickyNav({ scrolled }: { scrolled: boolean }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, profile } = useAuth();
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
 
-  // Authenticated users skip the landing page
+  // Authenticated users skip the landing page — redirect to their role home
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      navigate('/dashboard', { replace: true });
+    if (!isLoading && isAuthenticated && profile?.role) {
+      navigate(getRoleHome(profile.role), { replace: true });
     }
-  }, [isAuthenticated, isLoading, navigate]);
+  }, [isAuthenticated, isLoading, profile, navigate]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
