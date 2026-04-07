@@ -120,78 +120,135 @@ export default function VendorsPage(): React.JSX.Element {
   };
 
   return (
-    <div style={{ padding: 'var(--space-8)' }}>
+    <>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
-        <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 700 }}>Vendors</h1>
+      <div className="d-flex align-items-center justify-content-between mb-24">
+        <div />
         {isAdmin && (
-          <VButton onClick={() => { setShowModal(true); setFormError(null); setFormSuccess(false); }}>
-            + Onboard Vendor
-          </VButton>
+          <button
+            onClick={() => { setShowModal(true); setFormError(null); setFormSuccess(false); }}
+            className="btn d-flex align-items-center gap-8"
+            style={{ background: '#299E60', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500 }}
+          >
+            <i className="ph ph-plus" />
+            Onboard Vendor
+          </button>
         )}
       </div>
 
-      {error && <ErrorBanner message={error} />}
+      {/* Error */}
+      {error && (
+        <div role="alert" className="alert alert-danger d-flex align-items-center gap-8 mb-20" style={{ borderRadius: 10, fontSize: 14 }}>
+          <i className="ph ph-warning-circle" style={{ fontSize: 18 }} />
+          {error}
+        </div>
+      )}
 
+      {/* Vendor card grid */}
       {isLoading ? (
-        <LoadingState label="Loading vendors…" />
+        <div className="d-flex align-items-center justify-content-center py-64" aria-live="polite" aria-busy="true">
+          <div className="spinner-border" style={{ color: '#299E60' }} role="status">
+            <span className="visually-hidden">Loading vendors…</span>
+          </div>
+        </div>
       ) : vendors.length === 0 ? (
-        <EmptyState label="No vendors found. Use 'Onboard Vendor' to add the first one." />
+        <div className="d-flex flex-column align-items-center justify-content-center py-64 text-center">
+          <div className="d-inline-flex align-items-center justify-content-center rounded-circle mb-16" style={{ width: 64, height: 64, background: '#f1f5f9' }}>
+            <i className="ph ph-storefront" style={{ fontSize: 28, color: '#94a3b8' }} />
+          </div>
+          <p className="fw-semibold mb-4" style={{ color: '#374151' }}>No vendors yet</p>
+          <p style={{ color: '#94a3b8', fontSize: 13 }}>Use "Onboard Vendor" to add the first one.</p>
+        </div>
       ) : (
         <>
-          <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}>
-                  <Th>Company</Th>
-                  <Th>Category</Th>
-                  <Th>Country</Th>
-                  <Th>Status</Th>
-                  <Th>Compliance</Th>
-                  {isAdmin && <Th>Actions</Th>}
-                </tr>
-              </thead>
-              <tbody>
-                {vendors.map((vendor) => (
-                  <tr key={vendor.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                    <Td>
-                      <div style={{ fontWeight: 500 }}>{vendor.company_name}</div>
-                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>{vendor.contact_email}</div>
-                    </Td>
-                    <Td>{vendor.business_category.replace(/_/g, ' ')}</Td>
-                    <Td>{vendor.country_of_registration}</Td>
-                    <Td><VendorStatusBadge status={vendor.status} /></Td>
-                    <Td><ComplianceBadge status={vendor.compliance_status} /></Td>
+          <div className="row g-20 mb-24">
+            {vendors.map((vendor) => (
+              <div key={vendor.id} className="col-xl-3 col-lg-4 col-md-6">
+                <div className="card border-0 shadow-sm h-100" style={{ borderRadius: 12, transition: 'transform 0.15s, box-shadow 0.15s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}
+                >
+                  <div className="card-body p-20">
+                    {/* Vendor logo placeholder */}
+                    <div className="d-flex align-items-center gap-12 mb-16">
+                      <div
+                        className="d-flex align-items-center justify-content-center rounded-circle fw-bold text-white flex-shrink-0"
+                        style={{ width: 48, height: 48, background: '#299E60', fontSize: 18 }}
+                      >
+                        {vendor.company_name.charAt(0).toUpperCase()}
+                      </div>
+                      <div style={{ overflow: 'hidden' }}>
+                        <div className="fw-semibold text-truncate" style={{ fontSize: 14, color: '#0f172a' }}>{vendor.company_name}</div>
+                        <div style={{ fontSize: 12, color: '#64748b' }}>{vendor.business_category.replace(/_/g, ' ')}</div>
+                      </div>
+                    </div>
+
+                    <div className="d-flex align-items-center gap-6 mb-8" style={{ fontSize: 12, color: '#64748b' }}>
+                      <i className="ph ph-map-pin" />
+                      {vendor.country_of_registration}
+                    </div>
+                    <div className="d-flex align-items-center gap-6 mb-16" style={{ fontSize: 12, color: '#64748b' }}>
+                      <i className="ph ph-envelope" />
+                      <span className="text-truncate">{vendor.contact_email}</span>
+                    </div>
+
+                    <div className="d-flex align-items-center gap-8 flex-wrap mb-12">
+                      <VendorStatusBadge status={vendor.status} />
+                      <ComplianceBadge status={vendor.compliance_status} />
+                    </div>
+
                     {isAdmin && (
-                      <Td>
-                        <div style={{ display: 'flex', gap: 'var(--space-1)' }}>
-                          {vendor.status === 'pending_review' && (
-                            <>
-                              <ActionButton color="#16a34a" onClick={() => void handleStatusChange(vendor.id, 'approved')}>Approve</ActionButton>
-                              <ActionButton color="#ef4444" onClick={() => void handleStatusChange(vendor.id, 'rejected')}>Reject</ActionButton>
-                            </>
-                          )}
-                          {vendor.status === 'approved' && (
-                            <ActionButton color="#f97316" onClick={() => void handleStatusChange(vendor.id, 'suspended')}>Suspend</ActionButton>
-                          )}
-                          {vendor.status === 'suspended' && (
-                            <ActionButton color="#16a34a" onClick={() => void handleStatusChange(vendor.id, 'approved')}>Reinstate</ActionButton>
-                          )}
-                        </div>
-                      </Td>
+                      <div className="d-flex gap-8 flex-wrap mt-12 pt-12" style={{ borderTop: '1px solid #f1f5f9' }}>
+                        {vendor.status === 'pending_review' && (
+                          <>
+                            <button onClick={() => void handleStatusChange(vendor.id, 'approved')}
+                              className="btn btn-sm d-flex align-items-center gap-4"
+                              style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 6, fontSize: 12 }}>
+                              <i className="ph ph-check" /> Approve
+                            </button>
+                            <button onClick={() => void handleStatusChange(vendor.id, 'rejected')}
+                              className="btn btn-sm d-flex align-items-center gap-4"
+                              style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 6, fontSize: 12 }}>
+                              <i className="ph ph-x" /> Reject
+                            </button>
+                          </>
+                        )}
+                        {vendor.status === 'approved' && (
+                          <button onClick={() => void handleStatusChange(vendor.id, 'suspended')}
+                            className="btn btn-sm d-flex align-items-center gap-4"
+                            style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa', borderRadius: 6, fontSize: 12 }}>
+                            <i className="ph ph-pause-circle" /> Suspend
+                          </button>
+                        )}
+                        {vendor.status === 'suspended' && (
+                          <button onClick={() => void handleStatusChange(vendor.id, 'approved')}
+                            className="btn btn-sm d-flex align-items-center gap-4"
+                            style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 6, fontSize: 12 }}>
+                            <i className="ph ph-play-circle" /> Reinstate
+                          </button>
+                        )}
+                      </div>
                     )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
 
           {pagination && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--space-4)', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
-              <span>Showing {((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, pagination.total)} of {pagination.total}</span>
-              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                <VButton onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>← Prev</VButton>
-                <VButton onClick={() => setPage((p) => p + 1)} disabled={page >= pagination.total_pages}>Next →</VButton>
+            <div className="d-flex align-items-center justify-content-between mt-8">
+              <span style={{ fontSize: 13, color: '#64748b' }}>
+                Showing {((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, pagination.total)} of {pagination.total} vendors
+              </span>
+              <div className="d-flex gap-8">
+                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
+                  className="btn btn-sm" style={{ background: '#fff', border: '1px solid #e2e8f0', color: '#374151', borderRadius: 8, fontSize: 13, opacity: page === 1 ? 0.4 : 1 }}>
+                  <i className="ph ph-caret-left" /> Prev
+                </button>
+                <button onClick={() => setPage((p) => p + 1)} disabled={page >= pagination.total_pages}
+                  className="btn btn-sm" style={{ background: '#fff', border: '1px solid #e2e8f0', color: '#374151', borderRadius: 8, fontSize: 13, opacity: page >= pagination.total_pages ? 0.4 : 1 }}>
+                  Next <i className="ph ph-caret-right" />
+                </button>
               </div>
             </div>
           )}
@@ -200,172 +257,124 @@ export default function VendorsPage(): React.JSX.Element {
 
       {/* Onboard Vendor Modal */}
       {showModal && (
-        <ModalOverlay onClose={() => setShowModal(false)}>
-          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, marginBottom: 'var(--space-4)' }}>Onboard Vendor</h2>
-
-          {formSuccess ? (
-            <div style={{ padding: 'var(--space-4)', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 'var(--radius-md)', color: '#16a34a', textAlign: 'center' }}>
-              ✓ Vendor onboarded — compliance check running…
-            </div>
-          ) : (
-            <form onSubmit={(e) => void handleSubmit(e)}>
-              {formError && <ErrorBanner message={formError} />}
-
-              <FormField label="Company Name *">
-                <input required value={form.company_name} onChange={(e) => handleFieldChange('company_name', e.target.value)} style={inputStyle} placeholder="Acme Logistics Ltd" />
-              </FormField>
-              <FormField label="Registration Number *">
-                <input required value={form.company_registration_number} onChange={(e) => handleFieldChange('company_registration_number', e.target.value)} style={inputStyle} placeholder="UK123456" />
-              </FormField>
-              <FormField label="Country of Registration *">
-                <input required value={form.country_of_registration} onChange={(e) => handleFieldChange('country_of_registration', e.target.value)} style={inputStyle} placeholder="GB" maxLength={2} />
-              </FormField>
-              <FormField label="Contact Email *">
-                <input required type="email" value={form.contact_email} onChange={(e) => handleFieldChange('contact_email', e.target.value)} style={inputStyle} placeholder="contact@vendor.com" />
-              </FormField>
-              <FormField label="Contact Phone">
-                <input type="tel" value={form.contact_phone} onChange={(e) => handleFieldChange('contact_phone', e.target.value)} style={inputStyle} placeholder="+44 20 0000 0000" />
-              </FormField>
-              <FormField label="Business Category *">
-                <select required value={form.business_category} onChange={(e) => handleFieldChange('business_category', e.target.value)} style={inputStyle}>
-                  {BUSINESS_CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>
-                  ))}
-                </select>
-              </FormField>
-              <FormField label="Website URL">
-                <input type="url" value={form.website_url} onChange={(e) => handleFieldChange('website_url', e.target.value)} style={inputStyle} placeholder="https://vendor.com" />
-              </FormField>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)', marginTop: 'var(--space-6)' }}>
-                <VButton onClick={() => setShowModal(false)} disabled={isSubmitting}>Cancel</VButton>
-                <button type="submit" disabled={isSubmitting} style={{ ...primaryButtonStyle, opacity: isSubmitting ? 0.7 : 1 }}>
-                  {isSubmitting ? 'Submitting…' : 'Onboard Vendor'}
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1050 }}
+        >
+          <div className="card border-0 shadow-lg" style={{ borderRadius: 16, width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto', margin: 16 }}>
+            <div className="card-body p-32">
+              <div className="d-flex align-items-center justify-content-between mb-24">
+                <h2 className="fw-bold mb-0" style={{ fontSize: 18, color: '#0f172a' }}>Onboard Vendor</h2>
+                <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 20 }}>
+                  <i className="ph ph-x" />
                 </button>
               </div>
-            </form>
-          )}
-        </ModalOverlay>
+
+              {formSuccess ? (
+                <div className="d-flex flex-column align-items-center py-32 text-center">
+                  <div className="d-inline-flex align-items-center justify-content-center rounded-circle mb-16" style={{ width: 64, height: 64, background: '#f0fdf4' }}>
+                    <i className="ph ph-check-circle" style={{ fontSize: 32, color: '#15803d' }} />
+                  </div>
+                  <p className="fw-semibold mb-4" style={{ color: '#15803d' }}>Vendor onboarded successfully!</p>
+                  <p style={{ color: '#64748b', fontSize: 13 }}>Compliance check is now running in the background.</p>
+                </div>
+              ) : (
+                <form onSubmit={(e) => void handleSubmit(e)}>
+                  {formError && (
+                    <div role="alert" className="alert alert-danger d-flex align-items-center gap-8 mb-20" style={{ borderRadius: 8, fontSize: 13 }}>
+                      <i className="ph ph-warning-circle" />
+                      {formError}
+                    </div>
+                  )}
+
+                  <div className="row g-16">
+                    <div className="col-12">
+                      <label className="form-label fw-semibold" style={{ fontSize: 13 }}>Company Name *</label>
+                      <input required className="form-control" value={form.company_name} onChange={(e) => handleFieldChange('company_name', e.target.value)} placeholder="Acme Logistics Ltd" style={{ borderRadius: 8, fontSize: 14 }} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold" style={{ fontSize: 13 }}>Registration Number *</label>
+                      <input required className="form-control" value={form.company_registration_number} onChange={(e) => handleFieldChange('company_registration_number', e.target.value)} placeholder="UK123456" style={{ borderRadius: 8, fontSize: 14 }} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold" style={{ fontSize: 13 }}>Country Code *</label>
+                      <input required className="form-control" value={form.country_of_registration} onChange={(e) => handleFieldChange('country_of_registration', e.target.value)} placeholder="GB" maxLength={2} style={{ borderRadius: 8, fontSize: 14 }} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold" style={{ fontSize: 13 }}>Contact Email *</label>
+                      <input required type="email" className="form-control" value={form.contact_email} onChange={(e) => handleFieldChange('contact_email', e.target.value)} placeholder="contact@vendor.com" style={{ borderRadius: 8, fontSize: 14 }} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold" style={{ fontSize: 13 }}>Contact Phone</label>
+                      <input type="tel" className="form-control" value={form.contact_phone} onChange={(e) => handleFieldChange('contact_phone', e.target.value)} placeholder="+44 20 0000 0000" style={{ borderRadius: 8, fontSize: 14 }} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold" style={{ fontSize: 13 }}>Business Category *</label>
+                      <select required className="form-select" value={form.business_category} onChange={(e) => handleFieldChange('business_category', e.target.value)} style={{ borderRadius: 8, fontSize: 14 }}>
+                        {BUSINESS_CATEGORIES.map((c) => (
+                          <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold" style={{ fontSize: 13 }}>Website URL</label>
+                      <input type="url" className="form-control" value={form.website_url} onChange={(e) => handleFieldChange('website_url', e.target.value)} placeholder="https://vendor.com" style={{ borderRadius: 8, fontSize: 14 }} />
+                    </div>
+                  </div>
+
+                  <div className="d-flex justify-content-end gap-8 mt-24">
+                    <button type="button" onClick={() => setShowModal(false)} disabled={isSubmitting}
+                      className="btn" style={{ background: '#fff', border: '1px solid #e2e8f0', color: '#374151', borderRadius: 8, fontSize: 14 }}>
+                      Cancel
+                    </button>
+                    <button type="submit" disabled={isSubmitting}
+                      className="btn d-flex align-items-center gap-8"
+                      style={{ background: '#299E60', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, opacity: isSubmitting ? 0.7 : 1 }}>
+                      {isSubmitting ? <><span className="spinner-border spinner-border-sm" /> Submitting…</> : <><i className="ph ph-check" /> Onboard Vendor</>}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
       )}
-    </div>
+    </>
   );
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
-function VButton({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }): React.JSX.Element {
-  return (
-    <button onClick={onClick} disabled={disabled} style={{ padding: 'var(--space-2) var(--space-4)', background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', cursor: disabled ? 'not-allowed' : 'pointer', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', opacity: disabled ? 0.5 : 1 }}>
-      {children}
-    </button>
-  );
-}
-
-function ActionButton({ children, onClick, color }: { children: React.ReactNode; onClick: () => void; color: string }): React.JSX.Element {
-  return (
-    <button onClick={onClick} style={{ padding: '2px var(--space-2)', background: `${color}15`, border: `1px solid ${color}40`, borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 'var(--text-xs)', color, fontWeight: 500 }}>
-      {children}
-    </button>
-  );
-}
-
-function ErrorBanner({ message }: { message: string }): React.JSX.Element {
-  return (
-    <div role="alert" style={{ padding: 'var(--space-4)', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 'var(--radius-md)', color: 'var(--color-error)', marginBottom: 'var(--space-4)' }}>
-      {message}
-    </div>
-  );
-}
-
-function LoadingState({ label }: { label: string }): React.JSX.Element {
-  return <div aria-live="polite" aria-busy="true" style={{ textAlign: 'center', padding: 'var(--space-12)', color: 'var(--color-text-muted)' }}>{label}</div>;
-}
-
-function EmptyState({ label }: { label: string }): React.JSX.Element {
-  return <div style={{ textAlign: 'center', padding: 'var(--space-12)', color: 'var(--color-text-muted)' }}>{label}</div>;
-}
-
-function Th({ children }: { children: React.ReactNode }): React.JSX.Element {
-  return <th style={{ textAlign: 'left', padding: 'var(--space-3) var(--space-4)', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{children}</th>;
-}
-
-function Td({ children }: { children: React.ReactNode }): React.JSX.Element {
-  return <td style={{ padding: 'var(--space-3) var(--space-4)', fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>{children}</td>;
-}
-
-function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }): React.JSX.Element {
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
-    >
-      <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-8)', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-xl)' }}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function FormField({ label, children }: { label: string; children: React.ReactNode }): React.JSX.Element {
-  return (
-    <div style={{ marginBottom: 'var(--space-4)' }}>
-      <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text)', marginBottom: 'var(--space-1)' }}>{label}</label>
-      {children}
-    </div>
-  );
-}
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: 'var(--space-2) var(--space-3)',
-  border: '1px solid var(--color-border)',
-  borderRadius: 'var(--radius-md)',
-  fontSize: 'var(--text-sm)',
-  background: 'var(--color-bg)',
-  color: 'var(--color-text)',
-  boxSizing: 'border-box',
-};
-
-const primaryButtonStyle: React.CSSProperties = {
-  padding: 'var(--space-2) var(--space-6)',
-  background: 'var(--color-primary)',
-  color: '#fff',
-  border: 'none',
-  borderRadius: 'var(--radius-md)',
-  cursor: 'pointer',
-  fontSize: 'var(--text-sm)',
-  fontWeight: 600,
-};
-
-const VENDOR_STATUS_COLORS: Record<string, string> = {
-  pending_review: '#f59e0b',
-  approved: '#16a34a',
-  rejected: '#ef4444',
-  suspended: '#6b7280',
+const VENDOR_STATUS_META: Record<string, { bg: string; text: string }> = {
+  pending_review: { bg: '#fffbeb', text: '#d97706' },
+  approved:       { bg: '#f0fdf4', text: '#15803d' },
+  rejected:       { bg: '#fef2f2', text: '#b91c1c' },
+  suspended:      { bg: '#f9fafb', text: '#6b7280' },
 };
 
 function VendorStatusBadge({ status }: { status: string }): React.JSX.Element {
-  const color = VENDOR_STATUS_COLORS[status] ?? '#6b7280';
+  const m = VENDOR_STATUS_META[status] ?? { bg: '#f9fafb', text: '#6b7280' };
   return (
-    <span style={{ display: 'inline-flex', padding: '2px var(--space-2)', borderRadius: 'var(--radius-full)', fontSize: 'var(--text-xs)', fontWeight: 500, background: `${color}20`, color, border: `1px solid ${color}40` }}>
+    <span className="badge" style={{ background: m.bg, color: m.text, fontSize: 11, fontWeight: 500, borderRadius: 20, padding: '4px 10px' }}>
       {status.replace(/_/g, ' ')}
     </span>
   );
 }
 
-const COMPLIANCE_COLORS: Record<string, string> = {
-  pending: '#f59e0b',
-  passed: '#16a34a',
-  failed: '#ef4444',
-  manual_review: '#f97316',
+const COMPLIANCE_META: Record<string, { bg: string; text: string; icon: string }> = {
+  pending:       { bg: '#fffbeb', text: '#d97706',  icon: 'ph ph-clock' },
+  passed:        { bg: '#f0fdf4', text: '#15803d',  icon: 'ph ph-shield-check' },
+  failed:        { bg: '#fef2f2', text: '#b91c1c',  icon: 'ph ph-shield-warning' },
+  manual_review: { bg: '#fff7ed', text: '#c2410c',  icon: 'ph ph-magnifying-glass' },
 };
 
 function ComplianceBadge({ status }: { status: string }): React.JSX.Element {
-  const color = COMPLIANCE_COLORS[status] ?? '#6b7280';
+  const m = COMPLIANCE_META[status] ?? { bg: '#f9fafb', text: '#6b7280', icon: 'ph ph-dot' };
   return (
-    <span style={{ display: 'inline-flex', padding: '2px var(--space-2)', borderRadius: 'var(--radius-full)', fontSize: 'var(--text-xs)', fontWeight: 500, background: `${color}20`, color, border: `1px solid ${color}40` }}>
+    <span className="badge d-inline-flex align-items-center gap-4" style={{ background: m.bg, color: m.text, fontSize: 11, fontWeight: 500, borderRadius: 20, padding: '4px 10px' }}>
+      <i className={m.icon} style={{ fontSize: 12 }} />
       {status.replace(/_/g, ' ')}
     </span>
   );

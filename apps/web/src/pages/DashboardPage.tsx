@@ -1,17 +1,73 @@
 /**
  * DashboardPage.tsx — Main authenticated landing page
- *
- * Displays tenant-scoped summary cards.
- * All data fetched from the backend API (never directly from Supabase in the browser).
+ * Rebuilt using the MarketPro Bootstrap 5 template visual language.
  */
 
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/apiClient';
 import type { Order, DashboardStats } from '@sbdmm/shared';
 
+const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
+  pending:    { bg: '#fff7ed', text: '#c2410c', label: 'Pending' },
+  confirmed:  { bg: '#eff6ff', text: '#1d4ed8', label: 'Confirmed' },
+  in_transit: { bg: '#ecfeff', text: '#0e7490', label: 'In Transit' },
+  delivered:  { bg: '#f0fdf4', text: '#15803d', label: 'Delivered' },
+  cancelled:  { bg: '#f9fafb', text: '#4b5563', label: 'Cancelled' },
+  on_hold:    { bg: '#fff7ed', text: '#c2410c', label: 'On Hold' },
+  failed:     { bg: '#fef2f2', text: '#b91c1c', label: 'Failed' },
+};
+
+interface StatCardProps {
+  label: string;
+  value: number;
+  icon: string;
+  iconBg: string;
+  iconColor: string;
+  trend?: string;
+}
+
+function StatCard({ label, value, icon, iconBg, iconColor, trend }: StatCardProps): React.JSX.Element {
+  return (
+    <div className="card border-0 shadow-sm h-100" style={{ borderRadius: 12 }}>
+      <div className="card-body p-24">
+        <div className="d-flex align-items-center justify-content-between mb-16">
+          <div
+            className="d-flex align-items-center justify-content-center rounded-circle"
+            style={{ width: 48, height: 48, background: iconBg }}
+          >
+            <i className={icon} style={{ fontSize: 22, color: iconColor }} />
+          </div>
+          {trend && (
+            <span className="badge" style={{ background: '#f0fdf4', color: '#15803d', fontSize: 12, fontWeight: 500, borderRadius: 20, padding: '4px 10px' }}>
+              {trend}
+            </span>
+          )}
+        </div>
+        <h3 className="fw-bold mb-4" style={{ fontSize: 28, color: '#0f172a' }}>
+          {value.toLocaleString()}
+        </h3>
+        <p className="mb-0" style={{ fontSize: 13, color: '#64748b' }}>{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }): React.JSX.Element {
+  const s = STATUS_COLORS[status] ?? { bg: '#f9fafb', text: '#4b5563', label: status };
+  return (
+    <span
+      className="badge"
+      style={{ background: s.bg, color: s.text, fontWeight: 500, fontSize: 11, borderRadius: 20, padding: '4px 10px' }}
+    >
+      {s.label}
+    </span>
+  );
+}
+
 export default function DashboardPage(): React.JSX.Element {
-  const { profile, signOut } = useAuth();
+  const { profile } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -19,167 +75,176 @@ export default function DashboardPage(): React.JSX.Element {
 
   useEffect(() => {
     let cancelled = false;
-
     const load = async (): Promise<void> => {
       setIsLoading(true);
       setError(null);
-
       const [statsResult, ordersResult] = await Promise.all([
         api.get<DashboardStats>('/api/v1/dashboard/stats'),
         api.get<{ data: Order[]; total: number }>('/api/v1/orders?limit=5'),
       ]);
-
       if (cancelled) return;
-
       if (!statsResult.success) {
         setError(statsResult.error?.message ?? 'Failed to load dashboard data.');
       } else {
         setStats(statsResult.data ?? null);
       }
-
       if (ordersResult.success && ordersResult.data) {
         setRecentOrders(ordersResult.data.data ?? []);
       }
-
       setIsLoading(false);
     };
-
     void load();
     return () => { cancelled = true; };
   }, []);
 
   return (
-    <div style={{ padding: 'var(--space-8)' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-8)' }}>
+    <>
+      {/* Welcome banner */}
+      <div
+        className="d-flex align-items-center justify-content-between p-24 mb-24"
+        style={{
+          background: 'linear-gradient(135deg, #1e293b 0%, #299E60 100%)',
+          borderRadius: 16,
+          color: '#fff',
+        }}
+      >
         <div>
-          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--color-secondary)' }}>
-            Dashboard
-          </h1>
-          {profile && (
-            <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)', marginTop: 'var(--space-1)' }}>
-              Welcome back, {profile.full_name ?? profile.email} — <em>{profile.role.replace('_', ' ')}</em>
-            </p>
-          )}
+          <h2 className="fw-bold mb-4" style={{ fontSize: 22, color: '#fff' }}>
+            Welcome back{profile?.full_name ? `, ${profile.full_name}` : ''}! 👋
+          </h2>
+          <p className="mb-0" style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)' }}>
+            Here's what's happening on your platform today.
+          </p>
         </div>
-        <button
-          onClick={() => void signOut()}
-          style={{
-            padding: 'var(--space-2) var(--space-4)',
-            background: 'transparent',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-md)',
-            cursor: 'pointer',
-            fontSize: 'var(--text-sm)',
-            color: 'var(--color-text-muted)',
-          }}
-        >
-          Sign out
-        </button>
+        <div className="d-none d-md-flex align-items-center gap-8">
+          <Link to="/orders" className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, backdropFilter: 'blur(4px)' }}>
+            <i className="ph ph-package me-1" />
+            View Orders
+          </Link>
+        </div>
       </div>
 
-      {/* Error state */}
+      {/* Error */}
       {error && (
-        <div role="alert" style={{ padding: 'var(--space-4)', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 'var(--radius-md)', color: 'var(--color-error)', marginBottom: 'var(--space-6)' }}>
+        <div role="alert" className="alert alert-danger d-flex align-items-center gap-8 mb-24" style={{ borderRadius: 10, fontSize: 14 }}>
+          <i className="ph ph-warning-circle" style={{ fontSize: 18 }} />
           {error}
         </div>
       )}
 
       {/* Stats cards */}
       {isLoading ? (
-        <div aria-live="polite" aria-busy="true" style={{ textAlign: 'center', padding: 'var(--space-12)', color: 'var(--color-text-muted)' }}>
-          Loading dashboard...
+        <div className="row g-16 mb-24">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="col-xl-2 col-lg-4 col-md-6">
+              <div className="card border-0 shadow-sm" style={{ borderRadius: 12, height: 120, background: '#f8fafc' }}>
+                <div className="card-body d-flex align-items-center justify-content-center">
+                  <div className="spinner-border spinner-border-sm text-muted" role="status" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : stats ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-8)' }}>
-          <StatCard label="Total Orders" value={stats.total_orders} />
-          <StatCard label="Pending Orders" value={stats.pending_orders} accent="warning" />
-          <StatCard label="Active Vendors" value={stats.active_vendors} />
-          <StatCard label="Compliance Alerts" value={stats.compliance_alerts} accent={stats.compliance_alerts > 0 ? 'error' : 'success'} />
-          <StatCard label="Open Quotes" value={stats.open_quotes} accent="warning" />
-          <StatCard label="Docs Pending" value={stats.documents_pending} accent={stats.documents_pending > 0 ? 'warning' : 'success'} />
+        <div className="row g-16 mb-24">
+          <div className="col-xl-2 col-lg-4 col-md-6">
+            <StatCard label="Total Orders" value={stats.total_orders} icon="ph ph-package" iconBg="#eff6ff" iconColor="#2563eb" />
+          </div>
+          <div className="col-xl-2 col-lg-4 col-md-6">
+            <StatCard label="Pending Orders" value={stats.pending_orders} icon="ph ph-clock" iconBg="#fff7ed" iconColor="#c2410c" />
+          </div>
+          <div className="col-xl-2 col-lg-4 col-md-6">
+            <StatCard label="Active Vendors" value={stats.active_vendors} icon="ph ph-storefront" iconBg="#f0fdf4" iconColor="#15803d" />
+          </div>
+          <div className="col-xl-2 col-lg-4 col-md-6">
+            <StatCard label="Compliance Alerts" value={stats.compliance_alerts} icon="ph ph-shield-warning" iconBg={stats.compliance_alerts > 0 ? '#fef2f2' : '#f0fdf4'} iconColor={stats.compliance_alerts > 0 ? '#b91c1c' : '#15803d'} />
+          </div>
+          <div className="col-xl-2 col-lg-4 col-md-6">
+            <StatCard label="Open Quotes" value={stats.open_quotes} icon="ph ph-chat-dots" iconBg="#faf5ff" iconColor="#7c3aed" />
+          </div>
+          <div className="col-xl-2 col-lg-4 col-md-6">
+            <StatCard label="Docs Pending" value={stats.documents_pending} icon="ph ph-file-text" iconBg="#fffbeb" iconColor="#d97706" />
+          </div>
         </div>
       ) : null}
 
-      {/* Recent orders */}
-      {recentOrders.length > 0 && (
-        <section>
-          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, marginBottom: 'var(--space-4)' }}>
-            Recent Orders
-          </h2>
-          <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}>
-                  <Th>Reference</Th>
-                  <Th>Origin</Th>
-                  <Th>Destination</Th>
-                  <Th>Status</Th>
-                  <Th>Created</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentOrders.map((order) => (
-                  <tr key={order.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                    <Td><code style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{order.reference_number}</code></Td>
-                    <Td>{order.origin_location}</Td>
-                    <Td>{order.destination_location}</Td>
-                    <Td><StatusBadge status={order.status} /></Td>
-                    <Td>{new Date(order.created_at).toLocaleDateString()}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Quick actions */}
+      <div className="row g-16 mb-24">
+        {[
+          { to: '/orders',     icon: 'ph ph-package',      label: 'Orders',     desc: 'Manage shipment orders', bg: '#eff6ff', color: '#2563eb' },
+          { to: '/quotes',     icon: 'ph ph-chat-dots',    label: 'Quotes',     desc: 'View & respond to quotes', bg: '#faf5ff', color: '#7c3aed' },
+          { to: '/vendors',    icon: 'ph ph-storefront',   label: 'Vendors',    desc: 'Browse vendor network', bg: '#f0fdf4', color: '#15803d' },
+          { to: '/documents',  icon: 'ph ph-file-text',    label: 'Documents',  desc: 'Shipping docs & compliance', bg: '#fffbeb', color: '#d97706' },
+          { to: '/compliance', icon: 'ph ph-shield-check', label: 'Compliance', desc: 'Regulatory & audit status', bg: '#fef2f2', color: '#b91c1c' },
+        ].map(item => (
+          <div key={item.to} className="col-lg col-md-4 col-6">
+            <Link
+              to={item.to}
+              className="card border-0 shadow-sm text-decoration-none h-100"
+              style={{ borderRadius: 12, transition: 'transform 0.15s, box-shadow 0.15s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}
+            >
+              <div className="card-body p-20 text-center">
+                <div className="d-inline-flex align-items-center justify-content-center rounded-circle mb-12" style={{ width: 48, height: 48, background: item.bg }}>
+                  <i className={item.icon} style={{ fontSize: 22, color: item.color }} />
+                </div>
+                <div className="fw-semibold mb-4" style={{ fontSize: 14, color: '#0f172a' }}>{item.label}</div>
+                <div style={{ fontSize: 12, color: '#64748b' }}>{item.desc}</div>
+              </div>
+            </Link>
           </div>
-        </section>
+        ))}
+      </div>
+
+      {/* Recent orders table */}
+      {(isLoading || recentOrders.length > 0) && (
+        <div className="card border-0 shadow-sm" style={{ borderRadius: 12 }}>
+          <div className="card-body p-0">
+            <div className="d-flex align-items-center justify-content-between px-24 py-16" style={{ borderBottom: '1px solid #f1f5f9' }}>
+              <h3 className="fw-semibold mb-0" style={{ fontSize: 16, color: '#0f172a' }}>
+                <i className="ph ph-clock-counter-clockwise me-8" style={{ color: '#299E60' }} />
+                Recent Orders
+              </h3>
+              <Link to="/orders" className="text-decoration-none" style={{ fontSize: 13, color: '#299E60', fontWeight: 600 }}>
+                View all <i className="ph ph-arrow-right" />
+              </Link>
+            </div>
+            <div className="table-responsive">
+              <table className="table table-hover mb-0" style={{ fontSize: 13 }}>
+                <thead style={{ background: '#f8fafc' }}>
+                  <tr>
+                    <th className="fw-semibold py-12 px-24" style={{ color: '#64748b', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', border: 'none' }}>Reference</th>
+                    <th className="fw-semibold py-12 px-16" style={{ color: '#64748b', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', border: 'none' }}>Origin</th>
+                    <th className="fw-semibold py-12 px-16" style={{ color: '#64748b', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', border: 'none' }}>Destination</th>
+                    <th className="fw-semibold py-12 px-16" style={{ color: '#64748b', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', border: 'none' }}>Status</th>
+                    <th className="fw-semibold py-12 px-16" style={{ color: '#64748b', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', border: 'none' }}>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={5} className="text-center py-32">
+                        <div className="spinner-border spinner-border-sm text-muted" role="status" />
+                      </td>
+                    </tr>
+                  ) : recentOrders.map((order) => (
+                    <tr key={order.id} style={{ borderColor: '#f1f5f9' }}>
+                      <td className="py-12 px-24">
+                        <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#299E60', fontWeight: 600 }}>{order.reference_number}</span>
+                      </td>
+                      <td className="py-12 px-16" style={{ color: '#374151' }}>{order.origin_location}</td>
+                      <td className="py-12 px-16" style={{ color: '#374151' }}>{order.destination_location}</td>
+                      <td className="py-12 px-16"><StatusBadge status={order.status} /></td>
+                      <td className="py-12 px-16" style={{ color: '#64748b' }}>{new Date(order.created_at).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       )}
-    </div>
-  );
-}
-
-function StatCard({ label, value, accent }: { label: string; value: number; accent?: 'warning' | 'error' | 'success' }): React.JSX.Element {
-  const accentColor = accent === 'error' ? 'var(--color-error)' : accent === 'warning' ? 'var(--color-warning)' : accent === 'success' ? 'var(--color-success)' : 'var(--color-primary)';
-  return (
-    <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-6)', boxShadow: 'var(--shadow-sm)' }}>
-      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>{label}</p>
-      <p style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, color: accentColor }}>{value.toLocaleString()}</p>
-    </div>
-  );
-}
-
-function Th({ children }: { children: React.ReactNode }): React.JSX.Element {
-  return <th style={{ textAlign: 'left', padding: 'var(--space-3) var(--space-4)', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{children}</th>;
-}
-
-function Td({ children }: { children: React.ReactNode }): React.JSX.Element {
-  return <td style={{ padding: 'var(--space-3) var(--space-4)', fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>{children}</td>;
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  pending: '#f59e0b',
-  confirmed: '#3b82f6',
-  in_transit: '#06b6d4',
-  delivered: '#16a34a',
-  cancelled: '#6b7280',
-  on_hold: '#f97316',
-  failed: '#dc2626',
-};
-
-function StatusBadge({ status }: { status: string }): React.JSX.Element {
-  const color = STATUS_COLORS[status] ?? '#6b7280';
-  return (
-    <span style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      padding: '2px var(--space-2)',
-      borderRadius: 'var(--radius-full)',
-      fontSize: 'var(--text-xs)',
-      fontWeight: 500,
-      background: `${color}20`,
-      color,
-      border: `1px solid ${color}40`,
-    }}>
-      {status.replace('_', ' ')}
-    </span>
+    </>
   );
 }

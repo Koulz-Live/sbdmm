@@ -12,22 +12,24 @@ export default function UnauthorizedPage(): React.JSX.Element {
   const { profile } = useAuth();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: 'var(--space-8)', textAlign: 'center' }}>
-      <div style={{ maxWidth: 480 }}>
-        <div style={{ fontSize: '4rem', marginBottom: 'var(--space-4)' }}>🔒</div>
-        <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--color-secondary)', marginBottom: 'var(--space-3)' }}>
-          Access Denied
-        </h1>
-        <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-6)', lineHeight: 1.6 }}>
+    <div className="d-flex align-items-center justify-content-center" style={{ minHeight: '100vh', background: '#f1f5f9' }}>
+      <div className="text-center" style={{ maxWidth: 480, padding: 32 }}>
+        <div className="d-inline-flex align-items-center justify-content-center rounded-circle mb-24" style={{ width: 80, height: 80, background: '#fef2f2' }}>
+          <i className="ph ph-lock" style={{ fontSize: 36, color: '#b91c1c' }} />
+        </div>
+        <h1 className="fw-bold mb-12" style={{ fontSize: 24, color: '#0f172a' }}>Access Denied</h1>
+        <p className="mb-24" style={{ color: '#64748b', lineHeight: 1.7, fontSize: 15 }}>
           You don&apos;t have permission to view this page.
           {profile && (
-            <> Your current role is <strong>{profile.role.replace('_', ' ')}</strong>.</>
+            <> Your current role is <strong style={{ color: '#0f172a' }}>{profile.role.replace('_', ' ')}</strong>.</>
           )}
         </p>
         <Link
           to="/dashboard"
-          style={{ display: 'inline-block', padding: 'var(--space-3) var(--space-6)', background: 'var(--color-primary)', color: '#fff', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: 'var(--text-sm)' }}
+          className="btn d-inline-flex align-items-center gap-8"
+          style={{ background: '#299E60', color: '#fff', border: 'none', borderRadius: 8, padding: '12px 24px', fontWeight: 600, textDecoration: 'none', fontSize: 14 }}
         >
+          <i className="ph ph-arrow-left" />
           Return to Dashboard
         </Link>
       </div>

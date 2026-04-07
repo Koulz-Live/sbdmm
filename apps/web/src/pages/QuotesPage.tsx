@@ -2,12 +2,12 @@
  * QuotesPage — Freight Quote Management
  *
  * ROLE SPLIT:
- *  - logistics_provider: sees their own submitted quotes, can submit new quotes for orders
+ *  - logistics_provider: sees their own submitted quotes, can submit new quotes
  *  - buyer / vendor / tenant_admin: sees quotes on their orders, can accept/reject
  *  - super_admin: cross-tenant read-only via admin route (not this page)
  *
  * SECURITY:
- * - All writes are idempotency-keyed to prevent double-submits on flaky connections
+ * - All writes are idempotency-keyed to prevent double-submits
  * - Valid-until date is enforced server-side; we display expiry clearly
  * - Price/currency fields are validated before submit
  */
@@ -16,8 +16,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/apiClient';
 import type { Quote, QuoteStatus, PaginationMeta } from '@sbdmm/shared';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface QuoteRow extends Quote {
   order_title?: string;
@@ -35,50 +33,39 @@ interface SubmitQuoteForm {
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'ZAR', 'CNY', 'AED', 'SGD'];
 
-const STATUS_COLORS: Record<QuoteStatus, string> = {
-  pending:   '#d97706',
-  accepted:  '#16a34a',
-  rejected:  '#dc2626',
-  expired:   '#6b7280',
-  withdrawn: '#9ca3af',
+interface StatusMeta { bg: string; text: string; border: string; icon: string }
+const STATUS_META: Record<QuoteStatus, StatusMeta> = {
+  pending:   { bg: '#fffbeb', text: '#b45309', border: '#fde68a', icon: 'ph-clock' },
+  accepted:  { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0', icon: 'ph-check-circle' },
+  rejected:  { bg: '#fef2f2', text: '#b91c1c', border: '#fecaca', icon: 'ph-x-circle' },
+  expired:   { bg: '#f8fafc', text: '#64748b', border: '#e2e8f0', icon: 'ph-timer' },
+  withdrawn: { bg: '#f8fafc', text: '#94a3b8', border: '#e2e8f0', icon: 'ph-arrow-u-up-left' },
 };
 
-function StatusBadge({ status }: { status: QuoteStatus }): React.JSX.Element {
-  const color = STATUS_COLORS[status] ?? '#6b7280';
+function QuoteStatusBadge({ status }: { status: QuoteStatus }): React.JSX.Element {
+  const m = STATUS_META[status] ?? { bg: '#f8fafc', text: '#64748b', border: '#e2e8f0', icon: 'ph-question' };
   return (
-    <span style={{
-      background: color + '22', color, border: `1px solid ${color}55`,
-      borderRadius: 4, padding: '2px 8px', fontSize: 12, fontWeight: 600,
-      textTransform: 'capitalize',
-    }}>
+    <span className="d-inline-flex align-items-center gap-4"
+      style={{ background: m.bg, color: m.text, border: `1px solid ${m.border}`, borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600, textTransform: 'capitalize' }}>
+      <i className={`ph ${m.icon}`} style={{ fontSize: 13 }} />
       {status}
     </span>
   );
 }
 
 function formatCurrency(amount: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
-  } catch {
-    return `${currency} ${amount.toFixed(2)}`;
-  }
+  try { return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount); }
+  catch { return `${currency} ${amount.toFixed(2)}`; }
 }
 
 // ─── Submit Quote Form ────────────────────────────────────────────────────────
 
-interface SubmitFormProps {
-  onSuccess: () => void;
-  onCancel: () => void;
-}
+interface SubmitFormProps { onSuccess: () => void; onCancel: () => void; }
 
 function SubmitQuoteForm({ onSuccess, onCancel }: SubmitFormProps): React.JSX.Element {
   const [form, setForm] = useState<SubmitQuoteForm>({
-    order_id: '',
-    price_amount: '',
-    price_currency: 'USD',
-    transit_days_estimated: '',
-    valid_until: '',
-    notes: '',
+    order_id: '', price_amount: '', price_currency: 'USD',
+    transit_days_estimated: '', valid_until: '', notes: '',
   });
   const [errors, setErrors] = useState<Partial<SubmitQuoteForm>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -101,97 +88,97 @@ function SubmitQuoteForm({ onSuccess, onCancel }: SubmitFormProps): React.JSX.El
   async function handleSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault();
     if (!validate()) return;
-
     setSubmitting(true);
     setSubmitError(null);
-
     const idempotencyKey = `quote-${form.order_id}-${Date.now()}`;
-    const res = await api.post<Quote>(
-      '/api/v1/quotes',
-      {
-        order_id: form.order_id.trim(),
-        price_amount: parseFloat(form.price_amount),
-        price_currency: form.price_currency,
-        transit_days_estimated: parseInt(form.transit_days_estimated, 10),
-        valid_until: new Date(form.valid_until).toISOString(),
-        notes: form.notes.trim() || undefined,
-      },
-      idempotencyKey,
-    );
-
+    const res = await api.post<Quote>('/api/v1/quotes', {
+      order_id: form.order_id.trim(),
+      price_amount: parseFloat(form.price_amount),
+      price_currency: form.price_currency,
+      transit_days_estimated: parseInt(form.transit_days_estimated, 10),
+      valid_until: new Date(form.valid_until).toISOString(),
+      notes: form.notes.trim() || undefined,
+    }, idempotencyKey);
     setSubmitting(false);
-    if (res.success) {
-      setSuccess(true);
-      setTimeout(onSuccess, 1800);
-    } else {
-      setSubmitError(res.error?.message ?? 'Failed to submit quote.');
-    }
+    if (res.success) { setSuccess(true); setTimeout(onSuccess, 1800); }
+    else setSubmitError(res.error?.message ?? 'Failed to submit quote.');
   }
 
-  if (success) {
-    return <div style={{ color: '#16a34a', fontWeight: 600, padding: '10px 0' }}>✓ Quote submitted successfully. Refreshing…</div>;
-  }
+  const inputCls = "form-control";
+  const inputStyle = { borderRadius: 8, fontSize: 14, borderColor: '#cbd5e1' };
 
-  const field = (label: string, key: keyof SubmitQuoteForm, input: React.ReactNode): React.JSX.Element => (
-    <div>
-      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{label}</label>
-      {input}
-      {errors[key] && <p style={{ color: '#dc2626', fontSize: 12, margin: '3px 0 0' }}>{errors[key]}</p>}
+  if (success) return (
+    <div className="d-flex align-items-center gap-8" style={{ color: '#15803d', fontWeight: 600 }}>
+      <i className="ph ph-check-circle" style={{ fontSize: 20 }} />
+      Quote submitted successfully. Refreshing…
     </div>
   );
 
-  const inputStyle: React.CSSProperties = { width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' };
-
   return (
-    <form onSubmit={(e) => { void handleSubmit(e); }} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+    <form onSubmit={(e) => { void handleSubmit(e); }}>
       {submitError && (
-        <div role="alert" style={{ gridColumn: '1 / -1', background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: 6, padding: '8px 12px', fontSize: 13 }}>
-          {submitError}
+        <div role="alert" className="mb-3"
+          style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', fontSize: 13 }}>
+          <i className="ph ph-warning-circle me-2" />{submitError}
         </div>
       )}
+      <div className="row g-3">
+        <div className="col-12">
+          <label className="form-label fw-semibold" style={{ fontSize: 13 }}>Order ID <span style={{ color: '#dc2626' }}>*</span></label>
+          <input type="text" className={inputCls} style={inputStyle} value={form.order_id}
+            onChange={e => setForm(f => ({ ...f, order_id: e.target.value }))} placeholder="UUID of the order you are quoting" />
+          {errors.order_id && <div style={{ color: '#b91c1c', fontSize: 12, marginTop: 3 }}>{errors.order_id}</div>}
+        </div>
 
-      {field('Order ID *', 'order_id',
-        <input type="text" value={form.order_id} onChange={e => setForm(f => ({ ...f, order_id: e.target.value }))}
-          placeholder="UUID of the order you are quoting" style={inputStyle} />
-      )}
+        <div className="col-md-8">
+          <label className="form-label fw-semibold" style={{ fontSize: 13 }}>Price <span style={{ color: '#dc2626' }}>*</span></label>
+          <input type="number" className={inputCls} style={inputStyle} min="0.01" step="0.01" value={form.price_amount}
+            onChange={e => setForm(f => ({ ...f, price_amount: e.target.value }))} placeholder="e.g. 4800.00" />
+          {errors.price_amount && <div style={{ color: '#b91c1c', fontSize: 12, marginTop: 3 }}>{errors.price_amount}</div>}
+        </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem' }}>
-        {field('Price Amount *', 'price_amount',
-          <input type="number" min="0.01" step="0.01" value={form.price_amount} onChange={e => setForm(f => ({ ...f, price_amount: e.target.value }))}
-            placeholder="e.g. 4800.00" style={inputStyle} />
-        )}
-        {field('Currency *', 'price_currency',
-          <select value={form.price_currency} onChange={e => setForm(f => ({ ...f, price_currency: e.target.value }))} style={inputStyle}>
+        <div className="col-md-4">
+          <label className="form-label fw-semibold" style={{ fontSize: 13 }}>Currency <span style={{ color: '#dc2626' }}>*</span></label>
+          <select className="form-select" style={inputStyle} value={form.price_currency}
+            onChange={e => setForm(f => ({ ...f, price_currency: e.target.value }))}>
             {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-        )}
-      </div>
+        </div>
 
-      {field('Transit Days *', 'transit_days_estimated',
-        <input type="number" min="1" step="1" value={form.transit_days_estimated} onChange={e => setForm(f => ({ ...f, transit_days_estimated: e.target.value }))}
-          placeholder="Estimated days in transit" style={inputStyle} />
-      )}
+        <div className="col-md-6">
+          <label className="form-label fw-semibold" style={{ fontSize: 13 }}>Transit Days <span style={{ color: '#dc2626' }}>*</span></label>
+          <input type="number" className={inputCls} style={inputStyle} min="1" step="1" value={form.transit_days_estimated}
+            onChange={e => setForm(f => ({ ...f, transit_days_estimated: e.target.value }))} placeholder="Estimated days in transit" />
+          {errors.transit_days_estimated && <div style={{ color: '#b91c1c', fontSize: 12, marginTop: 3 }}>{errors.transit_days_estimated}</div>}
+        </div>
 
-      {field('Valid Until *', 'valid_until',
-        <input type="datetime-local" value={form.valid_until} onChange={e => setForm(f => ({ ...f, valid_until: e.target.value }))} style={inputStyle} />
-      )}
+        <div className="col-md-6">
+          <label className="form-label fw-semibold" style={{ fontSize: 13 }}>Valid Until <span style={{ color: '#dc2626' }}>*</span></label>
+          <input type="datetime-local" className={inputCls} style={inputStyle} value={form.valid_until}
+            onChange={e => setForm(f => ({ ...f, valid_until: e.target.value }))} />
+          {errors.valid_until && <div style={{ color: '#b91c1c', fontSize: 12, marginTop: 3 }}>{errors.valid_until}</div>}
+        </div>
 
-      <div style={{ gridColumn: '1 / -1' }}>
-        {field('Notes', 'notes',
-          <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-            rows={3} placeholder="Optional notes for the buyer…" style={{ ...inputStyle, resize: 'vertical' }} />
-        )}
-      </div>
+        <div className="col-12">
+          <label className="form-label fw-semibold" style={{ fontSize: 13 }}>Notes <span className="fw-normal" style={{ color: '#94a3b8' }}>(optional)</span></label>
+          <textarea className={inputCls} style={{ ...inputStyle, resize: 'vertical' } as React.CSSProperties} rows={3} value={form.notes}
+            onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional notes for the buyer…" />
+        </div>
 
-      <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '0.75rem' }}>
-        <button type="submit" disabled={submitting}
-          style={{ padding: '9px 20px', background: submitting ? '#93c5fd' : '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: submitting ? 'not-allowed' : 'pointer', fontWeight: 600 }}>
-          {submitting ? 'Submitting…' : 'Submit Quote'}
-        </button>
-        <button type="button" onClick={onCancel}
-          style={{ padding: '9px 20px', background: '#f1f5f9', color: '#374151', border: '1px solid #cbd5e1', borderRadius: 6, cursor: 'pointer' }}>
-          Cancel
-        </button>
+        <div className="col-12 d-flex gap-8">
+          <button type="submit" disabled={submitting}
+            className="btn d-flex align-items-center gap-8"
+            style={{ background: submitting ? '#93c5fd' : '#299E60', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 600, fontSize: 14 }}>
+            {submitting
+              ? <><span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /> Submitting…</>
+              : <><i className="ph ph-paper-plane-tilt" /> Submit Quote</>}
+          </button>
+          <button type="button" onClick={onCancel}
+            className="btn"
+            style={{ background: '#f1f5f9', color: '#374151', border: '1px solid #cbd5e1', borderRadius: 8, padding: '10px 20px', fontWeight: 500, fontSize: 14 }}>
+            Cancel
+          </button>
+        </div>
       </div>
     </form>
   );
@@ -208,7 +195,6 @@ export default function QuotesPage(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
-  // Accept / reject state
   const [actionQuoteId, setActionQuoteId] = useState<string | null>(null);
   const [action, setAction] = useState<'accept' | 'reject' | null>(null);
   const [actioning, setActioning] = useState(false);
@@ -225,19 +211,12 @@ export default function QuotesPage(): React.JSX.Element {
       if (res.success && res.data) {
         setQuotes(res.data);
         if (res.meta?.pagination) setPagination(res.meta.pagination);
-      } else {
-        setError(res.error?.message ?? 'Failed to load quotes.');
-      }
-    } catch {
-      setError('Unable to load quotes. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+      } else setError(res.error?.message ?? 'Failed to load quotes.');
+    } catch { setError('Unable to load quotes. Please try again.'); }
+    finally { setLoading(false); }
   }, []);
 
-  useEffect(() => {
-    void fetchQuotes(page);
-  }, [fetchQuotes, page]);
+  useEffect(() => { void fetchQuotes(page); }, [fetchQuotes, page]);
 
   async function handleAction(quoteId: string, act: 'accept' | 'reject'): Promise<void> {
     setActioning(true);
@@ -245,153 +224,158 @@ export default function QuotesPage(): React.JSX.Element {
     try {
       const res = await api.patch<Quote>(`/api/v1/quotes/${quoteId}/${act}`, {});
       if (res.success) {
-        setQuotes(qs => qs.map(q => q.id === quoteId
-          ? { ...q, status: act === 'accept' ? 'accepted' : 'rejected' }
-          : q,
-        ));
+        setQuotes(qs => qs.map(q => q.id === quoteId ? { ...q, status: act === 'accept' ? 'accepted' : 'rejected' } : q));
         setActionQuoteId(null);
         setAction(null);
-      } else {
-        setError(res.error?.message ?? `Failed to ${act} quote.`);
-      }
-    } catch {
-      setError(`Unable to ${act} quote. Please try again.`);
-    } finally {
-      setActioning(false);
-    }
-  }
-
-  function openAction(quoteId: string, act: 'accept' | 'reject'): void {
-    setActionQuoteId(quoteId);
-    setAction(act);
+      } else setError(res.error?.message ?? `Failed to ${act} quote.`);
+    } catch { setError(`Unable to ${act} quote. Please try again.`); }
+    finally { setActioning(false); }
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: 1200, margin: '0 auto', fontFamily: 'system-ui, sans-serif' }}>
+    <div className="p-4" style={{ maxWidth: 1100 }}>
+
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+      <div className="d-flex align-items-start justify-content-between mb-4">
         <div>
-          <h1 style={{ margin: 0, fontSize: 24 }}>Quotes</h1>
-          <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: 14 }}>
+          <h1 className="fw-bold mb-1" style={{ fontSize: 22, color: '#0f172a' }}>Quotes</h1>
+          <p className="mb-0" style={{ fontSize: 14, color: '#64748b' }}>
             {isProvider
               ? 'Submit and track freight quotes for open orders.'
               : 'Review and action quotes submitted by logistics providers.'}
           </p>
         </div>
         {isProvider && (
-          <button
-            onClick={() => setShowForm(s => !s)}
-            style={{ padding: '8px 18px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}
-          >
-            {showForm ? '✕ Close' : '+ Submit Quote'}
+          <button onClick={() => setShowForm(s => !s)}
+            className="btn d-flex align-items-center gap-8"
+            style={{ background: '#299E60', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap' }}>
+            <i className={`ph ${showForm ? 'ph-x' : 'ph-plus'}`} style={{ fontSize: 16 }} />
+            {showForm ? 'Close' : 'Submit Quote'}
           </button>
         )}
       </div>
 
-      {/* Error banner */}
+      {/* Error */}
       {error && (
-        <div role="alert" style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: 6, padding: '10px 14px', marginBottom: '1rem', fontSize: 14 }}>
-          {error}
-          <button onClick={() => setError(null)} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontWeight: 700 }}>×</button>
+        <div className="d-flex align-items-center justify-content-between mb-3" role="alert"
+          style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', fontSize: 14 }}>
+          <span><i className="ph ph-warning-circle me-2" />{error}</span>
+          <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b91c1c', fontSize: 18, lineHeight: 1 }}>×</button>
         </div>
       )}
 
-      {/* Submit form panel */}
+      {/* Submit form */}
       {showForm && (
-        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '1.5rem', marginBottom: '1.5rem' }}>
-          <h2 style={{ margin: '0 0 1rem', fontSize: 16 }}>Submit New Quote</h2>
-          <SubmitQuoteForm
-            onSuccess={() => { setShowForm(false); void fetchQuotes(1); setPage(1); }}
-            onCancel={() => setShowForm(false)}
-          />
+        <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: 12 }}>
+          <div className="card-body p-4">
+            <h5 className="fw-semibold mb-3" style={{ color: '#0f172a', fontSize: 16 }}>
+              <i className="ph ph-paper-plane-tilt me-2" style={{ color: '#299E60' }} />
+              Submit New Quote
+            </h5>
+            <SubmitQuoteForm
+              onSuccess={() => { setShowForm(false); void fetchQuotes(1); setPage(1); }}
+              onCancel={() => setShowForm(false)}
+            />
+          </div>
         </div>
       )}
 
       {/* Quotes table */}
-      {loading ? (
-        <div aria-busy="true" style={{ color: '#6b7280', padding: '2rem', textAlign: 'center' }}>Loading quotes…</div>
-      ) : quotes.length === 0 ? (
-        <div style={{ textAlign: 'center', color: '#6b7280', padding: '3rem', border: '1px dashed #e2e8f0', borderRadius: 8 }}>
-          <p style={{ fontSize: 16, marginBottom: 8 }}>No quotes found.</p>
-          {isProvider && <p style={{ fontSize: 14 }}>Click "Submit Quote" to respond to an open order.</p>}
-        </div>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead>
-              <tr style={{ background: '#f8fafc' }}>
-                {['Order', 'Price', 'Transit', 'Valid Until', 'Status', 'Submitted', ...(canBuyerAction ? ['Actions'] : [])].map(h => (
-                  <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, fontSize: 12, color: '#6b7280', borderBottom: '1px solid #e2e8f0', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {quotes.map(q => {
-                const isExpired = new Date(q.valid_until) < new Date();
-                return (
-                  <tr key={q.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '10px 12px', fontWeight: 500 }}>
-                      {q.order_title ?? q.order_id.slice(0, 8) + '…'}
-                      <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2, fontFamily: 'monospace' }}>{q.id.slice(0, 12)}…</div>
-                    </td>
-                    <td style={{ padding: '10px 12px', fontWeight: 600 }}>
-                      {formatCurrency(q.price_amount, q.price_currency)}
-                    </td>
-                    <td style={{ padding: '10px 12px', color: '#374151' }}>{q.transit_days_estimated}d</td>
-                    <td style={{ padding: '10px 12px', color: isExpired ? '#dc2626' : '#374151', fontWeight: isExpired ? 600 : 400, whiteSpace: 'nowrap' }}>
-                      {new Date(q.valid_until).toLocaleDateString()}
-                      {isExpired && <div style={{ fontSize: 11 }}>Expired</div>}
-                    </td>
-                    <td style={{ padding: '10px 12px' }}><StatusBadge status={q.status} /></td>
-                    <td style={{ padding: '10px 12px', color: '#6b7280', whiteSpace: 'nowrap' }}>
-                      {new Date(q.created_at).toLocaleDateString()}
-                    </td>
-                    {canBuyerAction && (
-                      <td style={{ padding: '10px 12px' }}>
-                        {q.status === 'pending' && !isExpired ? (
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <button
-                              onClick={() => openAction(q.id, 'accept')}
-                              style={{ padding: '4px 10px', fontSize: 12, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: 4, cursor: 'pointer' }}
-                            >
-                              Accept
-                            </button>
-                            <button
-                              onClick={() => openAction(q.id, 'reject')}
-                              style={{ padding: '4px 10px', fontSize: 12, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 4, cursor: 'pointer' }}
-                            >
-                              Reject
-                            </button>
-                          </div>
-                        ) : (
-                          <span style={{ color: '#9ca3af', fontSize: 12 }}>—</span>
-                        )}
-                      </td>
-                    )}
+      <div className="card border-0 shadow-sm" style={{ borderRadius: 12 }}>
+        <div className="card-body p-0">
+          {loading ? (
+            <div className="d-flex align-items-center justify-content-center p-5" style={{ color: '#64748b' }}>
+              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+              Loading quotes…
+            </div>
+          ) : quotes.length === 0 ? (
+            <div className="text-center py-5" style={{ color: '#94a3b8' }}>
+              <i className="ph ph-chat-dots" style={{ fontSize: 40, display: 'block', marginBottom: 12 }} />
+              <p className="fw-semibold mb-1" style={{ color: '#64748b' }}>No quotes found.</p>
+              {isProvider && <p style={{ fontSize: 13 }}>Click "Submit Quote" to respond to an open order.</p>}
+            </div>
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-hover mb-0" style={{ fontSize: 14 }}>
+                <thead style={{ background: '#f8fafc' }}>
+                  <tr>
+                    {['Order', 'Price', 'Transit', 'Valid Until', 'Status', 'Submitted', ...(canBuyerAction ? ['Actions'] : [])].map(h => (
+                      <th key={h} className="fw-semibold border-bottom"
+                        style={{ padding: '12px 16px', fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                    ))}
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {quotes.map(q => {
+                    const isExpired = new Date(q.valid_until) < new Date();
+                    return (
+                      <tr key={q.id}>
+                        <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                          <div className="fw-semibold" style={{ color: '#0f172a', fontSize: 13 }}>
+                            {q.order_title ?? `Order ${q.order_id.slice(0, 8)}…`}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#94a3b8', fontFamily: 'monospace' }}>{q.id.slice(0, 12)}…</div>
+                        </td>
+                        <td style={{ padding: '12px 16px', verticalAlign: 'middle', fontWeight: 700, color: '#0f172a' }}>
+                          {formatCurrency(q.price_amount, q.price_currency)}
+                        </td>
+                        <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: '#475569' }}>
+                          <i className="ph ph-truck me-1" style={{ color: '#64748b' }} />{q.transit_days_estimated}d
+                        </td>
+                        <td style={{ padding: '12px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                          <span style={{ color: isExpired ? '#b91c1c' : '#374151', fontWeight: isExpired ? 600 : 400 }}>
+                            {new Date(q.valid_until).toLocaleDateString()}
+                          </span>
+                          {isExpired && <div style={{ fontSize: 11, color: '#b91c1c' }}>Expired</div>}
+                        </td>
+                        <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                          <QuoteStatusBadge status={q.status} />
+                        </td>
+                        <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: '#64748b', whiteSpace: 'nowrap' }}>
+                          {new Date(q.created_at).toLocaleDateString()}
+                        </td>
+                        {canBuyerAction && (
+                          <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                            {q.status === 'pending' && !isExpired ? (
+                              <div className="d-flex gap-6">
+                                <button onClick={() => { setActionQuoteId(q.id); setAction('accept'); }}
+                                  className="btn btn-sm d-flex align-items-center gap-4"
+                                  style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 6, fontSize: 12, fontWeight: 500, padding: '4px 10px' }}>
+                                  <i className="ph ph-check" /> Accept
+                                </button>
+                                <button onClick={() => { setActionQuoteId(q.id); setAction('reject'); }}
+                                  className="btn btn-sm d-flex align-items-center gap-4"
+                                  style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 6, fontSize: 12, fontWeight: 500, padding: '4px 10px' }}>
+                                  <i className="ph ph-x" /> Reject
+                                </button>
+                              </div>
+                            ) : (
+                              <span style={{ color: '#94a3b8', fontSize: 12 }}>—</span>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Pagination */}
       {pagination && pagination.total_pages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', fontSize: 13, color: '#6b7280' }}>
-          <span>
-            Showing {((pagination.page - 1) * pagination.per_page) + 1}–{Math.min(pagination.page * pagination.per_page, pagination.total)} of {pagination.total}
-          </span>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setPage(p => p - 1)} disabled={page <= 1}
-              style={{ padding: '5px 12px', borderRadius: 5, border: '1px solid #e2e8f0', cursor: page <= 1 ? 'not-allowed' : 'pointer', background: page <= 1 ? '#f8fafc' : '#fff', color: page <= 1 ? '#9ca3af' : '#374151' }}>
-              ← Prev
+        <div className="d-flex justify-content-between align-items-center mt-3" style={{ fontSize: 13, color: '#64748b' }}>
+          <span>Showing {((pagination.page - 1) * pagination.per_page) + 1}–{Math.min(pagination.page * pagination.per_page, pagination.total)} of {pagination.total}</span>
+          <div className="d-flex gap-8">
+            <button onClick={() => setPage(p => p - 1)} disabled={page <= 1} className="btn btn-sm"
+              style={{ border: '1px solid #e2e8f0', borderRadius: 6, padding: '5px 14px', background: page <= 1 ? '#f8fafc' : '#fff', color: page <= 1 ? '#94a3b8' : '#374151' }}>
+              <i className="ph ph-caret-left me-1" /> Prev
             </button>
-            <button onClick={() => setPage(p => p + 1)} disabled={page >= pagination.total_pages}
-              style={{ padding: '5px 12px', borderRadius: 5, border: '1px solid #e2e8f0', cursor: page >= pagination.total_pages ? 'not-allowed' : 'pointer', background: page >= pagination.total_pages ? '#f8fafc' : '#fff', color: page >= pagination.total_pages ? '#9ca3af' : '#374151' }}>
-              Next →
+            <button onClick={() => setPage(p => p + 1)} disabled={page >= pagination.total_pages} className="btn btn-sm"
+              style={{ border: '1px solid #e2e8f0', borderRadius: 6, padding: '5px 14px', background: page >= pagination.total_pages ? '#f8fafc' : '#fff', color: page >= pagination.total_pages ? '#94a3b8' : '#374151' }}>
+              Next <i className="ph ph-caret-right ms-1" />
             </button>
           </div>
         </div>
@@ -399,26 +383,36 @@ export default function QuotesPage(): React.JSX.Element {
 
       {/* Accept / Reject confirmation modal */}
       {actionQuoteId && action && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }} role="dialog" aria-modal="true">
-          <div style={{ background: '#fff', borderRadius: 10, padding: '2rem', width: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-            <h3 style={{ margin: '0 0 0.75rem', fontSize: 18, textTransform: 'capitalize' }}>{action} Quote?</h3>
-            <p style={{ margin: '0 0 1.25rem', color: '#374151', fontSize: 14 }}>
-              {action === 'accept'
-                ? 'Accepting this quote will notify the provider and move the order to confirmed status.'
-                : 'Rejecting this quote will notify the provider. This cannot be undone.'}
-            </p>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button onClick={() => { setActionQuoteId(null); setAction(null); }} disabled={actioning}
-                style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer' }}>
-                Cancel
-              </button>
-              <button
-                onClick={() => { void handleAction(actionQuoteId, action); }}
-                disabled={actioning}
-                style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: action === 'accept' ? '#16a34a' : '#dc2626', color: '#fff', fontWeight: 600, cursor: actioning ? 'not-allowed' : 'pointer' }}
-              >
-                {actioning ? (action === 'accept' ? 'Accepting…' : 'Rejecting…') : (action === 'accept' ? 'Accept' : 'Reject')}
-              </button>
+        <div role="dialog" aria-modal="true"
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1050 }}>
+          <div className="card border-0 shadow" style={{ borderRadius: 14, width: 400, maxWidth: '90vw' }}>
+            <div className="card-body p-4">
+              <div className="d-flex align-items-center gap-12 mb-3">
+                <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                  style={{ width: 44, height: 44, background: action === 'accept' ? '#f0fdf4' : '#fef2f2' }}>
+                  <i className={`ph ${action === 'accept' ? 'ph-check-circle' : 'ph-x-circle'}`}
+                    style={{ fontSize: 20, color: action === 'accept' ? '#15803d' : '#b91c1c' }} />
+                </div>
+                <h5 className="mb-0 fw-bold" style={{ fontSize: 17, textTransform: 'capitalize' }}>{action} Quote?</h5>
+              </div>
+              <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.6 }}>
+                {action === 'accept'
+                  ? 'Accepting this quote will notify the provider and move the order to confirmed status.'
+                  : 'Rejecting this quote will notify the provider. This cannot be undone.'}
+              </p>
+              <div className="d-flex justify-content-end gap-8 mt-3">
+                <button onClick={() => { setActionQuoteId(null); setAction(null); }} disabled={actioning}
+                  className="btn" style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 18px', background: '#f8fafc', color: '#374151', fontWeight: 500 }}>
+                  Cancel
+                </button>
+                <button onClick={() => { void handleAction(actionQuoteId, action); }} disabled={actioning}
+                  className="btn d-flex align-items-center gap-6"
+                  style={{ background: action === 'accept' ? '#15803d' : '#b91c1c', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontWeight: 600 }}>
+                  {actioning
+                    ? <><span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /> {action === 'accept' ? 'Accepting…' : 'Rejecting…'}</>
+                    : <>{action === 'accept' ? 'Accept' : 'Reject'}</>}
+                </button>
+              </div>
             </div>
           </div>
         </div>

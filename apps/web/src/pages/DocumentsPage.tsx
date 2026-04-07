@@ -14,7 +14,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { api, apiClient } from '../lib/apiClient';
 import type { TradeDocument, DocumentType, PaginationMeta } from '@sbdmm/shared';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface DocumentRow extends TradeDocument {
   original_filename: string;
@@ -35,7 +35,7 @@ const ALLOWED_MIME_TYPES = [
   'image/tiff',
 ] as const;
 
-const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25 MB
+const MAX_FILE_BYTES = 25 * 1024 * 1024;
 
 const DOCUMENT_TYPES: DocumentType[] = [
   'bill_of_lading',
@@ -59,28 +59,40 @@ function formatBytes(n: number): string {
   return `${(n / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-// ─── Status badge ─────────────────────────────────────────────────────────────
+// ─── Doc type icon map ────────────────────────────────────────────────────────
 
-const STATUS_COLORS: Record<string, string> = {
-  pending_review: '#d97706',
-  approved:       '#16a34a',
-  rejected:       '#dc2626',
+const DOC_TYPE_ICONS: Record<string, string> = {
+  bill_of_lading: 'ph-anchor',
+  commercial_invoice: 'ph-receipt',
+  packing_list: 'ph-list-bullets',
+  certificate_of_origin: 'ph-certificate',
+  customs_declaration: 'ph-stamp',
+  insurance_certificate: 'ph-shield-check',
+  dangerous_goods_declaration: 'ph-warning-diamond',
+  phytosanitary_certificate: 'ph-plant',
+  other: 'ph-file-text',
 };
 
-function StatusBadge({ status }: { status: string }): React.JSX.Element {
-  const color = STATUS_COLORS[status] ?? '#6b7280';
+// ─── Status badge ─────────────────────────────────────────────────────────────
+
+interface StatusMeta { bg: string; text: string; icon: string; label: string }
+const STATUS_META: Record<string, StatusMeta> = {
+  pending_review: { bg: '#fffbeb', text: '#b45309', icon: 'ph-clock', label: 'Pending Review' },
+  approved:       { bg: '#f0fdf4', text: '#15803d', icon: 'ph-check-circle', label: 'Approved' },
+  rejected:       { bg: '#fef2f2', text: '#b91c1c', icon: 'ph-x-circle', label: 'Rejected' },
+};
+
+function DocStatusBadge({ status }: { status: string }): React.JSX.Element {
+  const m = STATUS_META[status] ?? { bg: '#f1f5f9', text: '#64748b', icon: 'ph-question', label: status };
   return (
-    <span style={{
-      background: color + '22', color, border: `1px solid ${color}55`,
-      borderRadius: 4, padding: '2px 8px', fontSize: 12, fontWeight: 600,
-      textTransform: 'capitalize',
-    }}>
-      {status.replace(/_/g, ' ')}
+    <span className="d-inline-flex align-items-center gap-4" style={{ background: m.bg, color: m.text, border: `1px solid ${m.text}44`, borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
+      <i className={`ph ${m.icon}`} style={{ fontSize: 13 }} />
+      {m.label}
     </span>
   );
 }
 
-// ─── Main Component ──────────────────────────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function DocumentsPage(): React.JSX.Element {
   const { user } = useAuth();
@@ -90,7 +102,6 @@ export default function DocumentsPage(): React.JSX.Element {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Upload form state
   const [showUpload, setShowUpload] = useState(false);
   const [form, setForm] = useState<UploadForm>({ document_type: 'other', order_id: '', file: null });
   const [fileError, setFileError] = useState<string | null>(null);
@@ -98,7 +109,6 @@ export default function DocumentsPage(): React.JSX.Element {
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Delete confirmation
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -106,9 +116,7 @@ export default function DocumentsPage(): React.JSX.Element {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get<DocumentRow[]>(
-        `/api/v1/documents?page=${p}&per_page=20`,
-      );
+      const res = await api.get<DocumentRow[]>(`/api/v1/documents?page=${p}&per_page=20`);
       if (res.success && res.data) {
         setDocs(res.data);
         if (res.meta?.pagination) setPagination(res.meta.pagination);
@@ -120,17 +128,12 @@ export default function DocumentsPage(): React.JSX.Element {
     }
   }, []);
 
-  useEffect(() => {
-    void fetchDocs(page);
-  }, [fetchDocs, page]);
-
-  // ─── File validation ────────────────────────────────────────────────────────
+  useEffect(() => { void fetchDocs(page); }, [fetchDocs, page]);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>): void {
     setFileError(null);
     const file = e.target.files?.[0] ?? null;
     if (!file) { setForm(f => ({ ...f, file: null })); return; }
-
     if (!ALLOWED_MIME_TYPES.includes(file.type as typeof ALLOWED_MIME_TYPES[number])) {
       setFileError('Only PDF, JPEG, PNG, and TIFF files are allowed.');
       if (fileRef.current) fileRef.current.value = '';
@@ -146,42 +149,27 @@ export default function DocumentsPage(): React.JSX.Element {
     setForm(f => ({ ...f, file }));
   }
 
-  // ─── Upload ─────────────────────────────────────────────────────────────────
-
   async function handleUpload(e: React.FormEvent): Promise<void> {
     e.preventDefault();
     if (!form.file) { setFileError('Please select a file.'); return; }
-
     setUploading(true);
     setError(null);
     try {
-      // Multipart upload — build FormData and call the base apiClient directly
-      // so we can omit the Content-Type header (browser sets multipart boundary).
       const formData = new FormData();
       formData.append('file', form.file);
       formData.append('document_type', form.document_type);
       if (form.order_id.trim()) formData.append('order_id', form.order_id.trim());
-
-      // Use apiClient with raw fetch options via POST (body bypasses JSON stringify)
       await apiClient<unknown>('/api/v1/documents/upload', { method: 'POST', body: formData });
-
       setUploadSuccess(true);
       setForm({ document_type: 'other', order_id: '', file: null });
       if (fileRef.current) fileRef.current.value = '';
-      setTimeout(() => {
-        setUploadSuccess(false);
-        setShowUpload(false);
-        void fetchDocs(1);
-        setPage(1);
-      }, 2000);
+      setTimeout(() => { setUploadSuccess(false); setShowUpload(false); void fetchDocs(1); setPage(1); }, 2000);
     } catch {
       setError('Upload failed. Check the file and try again.');
     } finally {
       setUploading(false);
     }
   }
-
-  // ─── Download (signed URL) ───────────────────────────────────────────────────
 
   async function handleDownload(id: string, filename: string): Promise<void> {
     try {
@@ -200,8 +188,6 @@ export default function DocumentsPage(): React.JSX.Element {
     }
   }
 
-  // ─── Delete ──────────────────────────────────────────────────────────────────
-
   async function handleDelete(): Promise<void> {
     if (!confirmDeleteId) return;
     setDeleting(true);
@@ -219,204 +205,230 @@ export default function DocumentsPage(): React.JSX.Element {
 
   const isAdmin = user?.role === 'tenant_admin' || user?.role === 'super_admin';
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
-
   return (
-    <div style={{ padding: '2rem', maxWidth: 1200, margin: '0 auto', fontFamily: 'system-ui, sans-serif' }}>
+    <div className="p-4" style={{ maxWidth: 1100 }}>
+
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+      <div className="d-flex align-items-start justify-content-between mb-4">
         <div>
-          <h1 style={{ margin: 0, fontSize: 24 }}>Trade Documents</h1>
-          <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: 14 }}>
-            Upload and manage Bills of Lading, invoices, customs declarations, and other trade documents.
+          <h1 className="fw-bold mb-1" style={{ fontSize: 22, color: '#0f172a' }}>Trade Documents</h1>
+          <p className="mb-0" style={{ fontSize: 14, color: '#64748b' }}>
+            Upload and manage Bills of Lading, invoices, customs declarations and other trade documents.
           </p>
         </div>
         <button
+          className="btn d-flex align-items-center gap-8"
           onClick={() => { setShowUpload(s => !s); setUploadSuccess(false); setFileError(null); }}
-          style={{ padding: '8px 18px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}
+          style={{ background: '#299E60', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap' }}
         >
-          {showUpload ? '✕ Close' : '+ Upload Document'}
+          <i className={`ph ${showUpload ? 'ph-x' : 'ph-upload-simple'}`} style={{ fontSize: 16 }} />
+          {showUpload ? 'Close' : 'Upload Document'}
         </button>
       </div>
 
       {/* Error banner */}
       {error && (
-        <div role="alert" style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: 6, padding: '10px 14px', marginBottom: '1rem', fontSize: 14 }}>
-          {error}
-          <button onClick={() => setError(null)} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontWeight: 700 }}>×</button>
+        <div className="d-flex align-items-center justify-content-between mb-3" role="alert"
+          style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', fontSize: 14 }}>
+          <span><i className="ph ph-warning-circle me-2" />{error}</span>
+          <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b91c1c', fontSize: 18, lineHeight: 1 }}>×</button>
         </div>
       )}
 
       {/* Upload panel */}
       {showUpload && (
-        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '1.5rem', marginBottom: '1.5rem' }}>
-          <h2 style={{ margin: '0 0 1rem', fontSize: 16 }}>Upload Trade Document</h2>
+        <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: 12 }}>
+          <div className="card-body p-4">
+            <h5 className="fw-semibold mb-3" style={{ color: '#0f172a', fontSize: 16 }}>
+              <i className="ph ph-file-arrow-up me-2" style={{ color: '#299E60' }} />
+              Upload Trade Document
+            </h5>
+            <div className="d-flex align-items-center gap-8 mb-3 flex-wrap" style={{ fontSize: 12, color: '#64748b' }}>
+              <span><i className="ph ph-info me-1" />Accepted:</span>
+              {['PDF', 'JPEG', 'PNG', 'TIFF'].map(t => (
+                <span key={t} style={{ background: '#f1f5f9', color: '#475569', borderRadius: 4, padding: '1px 7px', fontWeight: 500 }}>{t}</span>
+              ))}
+              <span className="ms-2">· Max 25 MB</span>
+            </div>
 
-          {uploadSuccess ? (
-            <div style={{ color: '#16a34a', fontWeight: 600, padding: '10px 0' }}>
-              ✓ Document uploaded successfully. Refreshing list…
+            {uploadSuccess ? (
+              <div className="d-flex align-items-center gap-8" style={{ color: '#15803d', fontWeight: 600 }}>
+                <i className="ph ph-check-circle" style={{ fontSize: 20 }} />
+                Document uploaded successfully. Refreshing list…
+              </div>
+            ) : (
+              <form onSubmit={(e) => { void handleUpload(e); }}>
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <label className="form-label fw-semibold" style={{ fontSize: 13 }}>
+                      Document Type <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <select
+                      className="form-select"
+                      value={form.document_type}
+                      onChange={e => setForm(f => ({ ...f, document_type: e.target.value as DocumentType }))}
+                      required
+                      style={{ borderRadius: 8, fontSize: 14, borderColor: '#cbd5e1' }}
+                    >
+                      {DOCUMENT_TYPES.map(t => <option key={t} value={t}>{formatDocType(t)}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="col-md-6">
+                    <label className="form-label fw-semibold" style={{ fontSize: 13 }}>
+                      Order ID <span className="fw-normal" style={{ color: '#94a3b8' }}>(optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={form.order_id}
+                      onChange={e => setForm(f => ({ ...f, order_id: e.target.value }))}
+                      placeholder="UUID of the related order"
+                      style={{ borderRadius: 8, fontSize: 14, borderColor: '#cbd5e1' }}
+                    />
+                  </div>
+
+                  <div className="col-12">
+                    <label className="form-label fw-semibold" style={{ fontSize: 13 }}>
+                      File <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <div
+                      onClick={() => fileRef.current?.click()}
+                      style={{ border: '2px dashed #cbd5e1', borderRadius: 10, padding: '24px 16px', textAlign: 'center', background: '#f8fafc', cursor: 'pointer', position: 'relative' }}
+                    >
+                      <i className="ph ph-cloud-arrow-up" style={{ fontSize: 30, color: '#94a3b8', display: 'block', marginBottom: 8 }} />
+                      {form.file ? (
+                        <span style={{ color: '#15803d', fontWeight: 600, fontSize: 14 }}>
+                          <i className="ph ph-check-circle me-1" />
+                          {form.file.name} ({formatBytes(form.file.size)})
+                        </span>
+                      ) : (
+                        <span style={{ color: '#64748b', fontSize: 14 }}>Click to choose a file or drag &amp; drop here</span>
+                      )}
+                      <input
+                        ref={fileRef}
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff"
+                        onChange={handleFileChange}
+                        style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
+                        required
+                      />
+                    </div>
+                    {fileError && (
+                      <div className="mt-1" style={{ color: '#b91c1c', fontSize: 13 }}>
+                        <i className="ph ph-warning me-1" />{fileError}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="col-12 d-flex gap-8">
+                    <button type="submit" disabled={uploading || !form.file}
+                      className="btn d-flex align-items-center gap-8"
+                      style={{ background: uploading ? '#86efac' : '#299E60', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 600, fontSize: 14 }}>
+                      {uploading
+                        ? <><span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /> Uploading…</>
+                        : <><i className="ph ph-upload-simple" /> Upload</>}
+                    </button>
+                    <button type="button" onClick={() => { setShowUpload(false); setFileError(null); }}
+                      className="btn"
+                      style={{ background: '#f1f5f9', color: '#374151', border: '1px solid #cbd5e1', borderRadius: 8, padding: '10px 20px', fontWeight: 500, fontSize: 14 }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Documents list */}
+      <div className="card border-0 shadow-sm" style={{ borderRadius: 12 }}>
+        <div className="card-body p-0">
+          {loading ? (
+            <div className="d-flex align-items-center justify-content-center p-5" style={{ color: '#64748b' }}>
+              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+              Loading documents…
+            </div>
+          ) : docs.length === 0 ? (
+            <div className="text-center py-5" style={{ color: '#94a3b8' }}>
+              <i className="ph ph-files" style={{ fontSize: 40, display: 'block', marginBottom: 12 }} />
+              <p className="fw-semibold mb-1" style={{ color: '#64748b' }}>No documents uploaded yet.</p>
+              <p style={{ fontSize: 13 }}>Click "Upload Document" to get started.</p>
             </div>
           ) : (
-            <form onSubmit={(e) => { void handleUpload(e); }} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              {/* Document type */}
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
-                  Document Type <span style={{ color: '#dc2626' }}>*</span>
-                </label>
-                <select
-                  value={form.document_type}
-                  onChange={e => setForm(f => ({ ...f, document_type: e.target.value as DocumentType }))}
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 14 }}
-                  required
-                >
-                  {DOCUMENT_TYPES.map(t => (
-                    <option key={t} value={t}>{formatDocType(t)}</option>
+            <div className="table-responsive">
+              <table className="table table-hover mb-0" style={{ fontSize: 14 }}>
+                <thead style={{ background: '#f8fafc' }}>
+                  <tr>
+                    {['Document', 'Type', 'Size', 'Status', 'Uploaded', 'Actions'].map(h => (
+                      <th key={h} className="fw-semibold border-bottom" style={{ padding: '12px 16px', fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {docs.map(doc => (
+                    <tr key={doc.id}>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                        <div className="d-flex align-items-center gap-8">
+                          <div className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0" style={{ width: 32, height: 32, background: '#f1f5f9' }}>
+                            <i className={`ph ${DOC_TYPE_ICONS[doc.document_type] ?? 'ph-file-text'}`} style={{ fontSize: 16, color: '#299E60' }} />
+                          </div>
+                          <div>
+                            <div className="fw-semibold" style={{ color: '#0f172a', fontSize: 13 }}>{doc.original_filename}</div>
+                            {doc.order_id && (
+                              <div style={{ fontSize: 11, color: '#94a3b8', fontFamily: 'monospace' }}>Order: {doc.order_id.slice(0, 8)}…</div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: '#475569' }}>{formatDocType(doc.document_type)}</td>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: '#64748b', whiteSpace: 'nowrap' }}>{formatBytes(doc.file_size_bytes)}</td>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}><DocStatusBadge status={doc.status} /></td>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: '#64748b', whiteSpace: 'nowrap' }}>
+                        {new Date(doc.created_at).toLocaleDateString()}
+                      </td>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                        <div className="d-flex align-items-center gap-6">
+                          <button onClick={() => { void handleDownload(doc.id, doc.original_filename); }}
+                            className="btn btn-sm d-flex align-items-center gap-4"
+                            style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: 6, fontSize: 12, fontWeight: 500, padding: '4px 10px' }}>
+                            <i className="ph ph-download-simple" /> Download
+                          </button>
+                          {isAdmin && (
+                            <button onClick={() => setConfirmDeleteId(doc.id)}
+                              className="btn btn-sm d-flex align-items-center gap-4"
+                              style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 6, fontSize: 12, fontWeight: 500, padding: '4px 10px' }}>
+                              <i className="ph ph-trash" /> Delete
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
                   ))}
-                </select>
-              </div>
-
-              {/* Order ID */}
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
-                  Order ID <span style={{ color: '#6b7280', fontWeight: 400 }}>(optional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={form.order_id}
-                  onChange={e => setForm(f => ({ ...f, order_id: e.target.value }))}
-                  placeholder="UUID of the related order"
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' }}
-                />
-              </div>
-
-              {/* File picker */}
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
-                  File <span style={{ color: '#dc2626' }}>*</span>
-                  <span style={{ fontWeight: 400, color: '#6b7280', marginLeft: 8 }}>PDF, JPEG, PNG, TIFF — max 25 MB</span>
-                </label>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff"
-                  onChange={handleFileChange}
-                  style={{ display: 'block', width: '100%', fontSize: 14 }}
-                  required
-                />
-                {fileError && (
-                  <p style={{ color: '#dc2626', fontSize: 13, margin: '4px 0 0' }}>{fileError}</p>
-                )}
-                {form.file && !fileError && (
-                  <p style={{ color: '#16a34a', fontSize: 13, margin: '4px 0 0' }}>
-                    ✓ {form.file.name} ({formatBytes(form.file.size)})
-                  </p>
-                )}
-              </div>
-
-              {/* Submit */}
-              <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '0.75rem' }}>
-                <button
-                  type="submit"
-                  disabled={uploading || !form.file}
-                  style={{ padding: '9px 20px', background: uploading ? '#93c5fd' : '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: uploading ? 'not-allowed' : 'pointer', fontWeight: 600 }}
-                >
-                  {uploading ? 'Uploading…' : 'Upload'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowUpload(false); setFileError(null); }}
-                  style={{ padding: '9px 20px', background: '#f1f5f9', color: '#374151', border: '1px solid #cbd5e1', borderRadius: 6, cursor: 'pointer' }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
-      )}
-
-      {/* Documents table */}
-      {loading ? (
-        <div aria-busy="true" style={{ color: '#6b7280', padding: '2rem', textAlign: 'center' }}>Loading documents…</div>
-      ) : docs.length === 0 ? (
-        <div style={{ textAlign: 'center', color: '#6b7280', padding: '3rem', border: '1px dashed #e2e8f0', borderRadius: 8 }}>
-          <p style={{ fontSize: 16, marginBottom: 8 }}>No documents uploaded yet.</p>
-          <p style={{ fontSize: 14 }}>Click "Upload Document" to get started.</p>
-        </div>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead>
-              <tr style={{ background: '#f8fafc' }}>
-                {['File Name', 'Type', 'Size', 'Status', 'Uploaded', 'Actions'].map(h => (
-                  <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, fontSize: 12, color: '#6b7280', borderBottom: '1px solid #e2e8f0', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {docs.map(doc => (
-                <tr key={doc.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '10px 12px', fontWeight: 500 }}>
-                    {doc.original_filename}
-                    {doc.order_id && (
-                      <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>Order: {doc.order_id.slice(0, 8)}…</div>
-                    )}
-                  </td>
-                  <td style={{ padding: '10px 12px', color: '#374151' }}>{formatDocType(doc.document_type)}</td>
-                  <td style={{ padding: '10px 12px', color: '#6b7280' }}>{formatBytes(doc.file_size_bytes)}</td>
-                  <td style={{ padding: '10px 12px' }}><StatusBadge status={doc.status} /></td>
-                  <td style={{ padding: '10px 12px', color: '#6b7280', whiteSpace: 'nowrap' }}>
-                    {new Date(doc.created_at).toLocaleDateString()}
-                  </td>
-                  <td style={{ padding: '10px 12px' }}>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        onClick={() => { void handleDownload(doc.id, doc.original_filename); }}
-                        title="Download"
-                        style={{ padding: '4px 10px', fontSize: 12, background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: 4, cursor: 'pointer' }}
-                      >
-                        ↓ Download
-                      </button>
-                      {isAdmin && (
-                        <button
-                          onClick={() => setConfirmDeleteId(doc.id)}
-                          title="Delete"
-                          style={{ padding: '4px 10px', fontSize: 12, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 4, cursor: 'pointer' }}
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      </div>
 
       {/* Pagination */}
       {pagination && pagination.total_pages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', fontSize: 13, color: '#6b7280' }}>
+        <div className="d-flex justify-content-between align-items-center mt-3" style={{ fontSize: 13, color: '#64748b' }}>
           <span>
             Showing {((pagination.page - 1) * pagination.per_page) + 1}–{Math.min(pagination.page * pagination.per_page, pagination.total)} of {pagination.total}
           </span>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => setPage(p => p - 1)}
-              disabled={page <= 1}
-              style={{ padding: '5px 12px', borderRadius: 5, border: '1px solid #e2e8f0', cursor: page <= 1 ? 'not-allowed' : 'pointer', background: page <= 1 ? '#f8fafc' : '#fff', color: page <= 1 ? '#9ca3af' : '#374151' }}
-            >
-              ← Prev
+          <div className="d-flex gap-8">
+            <button onClick={() => setPage(p => p - 1)} disabled={page <= 1}
+              className="btn btn-sm"
+              style={{ border: '1px solid #e2e8f0', borderRadius: 6, padding: '5px 14px', background: page <= 1 ? '#f8fafc' : '#fff', color: page <= 1 ? '#94a3b8' : '#374151' }}>
+              <i className="ph ph-caret-left me-1" /> Prev
             </button>
-            <button
-              onClick={() => setPage(p => p + 1)}
-              disabled={page >= pagination.total_pages}
-              style={{ padding: '5px 12px', borderRadius: 5, border: '1px solid #e2e8f0', cursor: page >= pagination.total_pages ? 'not-allowed' : 'pointer', background: page >= pagination.total_pages ? '#f8fafc' : '#fff', color: page >= pagination.total_pages ? '#9ca3af' : '#374151' }}
-            >
-              Next →
+            <button onClick={() => setPage(p => p + 1)} disabled={page >= pagination.total_pages}
+              className="btn btn-sm"
+              style={{ border: '1px solid #e2e8f0', borderRadius: 6, padding: '5px 14px', background: page >= pagination.total_pages ? '#f8fafc' : '#fff', color: page >= pagination.total_pages ? '#94a3b8' : '#374151' }}>
+              Next <i className="ph ph-caret-right ms-1" />
             </button>
           </div>
         </div>
@@ -424,27 +436,33 @@ export default function DocumentsPage(): React.JSX.Element {
 
       {/* Delete confirmation modal */}
       {confirmDeleteId && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }} role="dialog" aria-modal="true" aria-label="Confirm delete document">
-          <div style={{ background: '#fff', borderRadius: 10, padding: '2rem', width: 380, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-            <h3 style={{ margin: '0 0 0.75rem', fontSize: 18 }}>Delete Document?</h3>
-            <p style={{ margin: '0 0 1.25rem', color: '#374151', fontSize: 14 }}>
-              This will permanently delete the document and its file from storage. This action cannot be undone.
-            </p>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setConfirmDeleteId(null)}
-                disabled={deleting}
-                style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => { void handleDelete(); }}
-                disabled={deleting}
-                style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#dc2626', color: '#fff', fontWeight: 600, cursor: deleting ? 'not-allowed' : 'pointer' }}
-              >
-                {deleting ? 'Deleting…' : 'Delete'}
-              </button>
+        <div role="dialog" aria-modal="true" aria-label="Confirm document deletion"
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1050 }}>
+          <div className="card border-0 shadow" style={{ borderRadius: 14, width: 400, maxWidth: '90vw' }}>
+            <div className="card-body p-4">
+              <div className="d-flex align-items-center gap-12 mb-3">
+                <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style={{ width: 44, height: 44, background: '#fef2f2' }}>
+                  <i className="ph ph-trash" style={{ fontSize: 20, color: '#b91c1c' }} />
+                </div>
+                <h5 className="mb-0 fw-bold" style={{ fontSize: 17 }}>Delete Document?</h5>
+              </div>
+              <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.6 }}>
+                This will permanently delete the document and its file from storage. <strong>This cannot be undone.</strong>
+              </p>
+              <div className="d-flex justify-content-end gap-8 mt-3">
+                <button onClick={() => setConfirmDeleteId(null)} disabled={deleting}
+                  className="btn"
+                  style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 18px', background: '#f8fafc', color: '#374151', fontWeight: 500 }}>
+                  Cancel
+                </button>
+                <button onClick={() => { void handleDelete(); }} disabled={deleting}
+                  className="btn d-flex align-items-center gap-6"
+                  style={{ background: '#b91c1c', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontWeight: 600 }}>
+                  {deleting
+                    ? <><span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /> Deleting…</>
+                    : <><i className="ph ph-trash" /> Delete</>}
+                </button>
+              </div>
             </div>
           </div>
         </div>

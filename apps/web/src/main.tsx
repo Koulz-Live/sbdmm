@@ -13,8 +13,11 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 // MONITORING: Must be the first side-effectful import so Sentry instruments fetch/XHR
 import './lib/monitoring';
+import 'animate.css';
+import 'slick-carousel/slick/slick.css';
+import 'slick-carousel/slick/slick-theme.css';
 import App from './App';
-import './index.css';
+import './index.scss';
 
 const rootElement = document.getElementById('root');
 
