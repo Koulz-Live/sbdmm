@@ -2,7 +2,7 @@
  * LandingPage — Public marketing page at /
  *
  * Layout mirrors the MarketPro HomePageOne template:
- *   - Fixed top-bar → sticky nav header
+ *   - Fixed top-bar → sticky nav header (with mobile hamburger)
  *   - Hero banner with CTA
  *   - Features / service modes strip
  *   - "Why SBDMM" value-prop section
@@ -10,10 +10,18 @@
  *   - Vendor / logistics stats
  *   - Testimonials
  *   - CTA banner
- *   - Footer
+ *   - Footer (5-column → stacks on mobile, correct 12-col grid)
  *
  * Uses only Bootstrap 5 + Phosphor icons (already in the bundle).
  * Zero new npm dependencies.
+ *
+ * Responsive fixes applied:
+ *   - Replaced all non-standard Bootstrap gap/mb classes with inline styles
+ *   - Footer grid: 3+2+2+2+3 = 12 cols (was 4+2+2+2+4 = 14, broken)
+ *   - Hero mockup hidden on mobile (d-none d-lg-flex)
+ *   - TopBar swaps contact info for tagline on xs
+ *   - StickyNav: hamburger toggle below lg, mobile dropdown menu
+ *   - col-12 fallback on all row children for correct stacking
  */
 
 import { useEffect, useState } from 'react';
@@ -23,14 +31,14 @@ import { useAuth } from '../contexts/AuthContext';
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
 const SERVICE_MODES = [
-  { icon: 'ph-container',        label: 'FCL',     desc: 'Full Container Load' },
-  { icon: 'ph-package',          label: 'LCL',     desc: 'Less Container Load' },
-  { icon: 'ph-airplane',         label: 'Air',     desc: 'Express Air Freight' },
-  { icon: 'ph-truck',            label: 'Road',    desc: 'Road Haulage' },
-  { icon: 'ph-train',            label: 'Rail',    desc: 'Rail Freight' },
-  { icon: 'ph-lightning',        label: 'Courier', desc: 'Courier & Express' },
-  { icon: 'ph-anchor',           label: 'Project', desc: 'Project Cargo' },
-  { icon: 'ph-warehouse',        label: 'Storage', desc: 'Bonded Warehousing' },
+  { icon: 'ph-container',  label: 'FCL',     desc: 'Full Container Load' },
+  { icon: 'ph-package',    label: 'LCL',     desc: 'Less Container Load' },
+  { icon: 'ph-airplane',   label: 'Air',     desc: 'Express Air Freight' },
+  { icon: 'ph-truck',      label: 'Road',    desc: 'Road Haulage' },
+  { icon: 'ph-train',      label: 'Rail',    desc: 'Rail Freight' },
+  { icon: 'ph-lightning',  label: 'Courier', desc: 'Courier & Express' },
+  { icon: 'ph-anchor',     label: 'Project', desc: 'Project Cargo' },
+  { icon: 'ph-warehouse',  label: 'Storage', desc: 'Bonded Warehousing' },
 ];
 
 const HOW_IT_WORKS = [
@@ -102,26 +110,22 @@ const NAV_LINKS = [
 
 function TopBar() {
   return (
-    <div
-      style={{
-        background: '#1e293b',
-        color: '#94a3b8',
-        fontSize: 12,
-        padding: '8px 0',
-      }}
-    >
-      <div
-        className="container"
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}
-      >
-        <span className="d-flex align-items-center gap-6">
+    <div style={{ background: '#1e293b', color: '#94a3b8', fontSize: 12, padding: '8px 0' }}>
+      <div className="container d-flex justify-content-between align-items-center flex-wrap" style={{ gap: 8 }}>
+        {/* sm+: show phone & email */}
+        <span className="d-none d-sm-flex align-items-center" style={{ gap: 6 }}>
           <i className="ph ph-phone" style={{ color: '#299E60' }} />
           +1 (800) 123-4567
-          <span style={{ margin: '0 12px', opacity: 0.3 }}>|</span>
+          <span style={{ margin: '0 10px', opacity: 0.3 }}>|</span>
           <i className="ph ph-envelope" style={{ color: '#299E60' }} />
           hello@sbdmm.com
         </span>
-        <span className="d-flex align-items-center gap-12">
+        {/* xs: show compact tagline instead */}
+        <span className="d-flex d-sm-none align-items-center" style={{ gap: 6, color: '#64748b' }}>
+          <i className="ph ph-globe-hemisphere-west" style={{ color: '#299E60' }} />
+          Global Trade &amp; Logistics Platform
+        </span>
+        <span className="d-flex align-items-center" style={{ gap: 12 }}>
           {['ph-linkedin-logo', 'ph-twitter-logo', 'ph-facebook-logo'].map((ic) => (
             <a key={ic} href="#" style={{ color: '#94a3b8' }}>
               <i className={`ph ${ic}`} />
@@ -134,6 +138,8 @@ function TopBar() {
 }
 
 function StickyNav({ scrolled }: { scrolled: boolean }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <header
       style={{
@@ -146,6 +152,7 @@ function StickyNav({ scrolled }: { scrolled: boolean }) {
       }}
     >
       <div className="container">
+        {/* Main row */}
         <nav
           style={{
             display: 'flex',
@@ -156,7 +163,7 @@ function StickyNav({ scrolled }: { scrolled: boolean }) {
           }}
         >
           {/* Logo */}
-          <a href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <a href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             <span
               style={{
                 width: 36,
@@ -178,8 +185,8 @@ function StickyNav({ scrolled }: { scrolled: boolean }) {
             </span>
           </a>
 
-          {/* Nav links — desktop only */}
-          <div className="d-none d-lg-flex align-items-center gap-32">
+          {/* Desktop nav links (lg+) */}
+          <div className="d-none d-lg-flex align-items-center" style={{ gap: 32 }}>
             {NAV_LINKS.map((l) => (
               <a
                 key={l.href}
@@ -193,8 +200,8 @@ function StickyNav({ scrolled }: { scrolled: boolean }) {
             ))}
           </div>
 
-          {/* CTA buttons */}
-          <div className="d-flex align-items-center gap-8">
+          {/* Right cluster: Sign In + Get Started + Hamburger */}
+          <div className="d-flex align-items-center" style={{ gap: 8 }}>
             <Link
               to="/login"
               style={{
@@ -205,13 +212,15 @@ function StickyNav({ scrolled }: { scrolled: boolean }) {
                 padding: '8px 16px',
                 borderRadius: 8,
                 border: '1px solid #e2e8f0',
+                whiteSpace: 'nowrap',
               }}
             >
               Sign In
             </Link>
+            {/* Get Started hidden on xs */}
             <Link
               to="/login"
-              className="d-none d-sm-inline-flex"
+              className="d-none d-sm-inline-flex align-items-center"
               style={{
                 fontSize: 13,
                 fontWeight: 600,
@@ -220,13 +229,77 @@ function StickyNav({ scrolled }: { scrolled: boolean }) {
                 padding: '8px 18px',
                 borderRadius: 8,
                 background: '#299E60',
-                border: 'none',
+                gap: 6,
+                whiteSpace: 'nowrap',
               }}
             >
-              Get Started <i className="ph ph-arrow-right ms-1" />
+              Get Started <i className="ph ph-arrow-right" />
             </Link>
+            {/* Hamburger (below lg) */}
+            <button
+              className="d-flex d-lg-none align-items-center justify-content-center"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-label="Toggle navigation"
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 8,
+                border: '1px solid #e2e8f0',
+                background: menuOpen ? '#f1f5f9' : '#fff',
+                cursor: 'pointer',
+                fontSize: 20,
+                color: '#1e293b',
+                flexShrink: 0,
+              }}
+            >
+              <i className={`ph ${menuOpen ? 'ph-x' : 'ph-list'}`} />
+            </button>
           </div>
         </nav>
+
+        {/* Mobile dropdown */}
+        {menuOpen && (
+          <div className="d-lg-none" style={{ borderTop: '1px solid #f1f5f9', paddingBottom: 12 }}>
+            {NAV_LINKS.map((l) => (
+              <a
+                key={l.href}
+                href={l.href}
+                onClick={() => setMenuOpen(false)}
+                style={{
+                  display: 'block',
+                  padding: '10px 4px',
+                  fontSize: 15,
+                  fontWeight: 500,
+                  color: '#475569',
+                  textDecoration: 'none',
+                  borderBottom: '1px solid #f8fafc',
+                }}
+              >
+                {l.label}
+              </a>
+            ))}
+            {/* Get Started CTA for xs (where the header button is hidden) */}
+            <div className="d-sm-none" style={{ paddingTop: 8 }}>
+              <Link
+                to="/login"
+                style={{
+                  display: 'block',
+                  textAlign: 'center',
+                  background: '#299E60',
+                  color: '#fff',
+                  fontWeight: 600,
+                  fontSize: 14,
+                  padding: '10px 0',
+                  borderRadius: 8,
+                  textDecoration: 'none',
+                  marginTop: 8,
+                }}
+              >
+                Get Started Free
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
     </header>
   );
@@ -239,7 +312,7 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
 
-  // Authenticated users skip the landing page → dashboard
+  // Authenticated users skip the landing page
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       navigate('/dashboard', { replace: true });
@@ -269,19 +342,20 @@ export default function LandingPage() {
       <section
         style={{
           background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #064e3b 100%)',
-          padding: '80px 0 0',
+          padding: '72px 0 0',
           position: 'relative',
           overflow: 'hidden',
         }}
       >
-        {/* decorative blobs */}
-        <div style={{ position: 'absolute', top: -80, right: -80, width: 400, height: 400, background: '#299E6015', borderRadius: '50%' }} />
-        <div style={{ position: 'absolute', bottom: 0, left: -60, width: 280, height: 280, background: '#1d4ed808', borderRadius: '50%' }} />
+        {/* Decorative blobs */}
+        <div style={{ position: 'absolute', top: -80, right: -80, width: 400, height: 400, background: '#299E6015', borderRadius: '50%', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: 0, left: -60, width: 280, height: 280, background: '#1d4ed808', borderRadius: '50%', pointerEvents: 'none' }} />
 
         <div className="container" style={{ position: 'relative' }}>
-          <div className="row align-items-center gy-5">
-            <div className="col-lg-6">
-              {/* Eyebrow */}
+          <div className="row align-items-center" style={{ rowGap: 40 }}>
+
+            {/* Copy */}
+            <div className="col-12 col-lg-6">
               <span
                 style={{
                   display: 'inline-flex',
@@ -295,34 +369,34 @@ export default function LandingPage() {
                   fontSize: 12,
                   fontWeight: 600,
                   letterSpacing: '0.04em',
-                  marginBottom: 24,
+                  marginBottom: 20,
                   textTransform: 'uppercase',
                 }}
               >
-                <i className="ph ph-globe-hemisphere-west" /> Global Trade & Logistics Platform
+                <i className="ph ph-globe-hemisphere-west" /> Global Trade &amp; Logistics Platform
               </span>
 
               <h1
                 style={{
-                  fontSize: 'clamp(2rem, 4vw, 3.25rem)',
+                  fontSize: 'clamp(1.85rem, 5vw, 3.25rem)',
                   fontWeight: 800,
                   color: '#fff',
                   lineHeight: 1.15,
-                  marginBottom: 24,
+                  marginBottom: 20,
                   letterSpacing: '-0.02em',
                 }}
               >
-                Smarter Freight <br />
-                <span style={{ color: '#299E60' }}>Procurement</span>, <br />
+                Smarter Freight{' '}
+                <span style={{ color: '#299E60' }}>Procurement</span>,{' '}
                 Built for Global Trade.
               </h1>
 
-              <p style={{ fontSize: 17, color: '#94a3b8', lineHeight: 1.7, marginBottom: 36, maxWidth: 500 }}>
+              <p style={{ fontSize: 16, color: '#94a3b8', lineHeight: 1.7, marginBottom: 32, maxWidth: 500 }}>
                 Connect with vetted logistics providers, compare live quotes, automate
                 compliance checks, and manage every shipment from one workspace.
               </p>
 
-              <div className="d-flex flex-wrap gap-12 mb-48">
+              <div className="d-flex flex-wrap" style={{ gap: 12, marginBottom: 32 }}>
                 <Link
                   to="/login"
                   style={{
@@ -330,7 +404,7 @@ export default function LandingPage() {
                     color: '#fff',
                     fontWeight: 700,
                     fontSize: 15,
-                    padding: '14px 28px',
+                    padding: '13px 26px',
                     borderRadius: 10,
                     textDecoration: 'none',
                     display: 'inline-flex',
@@ -348,7 +422,7 @@ export default function LandingPage() {
                     color: '#e2e8f0',
                     fontWeight: 600,
                     fontSize: 15,
-                    padding: '14px 28px',
+                    padding: '13px 26px',
                     borderRadius: 10,
                     textDecoration: 'none',
                     display: 'inline-flex',
@@ -362,9 +436,9 @@ export default function LandingPage() {
               </div>
 
               {/* Trust bar */}
-              <div className="d-flex flex-wrap gap-20" style={{ fontSize: 13, color: '#64748b' }}>
+              <div className="d-flex flex-wrap" style={{ gap: 16, fontSize: 13, color: '#64748b', paddingBottom: 8 }}>
                 {['No credit card required', 'SOC 2 Type II ready', 'GDPR compliant'].map((t) => (
-                  <span key={t} className="d-flex align-items-center gap-6">
+                  <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <i className="ph ph-check-circle" style={{ color: '#299E60', fontSize: 16 }} />
                     {t}
                   </span>
@@ -372,12 +446,12 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Hero image — platform mockup */}
-            <div className="col-lg-6 d-flex justify-content-center">
+            {/* Platform mockup — hidden on mobile to avoid overflow */}
+            <div className="col-lg-6 d-none d-lg-flex justify-content-center">
               <div
                 style={{
                   width: '100%',
-                  maxWidth: 540,
+                  maxWidth: 520,
                   background: 'rgba(255,255,255,0.04)',
                   border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: 20,
@@ -385,33 +459,54 @@ export default function LandingPage() {
                   backdropFilter: 'blur(10px)',
                 }}
               >
-                {/* Fake browser chrome */}
+                {/* Browser chrome */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
                   {['#ef4444', '#f59e0b', '#10b981'].map((c) => (
                     <span key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c }} />
                   ))}
-                  <span style={{ flex: 1, height: 28, borderRadius: 6, background: 'rgba(255,255,255,0.06)', marginLeft: 8, display: 'flex', alignItems: 'center', paddingLeft: 12, fontSize: 11, color: '#475569' }}>
+                  <span
+                    style={{
+                      flex: 1,
+                      height: 28,
+                      borderRadius: 6,
+                      background: 'rgba(255,255,255,0.06)',
+                      marginLeft: 8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      paddingLeft: 12,
+                      fontSize: 11,
+                      color: '#475569',
+                    }}
+                  >
                     sbdmm.vercel.app/dashboard
                   </span>
                 </div>
 
-                {/* Mini dashboard preview */}
+                {/* Mini dashboard */}
                 <div style={{ background: '#f1f5f9', borderRadius: 12, overflow: 'hidden' }}>
-                  {/* Sidebar strip */}
-                  <div style={{ display: 'flex', height: 260 }}>
-                    <div style={{ width: 48, background: '#1e293b', padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', height: 240 }}>
+                    <div
+                      style={{
+                        width: 48,
+                        background: '#1e293b',
+                        padding: '12px 8px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 14,
+                        alignItems: 'center',
+                      }}
+                    >
                       {['ph-squares-four', 'ph-package', 'ph-storefront', 'ph-file-text', 'ph-shield-check'].map((ic) => (
                         <i key={ic} className={`ph ${ic}`} style={{ fontSize: 18, color: '#64748b' }} />
                       ))}
                     </div>
-                    <div style={{ flex: 1, padding: 16 }}>
-                      {/* Stat cards row */}
+                    <div style={{ flex: 1, padding: 14 }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
                         {[
-                          { label: 'Active Vendors', val: '24', color: '#299E60' },
-                          { label: 'Open Quotes', val: '8', color: '#1d4ed8' },
-                          { label: 'In Transit', val: '31', color: '#7e22ce' },
-                          { label: 'Compliance OK', val: '96%', color: '#0f766e' },
+                          { label: 'Active Vendors', val: '24',  color: '#299E60' },
+                          { label: 'Open Quotes',    val: '8',   color: '#1d4ed8' },
+                          { label: 'In Transit',     val: '31',  color: '#7e22ce' },
+                          { label: 'Compliance OK',  val: '96%', color: '#0f766e' },
                         ].map((s) => (
                           <div key={s.label} style={{ background: '#fff', borderRadius: 8, padding: 10, borderLeft: `3px solid ${s.color}` }}>
                             <div style={{ fontSize: 18, fontWeight: 700, color: s.color }}>{s.val}</div>
@@ -419,9 +514,20 @@ export default function LandingPage() {
                           </div>
                         ))}
                       </div>
-                      {/* Fake table rows */}
                       {[1, 2, 3].map((i) => (
-                        <div key={i} style={{ background: '#fff', borderRadius: 6, height: 28, marginBottom: 6, padding: '0 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div
+                          key={i}
+                          style={{
+                            background: '#fff',
+                            borderRadius: 6,
+                            height: 28,
+                            marginBottom: 6,
+                            padding: '0 10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                          }}
+                        >
                           <span style={{ width: 8, height: 8, borderRadius: '50%', background: i === 1 ? '#299E60' : i === 2 ? '#f59e0b' : '#3b82f6', flexShrink: 0 }} />
                           <span style={{ height: 8, borderRadius: 4, background: '#e2e8f0', flex: 1 }} />
                           <span style={{ height: 8, borderRadius: 4, background: '#e2e8f0', width: 40 }} />
@@ -432,19 +538,20 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
+
           </div>
         </div>
 
         {/* Wave divider */}
-        <svg viewBox="0 0 1440 60" style={{ display: 'block', marginTop: 60 }} preserveAspectRatio="none">
+        <svg viewBox="0 0 1440 60" style={{ display: 'block', marginTop: 60, width: '100%' }} preserveAspectRatio="none">
           <path d="M0,60 C360,0 1080,0 1440,60 L1440,60 L0,60 Z" fill="#f8fafc" />
         </svg>
       </section>
 
       {/* ── Stats strip ────────────────────────────────────────────────── */}
-      <section style={{ background: '#f8fafc', paddingBottom: 60 }}>
+      <section style={{ background: '#f8fafc', paddingBottom: 56 }}>
         <div className="container">
-          <div className="row gy-4">
+          <div className="row" style={{ rowGap: 24 }}>
             {STATS.map((s) => (
               <div key={s.label} className="col-6 col-md-3 text-center">
                 <div style={{ fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', fontWeight: 800, color: '#299E60', lineHeight: 1 }}>
@@ -458,9 +565,9 @@ export default function LandingPage() {
       </section>
 
       {/* ── Service modes ──────────────────────────────────────────────── */}
-      <section id="features" style={{ padding: '80px 0', background: '#fff' }}>
+      <section id="features" style={{ padding: '72px 0', background: '#fff' }}>
         <div className="container">
-          <div className="text-center mb-48">
+          <div className="text-center" style={{ marginBottom: 48 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: '#299E60', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               Service Modes
             </span>
@@ -481,10 +588,11 @@ export default function LandingPage() {
                     background: '#f8fafc',
                     border: '1px solid #e2e8f0',
                     borderRadius: 16,
-                    padding: '28px 16px',
+                    padding: '28px 12px',
                     textAlign: 'center',
                     cursor: 'pointer',
                     transition: 'all 0.2s',
+                    height: '100%',
                   }}
                   onMouseEnter={(e) => {
                     const el = e.currentTarget;
@@ -501,11 +609,8 @@ export default function LandingPage() {
                     el.style.boxShadow = '';
                   }}
                 >
-                  <i
-                    className={`ph ${m.icon}`}
-                    style={{ fontSize: 40, color: '#299E60', display: 'block', marginBottom: 12 }}
-                  />
-                  <div style={{ fontWeight: 700, fontSize: 15, color: '#1e293b' }}>{m.label}</div>
+                  <i className={`ph ${m.icon}`} style={{ fontSize: 36, color: '#299E60', display: 'block', marginBottom: 10 }} />
+                  <div style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>{m.label}</div>
                   <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>{m.desc}</div>
                 </div>
               </div>
@@ -515,9 +620,9 @@ export default function LandingPage() {
       </section>
 
       {/* ── How it works ───────────────────────────────────────────────── */}
-      <section id="how-it-works" style={{ padding: '80px 0', background: '#f8fafc' }}>
+      <section id="how-it-works" style={{ padding: '72px 0', background: '#f8fafc' }}>
         <div className="container">
-          <div className="text-center mb-48">
+          <div className="text-center" style={{ marginBottom: 48 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: '#299E60', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               How It Works
             </span>
@@ -528,7 +633,7 @@ export default function LandingPage() {
 
           <div className="row g-4">
             {HOW_IT_WORKS.map((step, i) => (
-              <div key={step.step} className="col-md-6 col-lg-3">
+              <div key={step.step} className="col-12 col-sm-6 col-lg-3">
                 <div
                   style={{
                     background: '#fff',
@@ -539,15 +644,15 @@ export default function LandingPage() {
                     position: 'relative',
                   }}
                 >
-                  {/* Connector line on desktop */}
+                  {/* Connector line — desktop only */}
                   {i < HOW_IT_WORKS.length - 1 && (
                     <div
                       className="d-none d-lg-block"
                       style={{
                         position: 'absolute',
                         top: 36,
-                        right: -24,
-                        width: 24,
+                        right: -20,
+                        width: 20,
                         height: 2,
                         background: '#e2e8f0',
                         zIndex: 1,
@@ -574,20 +679,17 @@ export default function LandingPage() {
                       position: 'absolute',
                       top: 16,
                       right: 20,
-                      fontSize: 36,
+                      fontSize: 32,
                       fontWeight: 800,
                       color: '#f1f5f9',
                       lineHeight: 1,
+                      userSelect: 'none',
                     }}
                   >
                     {step.step}
                   </span>
-                  <h5 style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 10 }}>
-                    {step.title}
-                  </h5>
-                  <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, margin: 0 }}>
-                    {step.desc}
-                  </p>
+                  <h5 style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 8 }}>{step.title}</h5>
+                  <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, margin: 0 }}>{step.desc}</p>
                 </div>
               </div>
             ))}
@@ -596,24 +698,25 @@ export default function LandingPage() {
       </section>
 
       {/* ── Value props ────────────────────────────────────────────────── */}
-      <section id="vendors" style={{ padding: '80px 0', background: '#fff' }}>
+      <section id="vendors" style={{ padding: '72px 0', background: '#fff' }}>
         <div className="container">
-          <div className="row align-items-center gy-5">
-            {/* Left — content */}
-            <div className="col-lg-6">
+          <div className="row align-items-center" style={{ rowGap: 48 }}>
+
+            {/* Feature list */}
+            <div className="col-12 col-lg-6">
               <span style={{ fontSize: 12, fontWeight: 700, color: '#299E60', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 Why SBDMM
               </span>
-              <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', fontWeight: 800, color: '#1e293b', marginTop: 8, marginBottom: 24 }}>
+              <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', fontWeight: 800, color: '#1e293b', marginTop: 8, marginBottom: 28 }}>
                 Built for the complexity of global trade
               </h2>
               {[
-                { icon: 'ph-shield-check', title: 'Automated Compliance', desc: 'Every vendor passes a multi-point trade compliance check — sanctions screening, AML, and document validation — before you can award them a booking.' },
-                { icon: 'ph-chart-bar', title: 'Live Quote Comparison', desc: 'Receive structured quotes from multiple carriers on a single screen. Compare on price, transit time, and service mode — not PDFs in your inbox.' },
-                { icon: 'ph-lock-simple', title: 'Tenant Isolation', desc: 'Your vendor relationships, orders, and documents are strictly isolated by tenant. Row-level security enforced at the database layer.' },
-                { icon: 'ph-files', title: 'Document Management', desc: 'Centralise Bills of Lading, packing lists, and certificates of origin. Linked to the shipment they belong to.' },
+                { icon: 'ph-shield-check', title: 'Automated Compliance',  desc: 'Every vendor passes a multi-point trade compliance check — sanctions screening, AML, and document validation — before you can award them a booking.' },
+                { icon: 'ph-chart-bar',    title: 'Live Quote Comparison', desc: 'Receive structured quotes from multiple carriers on a single screen. Compare on price, transit time, and service mode — not PDFs in your inbox.' },
+                { icon: 'ph-lock-simple',  title: 'Tenant Isolation',      desc: 'Your vendor relationships, orders, and documents are strictly isolated by tenant. Row-level security enforced at the database layer.' },
+                { icon: 'ph-files',        title: 'Document Management',   desc: 'Centralise Bills of Lading, packing lists, and certificates of origin. Linked to the shipment they belong to.' },
               ].map((f) => (
-                <div key={f.title} className="d-flex gap-16 mb-24">
+                <div key={f.title} style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
                   <div
                     style={{
                       width: 44,
@@ -637,29 +740,30 @@ export default function LandingPage() {
               ))}
             </div>
 
-            {/* Right — feature cards */}
-            <div className="col-lg-6">
+            {/* Feature cards grid */}
+            <div className="col-12 col-lg-6">
               <div className="row g-3">
                 {[
-                  { icon: 'ph-globe', title: '40+ Countries', sub: 'Logistics network coverage', color: '#eff6ff', iconColor: '#1d4ed8' },
-                  { icon: 'ph-clock-countdown', title: 'Real-time Updates', sub: 'Live shipment tracking', color: '#fdf4ff', iconColor: '#7e22ce' },
-                  { icon: 'ph-currency-dollar', title: 'FX-Aware Pricing', sub: 'Multi-currency quotes', color: '#fff7ed', iconColor: '#c2410c' },
-                  { icon: 'ph-bell-ringing', title: 'Smart Alerts', sub: 'Compliance & delay notifications', color: '#f0fdfa', iconColor: '#0f766e' },
-                  { icon: 'ph-users-three', title: 'Team Roles', sub: 'Buyer, vendor, admin access', color: '#fefce8', iconColor: '#a16207' },
-                  { icon: 'ph-chart-line-up', title: 'Analytics', sub: 'Spend & performance insights', color: '#f0fdf4', iconColor: '#15803d' },
+                  { icon: 'ph-globe',          title: '40+ Countries',       sub: 'Logistics network coverage',       color: '#eff6ff', iconColor: '#1d4ed8' },
+                  { icon: 'ph-clock-countdown', title: 'Real-time Updates',   sub: 'Live shipment tracking',           color: '#fdf4ff', iconColor: '#7e22ce' },
+                  { icon: 'ph-currency-dollar', title: 'FX-Aware Pricing',    sub: 'Multi-currency quotes',            color: '#fff7ed', iconColor: '#c2410c' },
+                  { icon: 'ph-bell-ringing',    title: 'Smart Alerts',        sub: 'Compliance & delay notifications', color: '#f0fdfa', iconColor: '#0f766e' },
+                  { icon: 'ph-users-three',     title: 'Team Roles',          sub: 'Buyer, vendor, admin access',      color: '#fefce8', iconColor: '#a16207' },
+                  { icon: 'ph-chart-line-up',   title: 'Analytics',           sub: 'Spend & performance insights',     color: '#f0fdf4', iconColor: '#15803d' },
                 ].map((c) => (
                   <div key={c.title} className="col-6">
                     <div
                       style={{
                         background: c.color,
                         borderRadius: 14,
-                        padding: 20,
+                        padding: '18px 16px',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: 8,
+                        height: '100%',
                       }}
                     >
-                      <i className={`ph ${c.icon}`} style={{ fontSize: 28, color: c.iconColor }} />
+                      <i className={`ph ${c.icon}`} style={{ fontSize: 26, color: c.iconColor }} />
                       <div style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>{c.title}</div>
                       <div style={{ fontSize: 12, color: '#64748b' }}>{c.sub}</div>
                     </div>
@@ -667,14 +771,15 @@ export default function LandingPage() {
                 ))}
               </div>
             </div>
+
           </div>
         </div>
       </section>
 
       {/* ── Testimonials ───────────────────────────────────────────────── */}
-      <section style={{ padding: '80px 0', background: '#f8fafc' }}>
+      <section style={{ padding: '72px 0', background: '#f8fafc' }}>
         <div className="container">
-          <div className="text-center mb-48">
+          <div className="text-center" style={{ marginBottom: 48 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: '#299E60', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               Testimonials
             </span>
@@ -684,7 +789,7 @@ export default function LandingPage() {
           </div>
           <div className="row g-4">
             {TESTIMONIALS.map((t) => (
-              <div key={t.name} className="col-md-4">
+              <div key={t.name} className="col-12 col-md-4">
                 <div
                   style={{
                     background: '#fff',
@@ -704,7 +809,7 @@ export default function LandingPage() {
                   <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.7, flex: 1, marginBottom: 20, fontStyle: 'italic' }}>
                     "{t.quote}"
                   </p>
-                  <div className="d-flex align-items-center gap-12">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div
                       style={{
                         width: 44,
@@ -738,20 +843,20 @@ export default function LandingPage() {
       <section
         style={{
           background: 'linear-gradient(135deg, #064e3b 0%, #1e293b 100%)',
-          padding: '80px 0',
+          padding: '72px 0',
           position: 'relative',
           overflow: 'hidden',
         }}
       >
-        <div style={{ position: 'absolute', top: -100, right: -100, width: 400, height: 400, background: '#299E6015', borderRadius: '50%' }} />
+        <div style={{ position: 'absolute', top: -100, right: -100, width: 400, height: 400, background: '#299E6015', borderRadius: '50%', pointerEvents: 'none' }} />
         <div className="container text-center" style={{ position: 'relative' }}>
           <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.5rem)', fontWeight: 800, color: '#fff', marginBottom: 16 }}>
             Ready to modernise your freight procurement?
           </h2>
-          <p style={{ fontSize: 16, color: '#94a3b8', marginBottom: 36, maxWidth: 520, margin: '0 auto 36px' }}>
+          <p style={{ fontSize: 16, color: '#94a3b8', maxWidth: 520, margin: '0 auto 36px' }}>
             Join hundreds of trade teams already using SBDMM to move goods faster, smarter, and with full compliance confidence.
           </p>
-          <div className="d-flex flex-wrap justify-content-center gap-12">
+          <div className="d-flex flex-wrap justify-content-center" style={{ gap: 12 }}>
             <Link
               to="/login"
               style={{
@@ -759,7 +864,7 @@ export default function LandingPage() {
                 color: '#fff',
                 fontWeight: 700,
                 fontSize: 15,
-                padding: '14px 32px',
+                padding: '13px 30px',
                 borderRadius: 10,
                 textDecoration: 'none',
                 display: 'inline-flex',
@@ -777,7 +882,7 @@ export default function LandingPage() {
                 color: '#e2e8f0',
                 fontWeight: 600,
                 fontSize: 15,
-                padding: '14px 32px',
+                padding: '13px 30px',
                 borderRadius: 10,
                 textDecoration: 'none',
                 display: 'inline-flex',
@@ -793,21 +898,47 @@ export default function LandingPage() {
       </section>
 
       {/* ── Footer ─────────────────────────────────────────────────────── */}
+      {/*
+        12-column grid breakdown:
+          col-lg-3  Brand    (3)
+          col-lg-2  Platform (2)
+          col-lg-2  Company  (2)
+          col-lg-2  Portals  (2)
+          col-lg-3  Contact  (3)
+          Total: 3+2+2+2+3 = 12 ✓
+
+        md breakpoint: 2-up layout (col-md-6 / col-md-3)
+        sm/xs: full-width stack
+      */}
       <footer id="contact" style={{ background: '#0f172a', padding: '60px 0 0' }}>
         <div className="container">
-          <div className="row gy-5 mb-40">
+          <div className="row" style={{ rowGap: 40, marginBottom: 48 }}>
+
             {/* Brand */}
-            <div className="col-lg-4">
+            <div className="col-12 col-md-6 col-lg-3">
               <a href="/" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                <span style={{ width: 36, height: 36, borderRadius: 10, background: '#299E60', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 16 }}>
+                <span
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background: '#299E60',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    fontWeight: 800,
+                    fontSize: 16,
+                  }}
+                >
                   S
                 </span>
                 <span style={{ fontWeight: 700, fontSize: 18, color: '#fff' }}>SBDMM</span>
               </a>
-              <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7, maxWidth: 300, marginBottom: 24 }}>
+              <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7, maxWidth: 280, marginBottom: 20 }}>
                 A multi-tenant trade and logistics management platform. Helping global trade teams procure freight smarter.
               </p>
-              <div className="d-flex gap-12">
+              <div style={{ display: 'flex', gap: 8 }}>
                 {['ph-linkedin-logo', 'ph-twitter-logo', 'ph-github-logo'].map((ic) => (
                   <a
                     key={ic}
@@ -830,15 +961,16 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Links */}
-            <div className="col-6 col-md-4 col-lg-2">
+            {/* Platform */}
+            <div className="col-6 col-md-3 col-lg-2">
               <div style={{ fontWeight: 700, color: '#fff', fontSize: 13, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Platform</div>
               {['Dashboard', 'Orders', 'Vendors', 'Quotes', 'Documents', 'Compliance'].map((l) => (
                 <a key={l} href="/login" style={{ display: 'block', color: '#64748b', fontSize: 13, marginBottom: 10, textDecoration: 'none' }}>{l}</a>
               ))}
             </div>
 
-            <div className="col-6 col-md-4 col-lg-2">
+            {/* Company */}
+            <div className="col-6 col-md-3 col-lg-2">
               <div style={{ fontWeight: 700, color: '#fff', fontSize: 13, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Company</div>
               {['About', 'Blog', 'Careers', 'Press', 'Partners'].map((l) => (
                 <a key={l} href="#" style={{ display: 'block', color: '#64748b', fontSize: 13, marginBottom: 10, textDecoration: 'none' }}>{l}</a>
@@ -846,7 +978,7 @@ export default function LandingPage() {
             </div>
 
             {/* Portals */}
-            <div className="col-6 col-md-4 col-lg-2">
+            <div className="col-6 col-md-3 col-lg-2">
               <div style={{ fontWeight: 700, color: '#fff', fontSize: 13, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Portals</div>
               <Link
                 to="/login"
@@ -871,22 +1003,21 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            {/* Contact */}
-            <div className="col-md-4 col-lg-4">
+            {/* Contact + Newsletter */}
+            <div className="col-6 col-md-3 col-lg-3">
               <div style={{ fontWeight: 700, color: '#fff', fontSize: 13, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Contact</div>
               {[
                 { icon: 'ph-envelope', text: 'hello@sbdmm.com' },
-                { icon: 'ph-phone', text: '+1 (800) 123-4567' },
-                { icon: 'ph-map-pin', text: '789 Inner Lane, California, USA' },
+                { icon: 'ph-phone',    text: '+1 (800) 123-4567' },
+                { icon: 'ph-map-pin',  text: '789 Inner Lane, California, USA' },
               ].map((c) => (
-                <div key={c.icon} className="d-flex align-items-start gap-10 mb-14">
-                  <i className={`ph ${c.icon}`} style={{ color: '#299E60', fontSize: 16, marginTop: 1, flexShrink: 0 }} />
+                <div key={c.icon} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 12 }}>
+                  <i className={`ph ${c.icon}`} style={{ color: '#299E60', fontSize: 15, marginTop: 1, flexShrink: 0 }} />
                   <span style={{ fontSize: 13, color: '#64748b' }}>{c.text}</span>
                 </div>
               ))}
 
-              {/* Newsletter */}
-              <div style={{ marginTop: 24 }}>
+              <div style={{ marginTop: 20 }}>
                 <div style={{ fontWeight: 600, color: '#94a3b8', fontSize: 12, marginBottom: 10 }}>Stay updated</div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input
@@ -894,6 +1025,7 @@ export default function LandingPage() {
                     placeholder="your@email.com"
                     style={{
                       flex: 1,
+                      minWidth: 0,
                       background: '#1e293b',
                       border: '1px solid #334155',
                       borderRadius: 8,
@@ -913,6 +1045,7 @@ export default function LandingPage() {
                       fontSize: 13,
                       fontWeight: 600,
                       cursor: 'pointer',
+                      flexShrink: 0,
                     }}
                   >
                     <i className="ph ph-paper-plane-tilt" />
@@ -920,6 +1053,7 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
+
           </div>
 
           {/* Bottom bar */}
@@ -931,13 +1065,13 @@ export default function LandingPage() {
               justifyContent: 'space-between',
               alignItems: 'center',
               flexWrap: 'wrap',
-              gap: 8,
+              gap: 12,
             }}
           >
             <span style={{ fontSize: 12, color: '#475569' }}>
               © {new Date().getFullYear()} SBDMM. All rights reserved.
             </span>
-            <div className="d-flex gap-20">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
               {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((l) => (
                 <a key={l} href="#" style={{ fontSize: 12, color: '#475569', textDecoration: 'none' }}>{l}</a>
               ))}
