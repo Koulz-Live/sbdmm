@@ -6,7 +6,7 @@
 create table if not exists public.design_sessions (
   id                    uuid primary key default gen_random_uuid(),
   tenant_id             uuid not null references public.tenants(id) on delete cascade,
-  created_by            uuid not null references auth.users(id) on delete cascade,
+  created_by            uuid not null references public.user_profiles(id) on delete cascade,
 
   -- Step 1: Room context
   room_type             text not null
@@ -73,44 +73,39 @@ create trigger trg_design_sessions_updated_at
   for each row execute function public.set_updated_at();
 
 -- ─── Row Level Security ───────────────────────────────────────────────────────
+-- Uses the project's established helper functions from 002_rls_policies.sql:
+--   public.get_my_tenant_id()  → current user's tenant_id
+--   public.is_tenant_admin()   → true if role is tenant_admin or super_admin
+--   public.is_super_admin()    → true if role is super_admin
+
 alter table public.design_sessions enable row level security;
 
--- Owners: see and manage only their own sessions within their tenant
+-- Owners: see their own sessions within their tenant
 create policy "design_sessions_owner_select" on public.design_sessions
   for select using (
     created_by = auth.uid()
-    and tenant_id = (
-      select tenant_id from public.profiles where id = auth.uid() limit 1
-    )
+    and tenant_id = public.get_my_tenant_id()
   );
 
+-- Owners: create sessions scoped to their own tenant and user
 create policy "design_sessions_owner_insert" on public.design_sessions
   for insert with check (
     created_by = auth.uid()
-    and tenant_id = (
-      select tenant_id from public.profiles where id = auth.uid() limit 1
-    )
+    and tenant_id = public.get_my_tenant_id()
   );
 
+-- Owners: update their own sessions
 create policy "design_sessions_owner_update" on public.design_sessions
   for update using (
     created_by = auth.uid()
-    and tenant_id = (
-      select tenant_id from public.profiles where id = auth.uid() limit 1
-    )
+    and tenant_id = public.get_my_tenant_id()
   );
 
 -- Tenant admins: read all sessions in their tenant (for reporting)
 create policy "design_sessions_admin_select" on public.design_sessions
   for select using (
-    tenant_id = (
-      select tenant_id from public.profiles where id = auth.uid() limit 1
-    )
-    and exists (
-      select 1 from public.profiles
-      where id = auth.uid()
-      and role in ('tenant_admin', 'super_admin')
-    )
+    tenant_id = public.get_my_tenant_id()
+    and public.is_tenant_admin()
   );
 
 -- ─── Storage bucket instructions (run in Supabase dashboard) ─────────────────
