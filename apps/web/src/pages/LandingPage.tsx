@@ -41,80 +41,80 @@ function getRoleHome(role: PlatformRole): string {
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
-const SERVICE_MODES = [
-  { icon: 'ph-container',  label: 'FCL',     desc: 'Full Container Load' },
-  { icon: 'ph-package',    label: 'LCL',     desc: 'Less Container Load' },
-  { icon: 'ph-airplane',   label: 'Air',     desc: 'Express Air Freight' },
-  { icon: 'ph-truck',      label: 'Road',    desc: 'Road Haulage' },
-  { icon: 'ph-train',      label: 'Rail',    desc: 'Rail Freight' },
-  { icon: 'ph-lightning',  label: 'Courier', desc: 'Courier & Express' },
-  { icon: 'ph-anchor',     label: 'Project', desc: 'Project Cargo' },
-  { icon: 'ph-warehouse',  label: 'Storage', desc: 'Bonded Warehousing' },
+const DESIGN_STEPS = [
+  { icon: 'ph-house-line',    label: 'Pick Room Type',       desc: 'Living, dining, office or kitchen nook.' },
+  { icon: 'ph-image',         label: 'Upload a Photo',        desc: 'Snap your space — AI reads scale & colour.' },
+  { icon: 'ph-sliders',       label: 'Set Preferences',       desc: 'Style, material, seating size & budget.' },
+  { icon: 'ph-cpu',           label: 'AI Generates Concepts', desc: 'GPT-4o Vision produces three bespoke designs.' },
+  { icon: 'ph-pencil-simple', label: 'Refine in One Message', desc: '"Hairpin legs" or "darker stain" — live updates.' },
+  { icon: 'ph-hammer',        label: 'Connect to Carpenters', desc: 'Verified artisans quote your brief in 48 h.' },
+  { icon: 'ph-package',       label: 'Order & Track',         desc: 'Full logistics visibility from workshop to door.' },
+  { icon: 'ph-star',          label: 'Rate & Reorder',        desc: 'Build a relationship with your craftsperson.' },
 ];
 
 const HOW_IT_WORKS = [
   {
     step: '01',
-    icon: 'ph-user-plus',
-    title: 'Create your account',
-    desc: 'Sign up as a buyer or logistics provider. Your workspace is isolated by tenant — your data stays yours.',
+    icon: 'ph-magic-wand',
+    title: 'Describe your vision',
+    desc: 'Upload a room photo and tell us your style, material preference, seating size, and budget. Takes under two minutes.',
   },
   {
     step: '02',
-    icon: 'ph-storefront',
-    title: 'Browse vendor catalogues',
-    desc: 'Explore FCL, LCL, air and road services from vetted logistics providers with transparent pricing.',
+    icon: 'ph-cpu',
+    title: 'AI designs your table',
+    desc: "GPT-4o Vision analyses your room's palette, scale, and existing furniture — then generates three tailored concepts.",
   },
   {
     step: '03',
-    icon: 'ph-paper-plane-tilt',
-    title: 'Request & compare quotes',
-    desc: 'Send RFQs to multiple providers, compare responses side-by-side, and accept in one click.',
+    icon: 'ph-pencil-simple',
+    title: 'Refine with plain English',
+    desc: 'Type "hairpin legs", "darker stain", or "add a shelf" and the AI revises the design live — no design skills needed.',
   },
   {
     step: '04',
-    icon: 'ph-shield-check',
-    title: 'Automated compliance checks',
-    desc: 'Every vendor is assessed against trade compliance rules before you can award them a shipment.',
+    icon: 'ph-hammer',
+    title: 'Matched to a carpenter',
+    desc: 'Your brief goes to verified local artisans. Compare quotes, read reviews, and award in one click.',
   },
 ];
 
 const STATS = [
-  { value: '500+', label: 'Logistics Providers' },
-  { value: '12K+', label: 'Shipments Managed' },
-  { value: '98%',  label: 'On-Time Delivery' },
-  { value: '40+',  label: 'Countries Covered' },
+  { value: '3',    label: 'AI Concepts per Session' },
+  { value: '48 h', label: 'Avg. Carpenter Response' },
+  { value: '500+', label: 'Verified Artisans' },
+  { value: '98%',  label: 'Customer Satisfaction' },
 ];
 
 const TESTIMONIALS = [
   {
-    quote: 'SBDMM cut our freight procurement cycle from three weeks to three days. The compliance engine alone saved us months of manual checks.',
-    name: 'Sarah Chen',
-    title: 'Head of Supply Chain, TechFlow Asia',
-    initials: 'SC',
+    quote: "I uploaded a photo of my living room and within seconds had three table designs that actually matched my colour palette. The walnut concept was exactly what I had in my head but couldn't articulate.",
+    name: 'Amara Osei',
+    title: 'Interior enthusiast, Accra',
+    initials: 'AO',
     color: '#299E60',
   },
   {
-    quote: 'As a freight forwarder, the vendor catalogue lets us showcase our lane expertise to buyers who would never have found us otherwise.',
-    name: 'Marcus Adeyemi',
-    title: 'Director, FastLane Logistics Nigeria',
-    initials: 'MA',
+    quote: 'The carpenter matched to my brief was brilliant. The AI brief was so detailed — dimensions, wood grain direction, leg style — that the quote came back the same day and was exactly on budget.',
+    name: 'James Whitfield',
+    title: 'Homeowner, Manchester',
+    initials: 'JW',
     color: '#1d4ed8',
   },
   {
-    quote: 'The RFQ workflow is genuinely seamless. We compare six carriers in one screen, not six email threads.',
-    name: 'Priya Nair',
-    title: 'Procurement Manager, GlobalMed',
-    initials: 'PN',
+    quote: 'As a carpenter I was sceptical, but the briefs I receive through SBDMM are the most detailed I\'ve ever seen. Clients know exactly what they want and are ready to commit.',
+    name: 'Lena Braun',
+    title: 'Master Carpenter, Berlin',
+    initials: 'LB',
     color: '#7e22ce',
   },
 ];
 
 const NAV_LINKS = [
-  { label: 'Features',     href: '#features' },
-  { label: 'How It Works', href: '#how-it-works' },
-  { label: 'Vendors',      href: '#vendors' },
-  { label: 'Contact',      href: '#contact' },
+  { label: 'How It Works',   href: '#how-it-works' },
+  { label: 'Design My Table', href: '#design-my-table' },
+  { label: 'Carpenters',     href: '#vendors' },
+  { label: 'Contact',        href: '#contact' },
 ];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -384,7 +384,7 @@ export default function LandingPage() {
                   textTransform: 'uppercase',
                 }}
               >
-                <i className="ph ph-globe-hemisphere-west" /> Global Trade &amp; Logistics Platform
+                <i className="ph ph-magic-wand" /> AI-Powered Furniture Design
               </span>
 
               <h1
@@ -397,14 +397,15 @@ export default function LandingPage() {
                   letterSpacing: '-0.02em',
                 }}
               >
-                Smarter Freight{' '}
-                <span style={{ color: '#299E60' }}>Procurement</span>,{' '}
-                Built for Global Trade.
+                Your Room. Your Style.{' '}
+                <span style={{ color: '#299E60' }}>Your Table</span>,{' '}
+                Built by a Craftsperson.
               </h1>
 
               <p style={{ fontSize: 16, color: '#94a3b8', lineHeight: 1.7, marginBottom: 32, maxWidth: 500 }}>
-                Connect with vetted logistics providers, compare live quotes, automate
-                compliance checks, and manage every shipment from one workspace.
+                Upload a photo of your room, set your preferences, and our AI generates
+                three bespoke table designs in seconds — then connects you with a
+                verified local carpenter to bring it to life.
               </p>
 
               <div className="d-flex flex-wrap" style={{ gap: 12, marginBottom: 32 }}>
@@ -424,7 +425,7 @@ export default function LandingPage() {
                     boxShadow: '0 4px 20px rgba(41,158,96,0.4)',
                   }}
                 >
-                  Start for Free <i className="ph ph-arrow-right" />
+                  Design My Table <i className="ph ph-magic-wand" />
                 </Link>
                 <a
                   href="#how-it-works"
@@ -448,7 +449,7 @@ export default function LandingPage() {
 
               {/* Trust bar */}
               <div className="d-flex flex-wrap" style={{ gap: 16, fontSize: 13, color: '#64748b', paddingBottom: 8 }}>
-                {['No credit card required', 'SOC 2 Type II ready', 'GDPR compliant'].map((t) => (
+                {['Free to try', 'No credit card required', 'Results in under 60 seconds'].map((t) => (
                   <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <i className="ph ph-check-circle" style={{ color: '#299E60', fontSize: 16 }} />
                     {t}
@@ -457,7 +458,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Platform mockup — hidden on mobile to avoid overflow */}
+            {/* AI concept preview mockup — hidden on mobile */}
             <div className="col-lg-6 d-none d-lg-flex justify-content-center">
               <div
                 style={{
@@ -477,75 +478,75 @@ export default function LandingPage() {
                   ))}
                   <span
                     style={{
-                      flex: 1,
-                      height: 28,
-                      borderRadius: 6,
-                      background: 'rgba(255,255,255,0.06)',
-                      marginLeft: 8,
-                      display: 'flex',
-                      alignItems: 'center',
-                      paddingLeft: 12,
-                      fontSize: 11,
-                      color: '#475569',
+                      flex: 1, height: 28, borderRadius: 6,
+                      background: 'rgba(255,255,255,0.06)', marginLeft: 8,
+                      display: 'flex', alignItems: 'center', paddingLeft: 12,
+                      fontSize: 11, color: '#475569',
                     }}
                   >
-                    sbdmm.vercel.app/dashboard
+                    sbdmm.vercel.app/design
                   </span>
                 </div>
 
-                {/* Mini dashboard */}
-                <div style={{ background: '#f1f5f9', borderRadius: 12, overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', height: 240 }}>
+                {/* Wizard progress */}
+                <div style={{ display: 'flex', gap: 4, marginBottom: 14 }}>
+                  {[1,2,3,4,5,6,7,8].map((n) => (
                     <div
+                      key={n}
                       style={{
-                        width: 48,
-                        background: '#1e293b',
-                        padding: '12px 8px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 14,
-                        alignItems: 'center',
+                        flex: 1, height: 4, borderRadius: 4,
+                        background: n <= 4 ? '#299E60' : 'rgba(255,255,255,0.1)',
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* AI output card */}
+                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 16, marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <i className="ph ph-star-four" style={{ color: '#299E60', fontSize: 16 }} />
+                    <span style={{ color: '#4ade80', fontWeight: 700, fontSize: 11, letterSpacing: '0.06em' }}>
+                      AI DESIGN CONCEPT · STANDARD
+                    </span>
+                  </div>
+                  <div style={{ color: '#e2e8f0', fontSize: 12, lineHeight: 1.65, fontStyle: 'italic', marginBottom: 12 }}>
+                    "Live-edge walnut dining table with tapered black steel legs. The organic grain contrasts with your exposed brick wall and complements the oak floor."
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {['Walnut', 'Steel Legs', '180 × 90 cm', '6-Seater', '$1,800–$2,400'].map((tag) => (
+                      <span
+                        key={tag}
+                        style={{
+                          background: 'rgba(41,158,96,0.2)', border: '1px solid rgba(41,158,96,0.3)',
+                          color: '#4ade80', borderRadius: 20, padding: '2px 10px',
+                          fontSize: 11, fontWeight: 600,
+                        }}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3 concept tabs */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                  {[
+                    { label: 'Budget', price: '$800–$1,100', active: false },
+                    { label: 'Standard', price: '$1,800–$2,400', active: true },
+                    { label: 'Premium', price: '$3,200–$4,500', active: false },
+                  ].map((c) => (
+                    <div
+                      key={c.label}
+                      style={{
+                        background: c.active ? 'rgba(41,158,96,0.2)' : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${c.active ? 'rgba(41,158,96,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                        borderRadius: 10, padding: '10px 8px', textAlign: 'center',
                       }}
                     >
-                      {['ph-squares-four', 'ph-package', 'ph-storefront', 'ph-file-text', 'ph-shield-check'].map((ic) => (
-                        <i key={ic} className={`ph ${ic}`} style={{ fontSize: 18, color: '#64748b' }} />
-                      ))}
+                      <div style={{ color: c.active ? '#4ade80' : '#94a3b8', fontWeight: 700, fontSize: 12 }}>{c.label}</div>
+                      <div style={{ color: '#64748b', fontSize: 10, marginTop: 2 }}>{c.price}</div>
                     </div>
-                    <div style={{ flex: 1, padding: 14 }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
-                        {[
-                          { label: 'Active Vendors', val: '24',  color: '#299E60' },
-                          { label: 'Open Quotes',    val: '8',   color: '#1d4ed8' },
-                          { label: 'In Transit',     val: '31',  color: '#7e22ce' },
-                          { label: 'Compliance OK',  val: '96%', color: '#0f766e' },
-                        ].map((s) => (
-                          <div key={s.label} style={{ background: '#fff', borderRadius: 8, padding: 10, borderLeft: `3px solid ${s.color}` }}>
-                            <div style={{ fontSize: 18, fontWeight: 700, color: s.color }}>{s.val}</div>
-                            <div style={{ fontSize: 10, color: '#64748b' }}>{s.label}</div>
-                          </div>
-                        ))}
-                      </div>
-                      {[1, 2, 3].map((i) => (
-                        <div
-                          key={i}
-                          style={{
-                            background: '#fff',
-                            borderRadius: 6,
-                            height: 28,
-                            marginBottom: 6,
-                            padding: '0 10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                          }}
-                        >
-                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: i === 1 ? '#299E60' : i === 2 ? '#f59e0b' : '#3b82f6', flexShrink: 0 }} />
-                          <span style={{ height: 8, borderRadius: 4, background: '#e2e8f0', flex: 1 }} />
-                          <span style={{ height: 8, borderRadius: 4, background: '#e2e8f0', width: 40 }} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -575,35 +576,35 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Service modes ──────────────────────────────────────────────── */}
+      {/* ── Design wizard steps strip ───────────────────────────────────── */}
       <section id="features" style={{ padding: '72px 0', background: '#fff' }}>
         <div className="container">
           <div className="text-center" style={{ marginBottom: 48 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: '#299E60', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Service Modes
+              The Process
             </span>
             <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', fontWeight: 800, color: '#1e293b', marginTop: 8 }}>
-              Every mode of transport, one platform
+              From room photo to finished table — 8 steps
             </h2>
             <p style={{ fontSize: 15, color: '#64748b', maxWidth: 540, margin: '12px auto 0' }}>
-              From 40HQ containers to next-day courier — SBDMM connects you with
-              specialists across all freight modes.
+              Our AI-guided wizard does the heavy lifting. You just make the choices.
             </p>
           </div>
 
           <div className="row g-3">
-            {SERVICE_MODES.map((m) => (
-              <div key={m.label} className="col-6 col-sm-4 col-lg-3">
+            {DESIGN_STEPS.map((s, i) => (
+              <div key={s.label} className="col-6 col-sm-4 col-lg-3">
                 <div
                   style={{
                     background: '#f8fafc',
                     border: '1px solid #e2e8f0',
                     borderRadius: 16,
-                    padding: '28px 12px',
+                    padding: '24px 16px',
                     textAlign: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
                     height: '100%',
+                    position: 'relative',
+                    transition: 'all 0.2s',
+                    cursor: 'default',
                   }}
                   onMouseEnter={(e) => {
                     const el = e.currentTarget;
@@ -620,9 +621,19 @@ export default function LandingPage() {
                     el.style.boxShadow = '';
                   }}
                 >
-                  <i className={`ph ${m.icon}`} style={{ fontSize: 36, color: '#299E60', display: 'block', marginBottom: 10 }} />
-                  <div style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>{m.label}</div>
-                  <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>{m.desc}</div>
+                  <span
+                    style={{
+                      position: 'absolute', top: 12, right: 14,
+                      fontSize: 11, fontWeight: 700, color: '#299E60',
+                      background: '#f0fdf4', border: '1px solid #bbf7d0',
+                      borderRadius: 6, padding: '1px 7px',
+                    }}
+                  >
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <i className={`ph ${s.icon}`} style={{ fontSize: 32, color: '#299E60', display: 'block', marginBottom: 10 }} />
+                  <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', marginBottom: 4 }}>{s.label}</div>
+                  <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>{s.desc}</div>
                 </div>
               </div>
             ))}
@@ -638,8 +649,11 @@ export default function LandingPage() {
               How It Works
             </span>
             <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', fontWeight: 800, color: '#1e293b', marginTop: 8 }}>
-              From RFQ to shipment in four steps
+              From idea to carpenter in four steps
             </h2>
+            <p style={{ fontSize: 15, color: '#64748b', maxWidth: 500, margin: '12px auto 0' }}>
+              AI does the design work. A verified craftsperson builds it. You enjoy the result.
+            </p>
           </div>
 
           <div className="row g-4">
@@ -867,13 +881,13 @@ export default function LandingPage() {
                 Why SBDMM
               </span>
               <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', fontWeight: 800, color: '#1e293b', marginTop: 8, marginBottom: 28 }}>
-                Built for the complexity of global trade
+                The smartest way to get bespoke furniture
               </h2>
               {[
-                { icon: 'ph-shield-check', title: 'Automated Compliance',  desc: 'Every vendor passes a multi-point trade compliance check — sanctions screening, AML, and document validation — before you can award them a booking.' },
-                { icon: 'ph-chart-bar',    title: 'Live Quote Comparison', desc: 'Receive structured quotes from multiple carriers on a single screen. Compare on price, transit time, and service mode — not PDFs in your inbox.' },
-                { icon: 'ph-lock-simple',  title: 'Tenant Isolation',      desc: 'Your vendor relationships, orders, and documents are strictly isolated by tenant. Row-level security enforced at the database layer.' },
-                { icon: 'ph-files',        title: 'Document Management',   desc: 'Centralise Bills of Lading, packing lists, and certificates of origin. Linked to the shipment they belong to.' },
+                { icon: 'ph-cpu', title: 'GPT-4o Vision Design',  desc: 'Our AI reads your room photo — lighting, colour, existing furniture — and designs a table that looks like it belongs there.' },
+                { icon: 'ph-users-three', title: 'Verified Carpenter Network', desc: 'Every artisan is vetted for quality and reliability. Read reviews, view past work, and award with confidence.' },
+                { icon: 'ph-lock-simple',  title: 'Your Data Stays Yours', desc: 'Design sessions, photos, and preferences are isolated by tenant at the database level. We never share your data.' },
+                { icon: 'ph-package', title: 'End-to-End Order Tracking', desc: 'From workshop to doorstep — track your build in real time, with automated notifications at every milestone.' },
               ].map((f) => (
                 <div key={f.title} style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
                   <div
@@ -903,12 +917,12 @@ export default function LandingPage() {
             <div className="col-12 col-lg-6">
               <div className="row g-3">
                 {[
-                  { icon: 'ph-globe',          title: '40+ Countries',       sub: 'Logistics network coverage',       color: '#eff6ff', iconColor: '#1d4ed8' },
-                  { icon: 'ph-clock-countdown', title: 'Real-time Updates',   sub: 'Live shipment tracking',           color: '#fdf4ff', iconColor: '#7e22ce' },
-                  { icon: 'ph-currency-dollar', title: 'FX-Aware Pricing',    sub: 'Multi-currency quotes',            color: '#fff7ed', iconColor: '#c2410c' },
-                  { icon: 'ph-bell-ringing',    title: 'Smart Alerts',        sub: 'Compliance & delay notifications', color: '#f0fdfa', iconColor: '#0f766e' },
-                  { icon: 'ph-users-three',     title: 'Team Roles',          sub: 'Buyer, vendor, admin access',      color: '#fefce8', iconColor: '#a16207' },
-                  { icon: 'ph-chart-line-up',   title: 'Analytics',           sub: 'Spend & performance insights',     color: '#f0fdf4', iconColor: '#15803d' },
+                  { icon: 'ph-magic-wand',      title: 'AI-Generated Designs',    sub: '3 bespoke concepts per session',     color: '#f0fdf4', iconColor: '#299E60' },
+                  { icon: 'ph-clock-countdown',  title: '48 h Response Time',      sub: 'Avg. quote turnaround',              color: '#eff6ff', iconColor: '#1d4ed8' },
+                  { icon: 'ph-currency-dollar',  title: 'Budget Tiers',            sub: 'Budget, Standard & Premium',         color: '#fff7ed', iconColor: '#c2410c' },
+                  { icon: 'ph-star',             title: 'Rated Craftspeople',       sub: 'Reviews from real buyers',           color: '#fdf4ff', iconColor: '#7e22ce' },
+                  { icon: 'ph-pencil-simple',    title: 'Natural Language Refine',  sub: 'Plain-English design iteration',     color: '#fefce8', iconColor: '#a16207' },
+                  { icon: 'ph-chart-line-up',    title: 'Order Analytics',          sub: 'Spend & timeline insights',          color: '#f0fdfa', iconColor: '#0f766e' },
                 ].map((c) => (
                   <div key={c.title} className="col-6">
                     <div
@@ -943,7 +957,7 @@ export default function LandingPage() {
               Testimonials
             </span>
             <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', fontWeight: 800, color: '#1e293b', marginTop: 8 }}>
-              Trusted by logistics teams worldwide
+              Loved by buyers and carpenters alike
             </h2>
           </div>
           <div className="row g-4">
@@ -1010,10 +1024,11 @@ export default function LandingPage() {
         <div style={{ position: 'absolute', top: -100, right: -100, width: 400, height: 400, background: '#299E6015', borderRadius: '50%', pointerEvents: 'none' }} />
         <div className="container text-center" style={{ position: 'relative' }}>
           <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.5rem)', fontWeight: 800, color: '#fff', marginBottom: 16 }}>
-            Ready to modernise your freight procurement?
+            Your perfect table is one photo away.
           </h2>
           <p style={{ fontSize: 16, color: '#94a3b8', maxWidth: 520, margin: '0 auto 36px' }}>
-            Join hundreds of trade teams already using SBDMM to move goods faster, smarter, and with full compliance confidence.
+            Join thousands of homeowners using SBDMM to design bespoke furniture with AI
+            and get it built by a craftsperson who cares about their work.
           </p>
           <div className="d-flex flex-wrap justify-content-center" style={{ gap: 12 }}>
             <Link
@@ -1032,10 +1047,10 @@ export default function LandingPage() {
                 boxShadow: '0 4px 20px rgba(41,158,96,0.4)',
               }}
             >
-              Get started free <i className="ph ph-arrow-right" />
+              Design My Table <i className="ph ph-magic-wand" />
             </Link>
             <a
-              href="#contact"
+              href="#how-it-works"
               style={{
                 background: 'rgba(255,255,255,0.08)',
                 color: '#e2e8f0',
@@ -1050,7 +1065,7 @@ export default function LandingPage() {
                 border: '1px solid rgba(255,255,255,0.15)',
               }}
             >
-              <i className="ph ph-chats" /> Talk to sales
+              <i className="ph ph-play-circle" /> See How It Works
             </a>
           </div>
         </div>
@@ -1095,7 +1110,7 @@ export default function LandingPage() {
                 <span style={{ fontWeight: 700, fontSize: 18, color: '#fff' }}>SBDMM</span>
               </a>
               <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7, maxWidth: 280, marginBottom: 20 }}>
-                A multi-tenant trade and logistics management platform. Helping global trade teams procure freight smarter.
+                A multi-tenant AI furniture design platform. Describe your room, get three bespoke designs, and have them built by a verified craftsperson.
               </p>
               <div style={{ display: 'flex', gap: 8 }}>
                 {['ph-linkedin-logo', 'ph-twitter-logo', 'ph-github-logo'].map((ic) => (
@@ -1123,7 +1138,7 @@ export default function LandingPage() {
             {/* Platform */}
             <div className="col-6 col-md-3 col-lg-2">
               <div style={{ fontWeight: 700, color: '#fff', fontSize: 13, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Platform</div>
-              {['Dashboard', 'Orders', 'Vendors', 'Quotes', 'Documents', 'Compliance'].map((l) => (
+              {['Design My Table', 'Dashboard', 'Orders', 'Vendors', 'Documents', 'Compliance'].map((l) => (
                 <a key={l} href="/login" style={{ display: 'block', color: '#64748b', fontSize: 13, marginBottom: 10, textDecoration: 'none' }}>{l}</a>
               ))}
             </div>
