@@ -42,6 +42,7 @@ import { adminRouter } from './routes/admin';
 import { notificationsRouter } from './routes/notifications';
 import { aiRouter } from './ai/aiProxy.route';
 import { webhookRouter } from './webhooks/webhookVerifier';
+import { designRouter } from './routes/design';
 import { logger } from './lib/logger';
 
 export function createApp() {
@@ -99,6 +100,7 @@ export function createApp() {
   app.use('/api/v1/admin', adminRouter);
   app.use('/api/v1/notifications', notificationsRouter);
   app.use('/api/v1/ai', aiRouter);
+  app.use('/api/v1/design', designRouter);
 
   // ─── 8. 404 Handler ─────────────────────────────────────────────────────────
   app.use((_req: Request, res: Response) => {

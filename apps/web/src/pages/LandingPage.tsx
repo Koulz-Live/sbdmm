@@ -708,6 +708,154 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Design My Table ────────────────────────────────────────────── */}
+      <section
+        id="design-my-table"
+        style={{
+          padding: '80px 0',
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #0f2d1a 100%)',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Decorative glow */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute', top: -80, right: -80,
+            width: 380, height: 380, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(41,158,96,0.18) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }}
+        />
+        <div className="container" style={{ position: 'relative', zIndex: 1 }}>
+          {/* Header */}
+          <div className="text-center mb-5">
+            <span
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: 'rgba(41,158,96,0.15)', border: '1px solid rgba(41,158,96,0.4)',
+                color: '#4ade80', borderRadius: 20, padding: '5px 16px',
+                fontSize: 13, fontWeight: 600, marginBottom: 20,
+              }}
+            >
+              <i className="ph ph-magic-wand" style={{ fontSize: 15 }} />
+              AI-Powered Design
+            </span>
+            <h2
+              style={{
+                fontSize: 'clamp(1.8rem, 4vw, 2.8rem)', fontWeight: 800,
+                color: '#fff', lineHeight: 1.2, marginBottom: 16,
+              }}
+            >
+              Design My Table
+            </h2>
+            <p style={{ fontSize: '1.05rem', color: '#94a3b8', maxWidth: 540, margin: '0 auto' }}>
+              Upload a photo of your room. Our AI analyses the space and generates three
+              bespoke table designs — then connects you with skilled local carpenters to build it.
+            </p>
+          </div>
+
+          {/* 6-step flow */}
+          <div className="row g-3 mb-5 justify-content-center">
+            {[
+              { icon: 'ph ph-image',        num: '01', label: 'Upload Room Photo',      desc: 'Drag & drop or snap a photo of the space.' },
+              { icon: 'ph ph-sliders',      num: '02', label: 'Set Your Preferences',   desc: 'Choose style, material, seating & budget.' },
+              { icon: 'ph ph-cpu',          num: '03', label: 'AI Analyses Your Space', desc: "GPT-4o Vision reads your room's colour, scale and style." },
+              { icon: 'ph ph-palette',      num: '04', label: '3 Concepts Generated',   desc: 'Budget, Standard and Premium designs — tailored to you.' },
+              { icon: 'ph ph-pencil',       num: '05', label: 'Refine with One Tap',    desc: '"Make it rounder" or "use hairpin legs" — AI updates live.' },
+              { icon: 'ph ph-hammer',       num: '06', label: 'Sent to Carpenters',     desc: 'Verified artisans quote your brief within 48 hours.' },
+            ].map((item) => (
+              <div key={item.num} className="col-6 col-md-4">
+                <div
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.09)',
+                    borderRadius: 16, padding: '20px 18px',
+                    height: '100%',
+                  }}
+                >
+                  <div className="d-flex align-items-center gap-2 mb-2">
+                    <span
+                      style={{
+                        fontSize: 11, fontWeight: 700, color: '#299E60',
+                        background: 'rgba(41,158,96,0.15)', borderRadius: 6,
+                        padding: '2px 8px', letterSpacing: '0.06em',
+                      }}
+                    >
+                      {item.num}
+                    </span>
+                    <i className={item.icon} style={{ color: '#299E60', fontSize: 18 }} />
+                  </div>
+                  <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.9rem', marginBottom: 6 }}>
+                    {item.label}
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.55 }}>
+                    {item.desc}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* AI example output card */}
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(41,158,96,0.25)',
+              borderRadius: 20, padding: '28px 24px',
+              maxWidth: 560, margin: '0 auto 48px',
+            }}
+          >
+            <div className="d-flex align-items-center gap-2 mb-3">
+              <i className="ph ph-star-four" style={{ color: '#299E60', fontSize: 20 }} />
+              <span style={{ color: '#4ade80', fontWeight: 700, fontSize: '0.88rem' }}>
+                EXAMPLE AI OUTPUT
+              </span>
+            </div>
+            <div style={{ color: '#e2e8f0', fontStyle: 'italic', fontSize: '0.9rem', lineHeight: 1.7, marginBottom: 16 }}>
+              "For your warm-toned dining room with exposed brick, I recommend a live-edge walnut
+              dining table with tapered black steel legs. The organic edge contrasts beautifully with
+              the industrial brick texture, while the deep walnut grain complements your existing
+              oak flooring."
+            </div>
+            <div className="d-flex flex-wrap gap-2">
+              {['Live-edge Walnut', 'Black Steel Legs', '180cm × 90cm', '6-Seater', '$1,800–$2,400'].map((tag) => (
+                <span
+                  key={tag}
+                  style={{
+                    background: 'rgba(41,158,96,0.15)', border: '1px solid rgba(41,158,96,0.3)',
+                    color: '#4ade80', borderRadius: 20, padding: '3px 12px', fontSize: '0.78rem', fontWeight: 600,
+                  }}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div className="text-center">
+            <a
+              href="/login"
+              className="btn btn-lg px-5 fw-bold"
+              style={{
+                background: '#299E60', color: '#fff', borderRadius: 14,
+                fontSize: '1rem', padding: '14px 36px',
+                boxShadow: '0 4px 24px rgba(41,158,96,0.35)',
+                textDecoration: 'none', display: 'inline-block',
+              }}
+            >
+              <i className="ph ph-magic-wand me-2" />
+              Try Design My Table Free
+            </a>
+            <p style={{ color: '#64748b', marginTop: 14, fontSize: '0.85rem' }}>
+              Free to try — no credit card required
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* ── Value props ────────────────────────────────────────────────── */}
       <section id="vendors" style={{ padding: '72px 0', background: '#fff' }}>
         <div className="container">

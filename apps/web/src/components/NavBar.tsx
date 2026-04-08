@@ -130,6 +130,8 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/vendors',            label: 'Vendors',      icon: 'ph ph-buildings',     roles: ['buyer', 'tenant_admin', 'super_admin'] },
   // ── Vendor & admins: compliance
   { to: '/compliance',         label: 'Compliance',   icon: 'ph ph-shield-check',  roles: ['vendor', 'tenant_admin', 'super_admin'] },
+  // ── Buyer: AI furniture design wizard
+  { to: '/design',             label: 'Design My Table', icon: 'ph ph-magic-wand', roles: ['buyer'] },
   // ── Admins only
   { to: '/admin',              label: 'Admin Panel',  icon: 'ph ph-gear',          roles: ['tenant_admin', 'super_admin'] },
   { to: '/settings',           label: 'Settings',     icon: 'ph ph-gear-six',      roles: ['tenant_admin', 'super_admin'] },

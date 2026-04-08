@@ -26,6 +26,7 @@
  *   /my-catalogue           → Protected (vendor | logistics_provider) — own catalogue mgmt
  *   /onboarding             → Protected (buyer) — first-login wizard
  *   /settings               → Protected (tenant_admin | super_admin) — tenant settings
+ *   /design                 → Protected (all roles) — AI-assisted Design My Table wizard
  */
 
 import React, { Suspense, lazy } from 'react';
@@ -52,6 +53,7 @@ const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const RfqFeedPage        = lazy(() => import('./pages/RfqFeedPage'));
 const MyCataloguePage    = lazy(() => import('./pages/MyCataloguePage'));
 const TenantSettingsPage = lazy(() => import('./pages/TenantSettingsPage'));
+const DesignMyTablePage  = lazy(() => import('./pages/DesignMyTablePage'));
 
 function PageLoader(): React.JSX.Element {
   return (
@@ -142,6 +144,13 @@ export default function App(): React.JSX.Element {
           <Route element={<AppLayout />}>
             <Route path="/rfqs" element={<RfqFeedPage />} />
             <Route path="/my-catalogue" element={<MyCataloguePage />} />
+          </Route>
+        </Route>
+
+        {/* Protected — Design My Table: all authenticated users */}
+        <Route element={<ProtectedRoute roles={['buyer', 'vendor', 'logistics_provider', 'tenant_admin', 'super_admin']} />}>
+          <Route element={<AppLayout />}>
+            <Route path="/design" element={<DesignMyTablePage />} />
           </Route>
         </Route>
 

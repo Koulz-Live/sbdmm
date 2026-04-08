@@ -349,6 +349,60 @@ export const ERROR_CODES = {
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
 
+// ─── AI Design Session (Carpentry) ───────────────────────────────────────────
+
+export type RoomType = 'living_room' | 'dining_room' | 'kitchen_nook' | 'office_study';
+export type TableType = 'coffee_table' | 'dining_table' | 'side_table' | 'console_table';
+export type FurnitureStyle = 'modern' | 'minimalist' | 'rustic' | 'classic' | 'luxury';
+export type SeatingSize = '2_seater' | '4_seater' | '6_seater' | '8_seater' | 'not_applicable';
+export type MaterialPreference = 'oak' | 'pine' | 'dark_wood' | 'walnut' | 'mixed_wood_steel';
+export type DesignSessionStatus = 'draft' | 'concepts_ready' | 'refining' | 'converted' | 'abandoned';
+
+export interface DesignConcept {
+  tier: 'budget' | 'standard' | 'premium';
+  label: string;           // e.g. "Option A – Budget-Friendly"
+  shape: string;           // e.g. "rectangular"
+  dimensions: string;      // e.g. "180cm × 90cm × 76cm"
+  finish: string;          // e.g. "light oak matt lacquer"
+  leg_style: string;       // e.g. "tapered wooden legs"
+  color_tone: string;      // e.g. "warm honey oak"
+  image_prompt: string;    // DALL-E prompt — server generated, not exposed
+  price_estimate_min: number;
+  price_estimate_max: number;
+  currency: string;
+  lead_time_days: number;
+}
+
+export interface RefinementEntry {
+  instruction: string;     // What the user asked to change
+  response: string;        // AI explanation of changes made
+  timestamp: string;       // ISO 8601
+}
+
+export interface DesignSession {
+  id: string;
+  tenant_id: string;
+  created_by: string;
+  room_type: RoomType;
+  room_photo_path?: string | null;
+  room_photo_url?: string | null;   // short-lived signed URL
+  table_type?: TableType | null;
+  style?: FurnitureStyle | null;
+  seating_size?: SeatingSize | null;
+  material_preference?: MaterialPreference | null;
+  budget_min?: number | null;
+  budget_max?: number | null;
+  budget_currency: string;
+  ai_design_rationale?: string | null;
+  ai_concepts?: DesignConcept[] | null;
+  refinement_history: RefinementEntry[];
+  active_concept_index: number;
+  converted_to_order_id?: string | null;
+  status: DesignSessionStatus;
+  created_at: string;
+  updated_at: string;
+}
+
 // ─── Vendor Catalogue ─────────────────────────────────────────────────────────
 // A catalogue item represents a specific service or lane a provider offers.
 // This is the public-facing "product" in the logistics marketplace context.
