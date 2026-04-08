@@ -263,6 +263,16 @@ export default function QuotesPage(): React.JSX.Element {
   const isAdmin = user?.role === 'tenant_admin' || user?.role === 'super_admin';
   const canBuyerAction = user?.role === 'buyer' || isAdmin;
 
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all');
+
+  const displayedQuotes = activeTab === 'all' ? quotes : quotes.filter(q => q.status === activeTab);
+
+  const acceptedCount = quotes.filter(q => q.status === 'accepted').length;
+  const rejectedCount = quotes.filter(q => q.status === 'rejected').length;
+  const winRate = isProvider && acceptedCount + rejectedCount > 0
+    ? Math.round((acceptedCount / (acceptedCount + rejectedCount)) * 100)
+    : null;
+
   const fetchQuotes = useCallback(async (p: number) => {
     setLoading(true);
     setError(null);
@@ -324,6 +334,44 @@ export default function QuotesPage(): React.JSX.Element {
         </div>
       )}
 
+      {/* Provider win-rate stat */}
+      {winRate !== null && !loading && (
+        <div className="d-inline-flex align-items-center gap-8 mb-3 px-16 py-10 rounded-3"
+          style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: 13, color: '#15803d', fontWeight: 600 }}>
+          <i className="ph ph-trophy" style={{ fontSize: 16 }} />
+          Win rate: {winRate}%
+          <span className="fw-normal" style={{ color: '#64748b', fontSize: 12 }}>({acceptedCount} accepted / {acceptedCount + rejectedCount} decided)</span>
+        </div>
+      )}
+
+      {/* Status tabs */}
+      <div className="d-flex gap-4 mb-3" style={{ borderBottom: '2px solid #f1f5f9' }}>
+        {(['all', 'pending', 'accepted', 'rejected'] as const).map(tab => {
+          const count = tab === 'all' ? quotes.length : quotes.filter(q => q.status === tab).length;
+          const isActive = activeTab === tab;
+          return (
+            <button key={tab} type="button" onClick={() => setActiveTab(tab)}
+              style={{
+                background: 'none', border: 'none', borderBottom: isActive ? '2px solid #299E60' : '2px solid transparent',
+                marginBottom: -2, padding: '8px 16px', fontWeight: isActive ? 700 : 500,
+                color: isActive ? '#299E60' : '#64748b', fontSize: 14, cursor: 'pointer', textTransform: 'capitalize',
+                transition: 'color 0.15s',
+              }}>
+              {tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {count > 0 && (
+                <span className="ms-6" style={{
+                  background: isActive ? '#299E60' : '#e2e8f0',
+                  color: isActive ? '#fff' : '#64748b',
+                  borderRadius: 20, padding: '1px 8px', fontSize: 11, fontWeight: 700,
+                }}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Submit form */}
       {showForm && (
         <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: 12 }}>
@@ -348,11 +396,11 @@ export default function QuotesPage(): React.JSX.Element {
               <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
               Loading quotes…
             </div>
-          ) : quotes.length === 0 ? (
+          ) : displayedQuotes.length === 0 ? (
             <div className="text-center py-5" style={{ color: '#94a3b8' }}>
               <i className="ph ph-chat-dots" style={{ fontSize: 40, display: 'block', marginBottom: 12 }} />
-              <p className="fw-semibold mb-1" style={{ color: '#64748b' }}>No quotes found.</p>
-              {isProvider && <p style={{ fontSize: 13 }}>Click "Submit Quote" to respond to an open order.</p>}
+              <p className="fw-semibold mb-1" style={{ color: '#64748b' }}>No {activeTab === 'all' ? '' : activeTab + ' '}quotes found.</p>
+              {isProvider && activeTab === 'all' && <p style={{ fontSize: 13 }}>Click "Submit Quote" to respond to an open order.</p>}
             </div>
           ) : (
             <div className="table-responsive">
@@ -366,7 +414,7 @@ export default function QuotesPage(): React.JSX.Element {
                   </tr>
                 </thead>
                 <tbody>
-                  {quotes.map(q => {
+                  {displayedQuotes.map(q => {
                     const isExpired = new Date(q.valid_until) < new Date();
                     return (
                       <tr key={q.id}>
@@ -425,7 +473,7 @@ export default function QuotesPage(): React.JSX.Element {
       </div>
 
       {/* Pagination */}
-      {pagination && pagination.total_pages > 1 && (
+      {pagination !== null && pagination.total_pages > 1 && (
         <div className="d-flex justify-content-between align-items-center mt-3" style={{ fontSize: 13, color: '#64748b' }}>
           <span>Showing {((pagination.page - 1) * pagination.per_page) + 1}–{Math.min(pagination.page * pagination.per_page, pagination.total)} of {pagination.total}</span>
           <div className="d-flex gap-8">
@@ -442,7 +490,7 @@ export default function QuotesPage(): React.JSX.Element {
       )}
 
       {/* Accept / Reject confirmation modal */}
-      {actionQuoteId && action && (
+      {actionQuoteId !== null && action !== null && (
         <div role="dialog" aria-modal="true"
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1050 }}>
           <div className="card border-0 shadow" style={{ borderRadius: 14, width: 400, maxWidth: '90vw' }}>

@@ -284,13 +284,24 @@ export default function OrdersPage(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
+  // Filter state
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterSearch, setFilterSearch] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
+
   const { realtimeEvents, isConnected, clearEvents } = useRealtimeOrders();
 
-  const fetchOrders = useCallback(async (p: number): Promise<void> => {
+  const fetchOrders = useCallback(async (p: number, status: string, search: string, dateFrom: string, dateTo: string): Promise<void> => {
     setIsLoading(true);
     setError(null);
+    const params = new URLSearchParams({ page: String(p), per_page: String(PAGE_SIZE) });
+    if (status)   params.set('status',    status);
+    if (search)   params.set('search',    search);
+    if (dateFrom) params.set('date_from', dateFrom);
+    if (dateTo)   params.set('date_to',   dateTo);
     const result = await api.get<{ data: Order[]; total: number }>(
-      `/api/v1/orders?page=${p}&per_page=${PAGE_SIZE}`,
+      `/api/v1/orders?${params.toString()}`,
     );
     if (result.success && result.data) {
       setOrders(result.data.data ?? []);
@@ -301,7 +312,7 @@ export default function OrdersPage(): React.JSX.Element {
     setIsLoading(false);
   }, []);
 
-  useEffect(() => { void fetchOrders(page); }, [fetchOrders, page]);
+  useEffect(() => { void fetchOrders(page, filterStatus, filterSearch, filterDateFrom, filterDateTo); }, [fetchOrders, page, filterStatus, filterSearch, filterDateFrom, filterDateTo]);
 
   useEffect(() => {
     if (realtimeEvents.length === 0) return;
@@ -315,7 +326,7 @@ export default function OrdersPage(): React.JSX.Element {
 
   const handleRefresh = (): void => {
     clearEvents();
-    void fetchOrders(page);
+    void fetchOrders(page, filterStatus, filterSearch, filterDateFrom, filterDateTo);
   };
 
   return (
@@ -378,6 +389,51 @@ export default function OrdersPage(): React.JSX.Element {
           {error}
         </div>
       )}
+
+      {/* Filter bar */}
+      <div className="card border-0 shadow-sm mb-20" style={{ borderRadius: 12 }}>
+        <div className="card-body py-12 px-20">
+          <div className="row g-12 align-items-end">
+            <div className="col-md-3">
+              <label className="form-label fw-semibold mb-4" style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Status</label>
+              <select className="form-select form-select-sm" style={{ borderRadius: 8, fontSize: 13, borderColor: '#e2e8f0' }}
+                value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setPage(1); }}>
+                <option value="">All Statuses</option>
+                {Object.keys(STATUS_META).map(s => (
+                  <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
+                ))}
+              </select>
+            </div>
+            <div className="col-md-3">
+              <label className="form-label fw-semibold mb-4" style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Search Reference</label>
+              <input type="text" className="form-control form-control-sm" placeholder="e.g. ORD-…"
+                style={{ borderRadius: 8, fontSize: 13, borderColor: '#e2e8f0' }}
+                value={filterSearch} onChange={e => { setFilterSearch(e.target.value); setPage(1); }} />
+            </div>
+            <div className="col-md-2">
+              <label className="form-label fw-semibold mb-4" style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>From</label>
+              <input type="date" className="form-control form-control-sm"
+                style={{ borderRadius: 8, fontSize: 13, borderColor: '#e2e8f0' }}
+                value={filterDateFrom} onChange={e => { setFilterDateFrom(e.target.value); setPage(1); }} />
+            </div>
+            <div className="col-md-2">
+              <label className="form-label fw-semibold mb-4" style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>To</label>
+              <input type="date" className="form-control form-control-sm"
+                style={{ borderRadius: 8, fontSize: 13, borderColor: '#e2e8f0' }}
+                value={filterDateTo} onChange={e => { setFilterDateTo(e.target.value); setPage(1); }} />
+            </div>
+            <div className="col-md-2">
+              {(filterStatus || filterSearch || filterDateFrom || filterDateTo) && (
+                <button type="button" className="btn btn-sm w-100 d-flex align-items-center justify-content-center gap-6"
+                  style={{ background: '#f1f5f9', color: '#374151', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, fontWeight: 500 }}
+                  onClick={() => { setFilterStatus(''); setFilterSearch(''); setFilterDateFrom(''); setFilterDateTo(''); setPage(1); }}>
+                  <i className="ph ph-x" /> Clear
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Table */}
       <div className="card border-0 shadow-sm" style={{ borderRadius: 12 }}>

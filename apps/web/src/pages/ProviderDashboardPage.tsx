@@ -115,7 +115,7 @@ export default function ProviderDashboardPage(): React.JSX.Element {
         </div>
         <div className="d-none d-md-flex align-items-center gap-8">
           <Link
-            to="/quotes"
+            to="/rfqs"
             className="btn btn-sm"
             style={{ background: '#299E60', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600 }}
           >
@@ -182,9 +182,9 @@ export default function ProviderDashboardPage(): React.JSX.Element {
       {/* Quick actions */}
       <div className="row g-16 mb-24">
         {[
-          { to: '/quotes',    icon: 'ph ph-list-magnifying-glass', label: 'Open RFQs',    desc: 'Browse & bid on new requests',  bg: '#eff6ff', color: '#2563eb'  },
+          { to: '/rfqs',          icon: 'ph ph-list-magnifying-glass', label: 'Open RFQs',    desc: 'Browse & bid on new requests',  bg: '#eff6ff', color: '#2563eb'  },
           { to: '/documents', icon: 'ph ph-chat-dots',             label: 'My Quotes',    desc: 'Track your submitted quotes',   bg: '#faf5ff', color: '#7c3aed'  },
-          { to: '/vendors/me',icon: 'ph ph-storefront',            label: 'My Catalogue', desc: 'Update services & pricing',     bg: '#f0fdf4', color: '#15803d'  },
+          { to: '/my-catalogue',  icon: 'ph ph-storefront',            label: 'My Catalogue', desc: 'Update services & pricing',     bg: '#f0fdf4', color: '#15803d'  },
           { to: '/compliance',icon: 'ph ph-shield-check',          label: 'Compliance',   desc: 'View your compliance status',   bg: '#fef2f2', color: '#b91c1c'  },
           { to: '/documents', icon: 'ph ph-file-text',             label: 'Documents',    desc: 'Contracts & shipping docs',     bg: '#fffbeb', color: '#d97706'  },
         ].map(item => (
@@ -226,7 +226,7 @@ export default function ProviderDashboardPage(): React.JSX.Element {
             </div>
           </div>
           <Link
-            to="/vendors/me"
+            to="/my-catalogue"
             className="btn btn-sm flex-shrink-0"
             style={{ background: '#299E60', color: '#fff', borderRadius: 8, fontWeight: 600, border: 'none', padding: '8px 20px' }}
           >
@@ -257,7 +257,7 @@ export default function ProviderDashboardPage(): React.JSX.Element {
               Browse open RFQs and submit your first quote to get started.
             </p>
             <Link
-              to="/quotes"
+              to="/rfqs"
               className="btn btn-sm"
               style={{ background: '#299E60', color: '#fff', borderRadius: 8, fontWeight: 600, border: 'none', padding: '8px 20px' }}
             >

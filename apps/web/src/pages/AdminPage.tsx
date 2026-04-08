@@ -10,9 +10,9 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '../lib/apiClient';
-import type { TenantSummary, UserProfile, PaginationMeta } from '@sbdmm/shared';
+import type { TenantSummary, UserProfile, PaginationMeta, Vendor } from '@sbdmm/shared';
 
-type AdminTab = 'tenants' | 'users' | 'audit';
+type AdminTab = 'tenants' | 'users' | 'audit' | 'vendors';
 
 interface AuditLogEntry {
   id: string;
@@ -382,15 +382,127 @@ function AuditTab(): React.JSX.Element {
   );
 }
 
+// ─── Vendor Queue Tab ─────────────────────────────────────────────────────────
+
+function VendorQueueTab(): React.JSX.Element {
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actioning, setActioning] = useState<string | null>(null); // vendorId being actioned
+
+  const fetchPending = useCallback(async (): Promise<void> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.get<Vendor[]>('/api/v1/vendors?status=pending_review');
+      if (res.success && res.data) {
+        setVendors(res.data.filter(v => v.status === 'pending_review'));
+      } else {
+        setError(res.error?.message ?? 'Failed to load vendors.');
+      }
+    } catch {
+      setError('Unable to load vendor queue. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void fetchPending(); }, [fetchPending]);
+
+  async function handleAction(vendorId: string, action: 'approved' | 'rejected'): Promise<void> {
+    setActioning(vendorId);
+    setError(null);
+    try {
+      const res = await api.patch<Vendor>(`/api/v1/vendors/${vendorId}/status`, { status: action });
+      if (res.success) {
+        setVendors(vs => vs.filter(v => v.id !== vendorId));
+      } else {
+        setError(res.error?.message ?? `Failed to ${action === 'approved' ? 'approve' : 'reject'} vendor.`);
+      }
+    } catch {
+      setError(`Unable to update vendor status. Please try again.`);
+    } finally {
+      setActioning(null);
+    }
+  }
+
+  if (loading) return <LoadingState label="Loading vendor queue…" />;
+
+  return (
+    <>
+      {error && <ErrorBanner message={error} />}
+
+      {vendors.length === 0 ? (
+        <div className="text-center py-5">
+          <div className="d-inline-flex align-items-center justify-content-center rounded-circle mb-16"
+            style={{ width: 64, height: 64, background: '#f0fdf4' }}>
+            <i className="ph ph-check-circle" style={{ fontSize: 30, color: '#22c55e' }} />
+          </div>
+          <p className="fw-semibold mb-4" style={{ color: '#374151', fontSize: 15 }}>All clear — no pending vendors.</p>
+          <p style={{ fontSize: 13, color: '#94a3b8' }}>New vendor registrations awaiting approval will appear here.</p>
+        </div>
+      ) : (
+        <div className="card border-0 shadow-sm" style={{ borderRadius: 12 }}>
+          <div className="card-body p-0">
+            <div className="table-responsive">
+              <table className="table table-hover mb-0" style={{ fontSize: 14 }}>
+                <TableHead cols={['Vendor', 'Type', 'Region', 'Registered', 'Actions']} />
+                <tbody>
+                  {vendors.map(v => (
+                    <tr key={v.id}>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                        <div className="fw-semibold" style={{ color: '#0f172a' }}>{v.company_name}</div>
+                        <div style={{ fontSize: 12, color: '#94a3b8', fontFamily: 'monospace' }}>{v.id.slice(0, 12)}…</div>
+                      </td>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                        <RoleBadge role={v.business_category} />
+                      </td>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: '#475569' }}>
+                        {v.country_of_registration}
+                      </td>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: '#64748b', whiteSpace: 'nowrap' }}>
+                        {new Date(v.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </td>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                        <div className="d-flex gap-6">
+                          <MiniBtn color="#15803d" onClick={() => { void handleAction(v.id, 'approved'); }} disabled={actioning === v.id}>
+                            <i className="ph ph-check" /> Approve
+                          </MiniBtn>
+                          <MiniBtn color="#b91c1c" onClick={() => { void handleAction(v.id, 'rejected'); }} disabled={actioning === v.id}>
+                            <i className="ph ph-x" /> Reject
+                          </MiniBtn>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminPage(): React.JSX.Element {
   const [tab, setTab] = useState<AdminTab>('tenants');
 
+  const [pendingVendorCount, setPendingVendorCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    void api.get<Vendor[]>('/api/v1/vendors?status=pending_review').then(res => {
+      if (res.success && res.data) setPendingVendorCount(res.data.filter(v => v.status === 'pending_review').length);
+    });
+  }, []);
+
   const TAB_CONFIG: { key: AdminTab; label: string; icon: string }[] = [
     { key: 'tenants', label: 'Tenants', icon: 'ph-buildings' },
     { key: 'users',   label: 'Users',   icon: 'ph-users' },
     { key: 'audit',   label: 'Audit Log', icon: 'ph-clock-clockwise' },
+    { key: 'vendors', label: pendingVendorCount ? `Vendor Queue (${pendingVendorCount})` : 'Vendor Queue', icon: 'ph-storefront' },
   ];
 
   return (
@@ -429,6 +541,7 @@ export default function AdminPage(): React.JSX.Element {
       {tab === 'tenants' && <TenantsTab />}
       {tab === 'users'   && <UsersTab />}
       {tab === 'audit'   && <AuditTab />}
+      {tab === 'vendors' && <VendorQueueTab />}
     </div>
   );
 }

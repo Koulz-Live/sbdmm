@@ -22,6 +22,10 @@
  *   /vendors/:id            → Protected (buyer | vendor | logistics_provider | tenant_admin | super_admin)
  *   /compliance             → Protected (vendor | tenant_admin | super_admin)
  *   /admin                  → Protected (tenant_admin | super_admin)
+ *   /rfqs                   → Protected (vendor | logistics_provider) — RFQ feed
+ *   /my-catalogue           → Protected (vendor | logistics_provider) — own catalogue mgmt
+ *   /onboarding             → Protected (buyer) — first-login wizard
+ *   /settings               → Protected (tenant_admin | super_admin) — tenant settings
  */
 
 import React, { Suspense, lazy } from 'react';
@@ -45,6 +49,9 @@ const VendorProfilePage = lazy(() => import('./pages/VendorProfilePage'));
 const CompliancePage  = lazy(() => import('./pages/CompliancePage'));
 const AdminPage       = lazy(() => import('./pages/AdminPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const RfqFeedPage        = lazy(() => import('./pages/RfqFeedPage'));
+const MyCataloguePage    = lazy(() => import('./pages/MyCataloguePage'));
+const TenantSettingsPage = lazy(() => import('./pages/TenantSettingsPage'));
 
 function PageLoader(): React.JSX.Element {
   return (
@@ -126,6 +133,15 @@ export default function App(): React.JSX.Element {
         <Route element={<ProtectedRoute roles={['tenant_admin', 'super_admin']} />}>
           <Route element={<AppLayout />}>
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/settings" element={<TenantSettingsPage />} />
+          </Route>
+        </Route>
+
+        {/* Protected — RFQ feed: vendors and logistics providers */}
+        <Route element={<ProtectedRoute roles={['vendor', 'logistics_provider']} />}>
+          <Route element={<AppLayout />}>
+            <Route path="/rfqs" element={<RfqFeedPage />} />
+            <Route path="/my-catalogue" element={<MyCataloguePage />} />
           </Route>
         </Route>
 

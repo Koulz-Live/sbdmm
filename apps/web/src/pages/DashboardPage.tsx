@@ -162,7 +162,7 @@ function getBannerConfig(role: PlatformRole | undefined): { subtitle: string; ct
   switch (role) {
     case 'vendor':
     case 'logistics_provider':
-      return { subtitle: 'Check open RFQs you can bid on and manage your catalogue.', ctaLabel: 'Browse Open RFQs', ctaTo: '/quotes' };
+      return { subtitle: 'Check open RFQs you can bid on and manage your catalogue.', ctaLabel: 'Browse Open RFQs', ctaTo: '/rfqs' };
     case 'tenant_admin':
       return { subtitle: 'Review pending vendor approvals and manage your team.', ctaLabel: 'Open Admin Panel', ctaTo: '/admin' };
     case 'super_admin':
@@ -172,10 +172,87 @@ function getBannerConfig(role: PlatformRole | undefined): { subtitle: string; ct
   }
 }
 
+// ─── Buyer onboarding wizard ──────────────────────────────────────────────────
+const ONBOARDING_KEY = 'sbdmm_onboarding_v1';
+
+const WIZARD_STEPS = [
+  { icon: 'ph ph-plus-circle', title: 'Post your first order', desc: 'Tell us your origin, destination, and cargo details.', to: '/orders', cta: 'Post Order' },
+  { icon: 'ph ph-chat-dots',   title: 'Get quotes from providers', desc: 'Providers bid on your request — compare price, speed, and ESG score.', to: '/quotes', cta: 'View Quotes' },
+  { icon: 'ph ph-package',     title: 'Confirm & track your shipment', desc: 'Accept a quote, and follow your shipment all the way to delivery.', to: '/orders', cta: 'My Orders' },
+];
+
+function OnboardingWizard(): React.JSX.Element | null {
+  const [visible, setVisible] = useState<boolean>(() => localStorage.getItem(ONBOARDING_KEY) !== 'true');
+
+  const dismiss = (): void => {
+    localStorage.setItem(ONBOARDING_KEY, 'true');
+    setVisible(false);
+  };
+
+  if (!visible) return null;
+
+  return (
+    <div className="card border-0 mb-24" style={{ borderRadius: 12, background: 'linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%)', border: '1px solid #bbf7d0' }}>
+      <div className="card-body p-24">
+        <div className="d-flex align-items-start justify-content-between mb-20">
+          <div>
+            <h4 className="fw-bold mb-4" style={{ fontSize: 17, color: '#0f172a' }}>
+              <i className="ph ph-rocket-launch me-8" style={{ color: '#299E60' }} />
+              Welcome to SBDMM 5PL!
+            </h4>
+            <p className="mb-0" style={{ fontSize: 13, color: '#64748b' }}>
+              Get started in 3 simple steps — it only takes a few minutes.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={dismiss}
+            className="btn-close"
+            aria-label="Dismiss onboarding"
+            style={{ flexShrink: 0 }}
+          />
+        </div>
+
+        <div className="row g-12">
+          {WIZARD_STEPS.map((step, idx) => (
+            <div key={step.title} className="col-md-4">
+              <div className="d-flex gap-12 align-items-start p-16 rounded-3 h-100"
+                style={{ background: '#fff', border: '1px solid #e2e8f0' }}>
+                <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                  style={{ width: 40, height: 40, background: '#299E60', color: '#fff' }}>
+                  <span className="fw-bold" style={{ fontSize: 14 }}>{idx + 1}</span>
+                </div>
+                <div>
+                  <div className="fw-semibold mb-4" style={{ fontSize: 14, color: '#0f172a' }}>{step.title}</div>
+                  <div style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>{step.desc}</div>
+                  <Link to={step.to}
+                    className="btn btn-sm"
+                    style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 8, fontWeight: 600, fontSize: 12 }}>
+                    <i className={`${step.icon} me-1`} />
+                    {step.cta}
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-16 text-center">
+          <button type="button" onClick={dismiss}
+            style={{ background: 'none', border: 'none', fontSize: 12, color: '#94a3b8', cursor: 'pointer', textDecoration: 'underline' }}>
+            I know what I'm doing — dismiss this
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Buyer dashboard ──────────────────────────────────────────────────────────
 function BuyerDashboard({ stats, orders, loading }: { stats: DashboardStats | null; orders: Order[]; loading: boolean }): React.JSX.Element {
   return (
     <>
+      {!loading && stats?.total_orders === 0 && <OnboardingWizard />}
       {loading ? <StatsSkeleton count={4} /> : stats && (
         <div className="row g-16 mb-24">
           <div className="col-xl col-lg-6 col-md-6">

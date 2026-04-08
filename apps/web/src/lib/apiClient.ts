@@ -24,6 +24,23 @@ import type { ApiResponse } from '@sbdmm/shared';
 
 const API_BASE_URL = (import.meta.env['VITE_API_BASE_URL'] as string | undefined) ?? 'http://localhost:3001';
 
+// ─── Super-admin tenant override ─────────────────────────────────────────────
+// Super admins can impersonate a specific tenant context.
+// The selected tenant ID is stored here and injected as X-Tenant-Override.
+const TENANT_OVERRIDE_KEY = 'sbdmm_tenant_override';
+
+export function getTenantOverride(): string | null {
+  return localStorage.getItem(TENANT_OVERRIDE_KEY);
+}
+
+export function setTenantOverride(tenantId: string | null): void {
+  if (tenantId) {
+    localStorage.setItem(TENANT_OVERRIDE_KEY, tenantId);
+  } else {
+    localStorage.removeItem(TENANT_OVERRIDE_KEY);
+  }
+}
+
 // Generate a simple browser-side request ID for correlation
 function generateRequestId(): string {
   return `web-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -64,6 +81,12 @@ export async function apiClient<T = unknown>(
   // Attach auth token if available
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`;
+  }
+
+  // Super-admin tenant override — allows impersonating a specific tenant context
+  const tenantOverride = getTenantOverride();
+  if (tenantOverride) {
+    headers['X-Tenant-Override'] = tenantOverride;
   }
 
   // Idempotency key for POST/PATCH operations

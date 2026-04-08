@@ -12,7 +12,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../lib/apiClient';
 import { useAuth } from '../contexts/AuthContext';
-import type { Order, OrderStatus, Quote } from '@sbdmm/shared';
+import type { Order, OrderStatus, Quote, TradeDocument } from '@sbdmm/shared';
 
 // ─── Status meta ──────────────────────────────────────────────────────────────
 
@@ -62,6 +62,203 @@ const NEXT_STATUSES: Record<OrderStatus, OrderStatus[]> = {
   disputed:      ['confirmed', 'cancelled'],
   cancelled:     [],
 };
+
+// ─── Linked documents ─────────────────────────────────────────────────────────
+
+const DOC_TYPE_ICONS: Record<string, string> = {
+  bill_of_lading:                'ph-anchor',
+  commercial_invoice:             'ph-receipt',
+  packing_list:                   'ph-list-checks',
+  certificate_of_origin:          'ph-certificate',
+  customs_declaration:            'ph-stamp',
+  insurance_certificate:          'ph-shield-check',
+  dangerous_goods_declaration:    'ph-warning-diamond',
+  phytosanitary_certificate:      'ph-leaf',
+  other:                          'ph-file-text',
+};
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function LinkedDocuments({ orderId }: { orderId: string }): React.JSX.Element {
+  const [docs, setDocs] = useState<TradeDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    void api.get<{ data: TradeDocument[] }>(`/api/v1/documents?order_id=${orderId}&per_page=50`).then(res => {
+      if (res.success && res.data) setDocs(res.data.data ?? []);
+      else setError(res.error?.message ?? 'Failed to load documents.');
+      setLoading(false);
+    });
+  }, [orderId]);
+
+  return (
+    <div className="card border-0 shadow-sm mt-4" style={{ borderRadius: 12 }}>
+      <div className="card-body p-4">
+        <div className="d-flex align-items-center justify-content-between mb-16">
+          <h5 className="fw-semibold mb-0" style={{ fontSize: 15, color: '#0f172a' }}>
+            <i className="ph ph-paperclip me-2" style={{ color: '#299E60' }} />
+            Linked Documents
+            {docs.length > 0 && (
+              <span className="ms-8" style={{ fontSize: 12, background: '#f0fdf4', color: '#15803d', borderRadius: 20, padding: '2px 8px', fontWeight: 600 }}>
+                {docs.length}
+              </span>
+            )}
+          </h5>
+          <Link to="/documents"
+            style={{ fontSize: 12, color: '#299E60', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <i className="ph ph-arrow-right" style={{ fontSize: 14 }} /> All Documents
+          </Link>
+        </div>
+
+        {error && (
+          <div style={{ fontSize: 13, color: '#b91c1c', background: '#fef2f2', borderRadius: 8, padding: '8px 12px', marginBottom: 12 }}>
+            <i className="ph ph-warning-circle me-6" />{error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="d-flex align-items-center gap-8" style={{ color: '#64748b', fontSize: 13 }}>
+            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /> Loading documents…
+          </div>
+        ) : docs.length === 0 ? (
+          <div className="text-center py-3" style={{ color: '#94a3b8' }}>
+            <i className="ph ph-file-dashed" style={{ fontSize: 32, display: 'block', marginBottom: 8 }} />
+            <span style={{ fontSize: 13 }}>No documents linked to this order.</span>
+            <div className="mt-8">
+              <Link to="/documents" style={{ fontSize: 12, color: '#299E60', fontWeight: 600, textDecoration: 'none' }}>
+                <i className="ph ph-upload-simple me-4" />Upload a document
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="d-flex flex-column gap-8">
+            {docs.map(doc => (
+              <div key={doc.id} className="d-flex align-items-center gap-12 p-12"
+                style={{ background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                <div className="d-flex align-items-center justify-content-center flex-shrink-0 rounded-8"
+                  style={{ width: 40, height: 40, background: '#e0f2fe', color: '#0369a1' }}>
+                  <i className={`ph ${DOC_TYPE_ICONS[doc.document_type] ?? 'ph-file-text'}`} style={{ fontSize: 18 }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {doc.file_name}
+                  </div>
+                  <div className="d-flex align-items-center gap-8 mt-2">
+                    <span style={{ fontSize: 11, color: '#64748b', background: '#f1f5f9', borderRadius: 6, padding: '2px 6px', fontWeight: 500 }}>
+                      {doc.document_type.replace(/_/g, ' ')}
+                    </span>
+                    <span style={{ fontSize: 11, color: '#94a3b8' }}>{formatBytes(doc.file_size_bytes)}</span>
+                    <span style={{ fontSize: 11, color: '#94a3b8' }}>{new Date(doc.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Shipment timeline ────────────────────────────────────────────────────────
+
+const TIMELINE_STEPS: OrderStatus[] = ['draft', 'pending_quote', 'quoted', 'confirmed', 'in_transit', 'delivered'];
+const TERMINAL_WARN: OrderStatus[] = ['customs_hold', 'disputed'];
+const TERMINAL_CANCEL: OrderStatus[] = ['cancelled'];
+
+const STEP_LABEL: Record<string, string> = {
+  draft:         'Draft',
+  pending_quote: 'Pending Quote',
+  quoted:        'Quoted',
+  confirmed:     'Confirmed',
+  in_transit:    'In Transit',
+  delivered:     'Delivered',
+};
+
+function ShipmentTimeline({ status }: { status: OrderStatus }): React.JSX.Element {
+  const isWarning  = (TERMINAL_WARN as string[]).includes(status);
+  const isCancelled = (TERMINAL_CANCEL as string[]).includes(status);
+  const currentIdx = TIMELINE_STEPS.indexOf(status);
+
+  return (
+    <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: 12 }}>
+      <div className="card-body p-4">
+        <h5 className="fw-semibold mb-20" style={{ fontSize: 15, color: '#0f172a' }}>
+          <i className="ph ph-path me-2" style={{ color: '#299E60' }} />
+          Shipment Progress
+        </h5>
+
+        {/* Warning banner for off-track statuses */}
+        {(isWarning || isCancelled) && (
+          <div className="d-flex align-items-center gap-8 mb-16"
+            style={{
+              background: isCancelled ? '#fef2f2' : '#fff7ed',
+              color: isCancelled ? '#b91c1c' : '#c2410c',
+              border: `1px solid ${isCancelled ? '#fecaca' : '#fed7aa'}`,
+              borderRadius: 8, padding: '10px 14px', fontSize: 13, fontWeight: 600,
+            }}>
+            <i className={`ph ${isCancelled ? 'ph-x-circle' : 'ph-warning'}`} style={{ fontSize: 16 }} />
+            {isCancelled ? 'This order has been cancelled.' : `Order is on hold: ${ORDER_STATUS_META[status]?.label ?? status}`}
+          </div>
+        )}
+
+        {/* Step row */}
+        <div className="d-flex align-items-center" style={{ overflowX: 'auto', paddingBottom: 4 }}>
+          {TIMELINE_STEPS.map((step, idx) => {
+            const isDone    = currentIdx > idx;
+            const isCurrent = currentIdx === idx && !isWarning && !isCancelled;
+
+            const dotColor  = isDone ? '#299E60' : isCurrent ? '#299E60' : '#e2e8f0';
+            const textColor = isDone || isCurrent ? '#0f172a' : '#94a3b8';
+            const lineColor = isDone ? '#299E60' : '#e2e8f0';
+
+            return (
+              <React.Fragment key={step}>
+                <div className="d-flex flex-column align-items-center flex-shrink-0" style={{ minWidth: 80 }}>
+                  {/* Dot */}
+                  <div
+                    className="d-flex align-items-center justify-content-center rounded-circle"
+                    style={{
+                      width: 32, height: 32,
+                      background: dotColor,
+                      border: `2px solid ${isDone || isCurrent ? dotColor : '#cbd5e1'}`,
+                      transition: 'background 0.2s',
+                    }}
+                  >
+                    {isDone ? (
+                      <i className="ph ph-check" style={{ color: '#fff', fontSize: 14 }} />
+                    ) : isCurrent ? (
+                      <i className={`ph ${ORDER_STATUS_META[step]?.icon ?? 'ph-circle'}`} style={{ color: '#fff', fontSize: 14 }} />
+                    ) : (
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#cbd5e1' }} />
+                    )}
+                  </div>
+                  {/* Label */}
+                  <span style={{ fontSize: 11, marginTop: 6, color: textColor, fontWeight: isCurrent ? 700 : 500, textAlign: 'center', lineHeight: 1.3 }}>
+                    {STEP_LABEL[step]}
+                  </span>
+                  {/* Invisible spacer to avoid clipping */}
+                  <div style={{ height: isCurrent ? 0 : 0 }} />
+                </div>
+
+                {/* Connector line (skip after last) */}
+                {idx < TIMELINE_STEPS.length - 1 && (
+                  <div style={{ flex: 1, height: 2, background: lineColor, minWidth: 24, marginBottom: 20, transition: 'background 0.2s' }} />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -211,6 +408,9 @@ export default function OrderDetailPage(): React.JSX.Element {
 
         {/* ── Left column: order fields ── */}
         <div className="col-lg-7">
+
+          {/* Shipment timeline */}
+          <ShipmentTimeline status={order.status} />
 
           {/* Route card */}
           <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: 12 }}>
@@ -430,6 +630,9 @@ export default function OrderDetailPage(): React.JSX.Element {
           </div>
         </div>
       </div>
+
+      {/* Linked documents */}
+      <LinkedDocuments orderId={order.id} />
     </div>
   );
 }

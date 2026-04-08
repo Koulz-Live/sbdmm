@@ -46,6 +46,98 @@ function ComplianceBadge({ status }: { status: string }): React.JSX.Element {
   );
 }
 
+// ─── ESG Breakdown Chart ──────────────────────────────────────────────────────
+
+interface EsgScore { label: string; score: number; color: string; icon: string; desc: string }
+
+function EsgBreakdownChart({ results }: { results: ComplianceListItem[] }): React.JSX.Element {
+  // Derive ESG proxy scores from compliance result statuses.
+  // Environmental ≈ trade/sanctions checks (order + document contexts)
+  // Social ≈ vendor-onboarding results
+  // Governance ≈ overall pass rate across all contexts
+  const total = results.length;
+
+  const score = (subset: ComplianceListItem[]): number => {
+    if (subset.length === 0) return 100;
+    const passed = subset.filter(r => r.overall_status === 'passed').length;
+    return Math.round((passed / subset.length) * 100);
+  };
+
+  const envItems  = results.filter(r => r.context_type === 'order' || r.context_type === 'document_upload');
+  const socItems  = results.filter(r => r.context_type === 'vendor_onboarding');
+  const govScore  = total > 0 ? score(results.filter(r => !r.blocked)) : 100;
+
+  const bars: EsgScore[] = [
+    { label: 'Environmental', score: score(envItems),  color: '#22c55e', icon: 'ph-leaf',         desc: 'Trade & shipment compliance' },
+    { label: 'Social',        score: score(socItems),  color: '#3b82f6', icon: 'ph-users-three',  desc: 'Vendor onboarding checks' },
+    { label: 'Governance',    score: govScore,          color: '#8b5cf6', icon: 'ph-shield-check', desc: 'Overall policy adherence' },
+  ];
+
+  const overall = Math.round(bars.reduce((a, b) => a + b.score, 0) / 3);
+  const ringColor = overall >= 80 ? '#299E60' : overall >= 50 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: 12 }}>
+      <div className="card-body p-4">
+        <div className="d-flex align-items-center gap-8 mb-3">
+          <i className="ph ph-chart-pie-slice" style={{ fontSize: 20, color: '#299E60' }} />
+          <h5 className="mb-0 fw-semibold" style={{ fontSize: 16, color: '#0f172a' }}>ESG Compliance Breakdown</h5>
+          <span className="ms-auto badge" style={{ background: '#f0fdf4', color: '#15803d', fontWeight: 600, fontSize: 13, borderRadius: 8, padding: '4px 10px' }}>
+            Score: {overall}
+          </span>
+        </div>
+
+        {total === 0 && (
+          <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>No evaluation data yet — run a compliance evaluation to see your ESG scores.</p>
+        )}
+
+        {total > 0 && (
+          <div className="row g-4 align-items-center">
+            {/* Donut-style overall ring (CSS only) */}
+            <div className="col-auto d-flex flex-column align-items-center" style={{ minWidth: 100 }}>
+              <div style={{
+                width: 88, height: 88, borderRadius: '50%',
+                background: `conic-gradient(${ringColor} ${overall * 3.6}deg, #e2e8f0 0deg)`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 0 0 10px #fff inset',
+              }}>
+                <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: ringColor }}>{overall}</span>
+                </div>
+              </div>
+              <span style={{ fontSize: 11, color: '#64748b', marginTop: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Overall</span>
+            </div>
+
+            {/* Horizontal bars */}
+            <div className="col">
+              <div className="d-flex flex-column gap-12">
+                {bars.map(b => (
+                  <div key={b.label}>
+                    <div className="d-flex align-items-center justify-content-between mb-4">
+                      <div className="d-flex align-items-center gap-6">
+                        <i className={`ph ${b.icon}`} style={{ fontSize: 14, color: b.color }} />
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{b.label}</span>
+                        <span style={{ fontSize: 11, color: '#94a3b8' }}>— {b.desc}</span>
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: b.color }}>{b.score}%</span>
+                    </div>
+                    <div style={{ height: 8, background: '#f1f5f9', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%', width: `${b.score}%`, background: b.color,
+                        borderRadius: 99, transition: 'width 0.6s ease',
+                      }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Context type badge ───────────────────────────────────────────────────────
 
 const CTX_ICONS: Record<string, string> = {
@@ -195,6 +287,9 @@ export default function CompliancePage(): React.JSX.Element {
           <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b91c1c', fontSize: 18, lineHeight: 1 }}>×</button>
         </div>
       )}
+
+      {/* ESG breakdown */}
+      <EsgBreakdownChart results={results} />
 
       {/* Two-column layout: list + detail */}
       <div className="row g-4">

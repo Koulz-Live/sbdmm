@@ -5,10 +5,102 @@
  * Role-aware: links shown/hidden based on the user's platform role.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { api } from '../lib/apiClient';
+import { getTenantOverride, setTenantOverride } from '../lib/apiClient';
 import type { PlatformRole } from '@sbdmm/shared';
+
+interface TenantOption { id: string; name: string }
+
+function TenantSwitcher({ collapsed }: { collapsed: boolean }): React.JSX.Element {
+  const [tenants, setTenants] = useState<TenantOption[]>([]);
+  const [override, setOverride] = useState<string>(getTenantOverride() ?? '');
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    void api.get<{ data: TenantOption[] }>('/api/v1/admin/tenants?per_page=100').then(res => {
+      if (res.success && res.data) setTenants(res.data.data ?? []);
+    });
+  }, []);
+
+  const current = tenants.find(t => t.id === override);
+
+  const handleSelect = (id: string): void => {
+    setTenantOverride(id || null);
+    setOverride(id);
+    setOpen(false);
+    // Reload the page so all data refetches with the new tenant context
+    window.location.reload();
+  };
+
+  return (
+    <div style={{ position: 'relative', marginBottom: 8 }}>
+      <button
+        title={collapsed ? 'Switch tenant' : undefined}
+        onClick={() => setOpen(o => !o)}
+        className="d-flex align-items-center gap-8"
+        style={{
+          width: '100%',
+          padding: collapsed ? '8px' : '8px 12px',
+          background: override ? 'rgba(41,158,96,0.12)' : 'transparent',
+          color: override ? '#4ade80' : '#94a3b8',
+          border: `1px solid ${override ? 'rgba(41,158,96,0.3)' : 'rgba(255,255,255,0.08)'}`,
+          borderRadius: 8,
+          cursor: 'pointer',
+          fontSize: 12,
+          fontWeight: 500,
+          justifyContent: collapsed ? 'center' : 'flex-start',
+          overflow: 'hidden',
+        }}>
+        <i className="ph ph-buildings" style={{ fontSize: 16, flexShrink: 0 }} />
+        {!collapsed && (
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textAlign: 'left' }}>
+            {current ? current.name : 'Switch Tenant'}
+          </span>
+        )}
+        {!collapsed && <i className={`ph ${open ? 'ph-caret-up' : 'ph-caret-down'}`} style={{ fontSize: 12, flexShrink: 0 }} />}
+      </button>
+
+      {open && !collapsed && (
+        <div style={{
+          position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 4,
+          background: '#1e293b', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)', zIndex: 200, overflow: 'hidden',
+          maxHeight: 240, overflowY: 'auto',
+        }}>
+          <button
+            onClick={() => handleSelect('')}
+            style={{
+              display: 'block', width: '100%', padding: '9px 14px', textAlign: 'left',
+              background: !override ? 'rgba(41,158,96,0.15)' : 'transparent',
+              color: !override ? '#4ade80' : '#94a3b8',
+              border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+            }}>
+            <i className="ph ph-user-circle me-8" style={{ fontSize: 14 }} />
+            Own tenant (default)
+          </button>
+          {tenants.map(t => (
+            <button key={t.id} onClick={() => handleSelect(t.id)}
+              style={{
+                display: 'block', width: '100%', padding: '9px 14px', textAlign: 'left',
+                background: override === t.id ? 'rgba(41,158,96,0.15)' : 'transparent',
+                color: override === t.id ? '#4ade80' : '#cbd5e1',
+                border: 'none', fontSize: 13, fontWeight: override === t.id ? 600 : 400, cursor: 'pointer',
+                borderTop: '1px solid rgba(255,255,255,0.05)',
+              }}>
+              {t.name}
+              {override === t.id && <i className="ph ph-check ms-6" style={{ fontSize: 12, color: '#4ade80' }} />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 interface NavItem {
   to: string;
@@ -25,13 +117,13 @@ const NAV_ITEMS: NavItem[] = [
   // ── Buyer & admins: orders
   { to: '/orders',             label: 'Orders',       icon: 'ph ph-package',       roles: ['buyer', 'tenant_admin', 'super_admin'] },
   // ── Providers: open RFQs they can bid on
-  { to: '/quotes',             label: 'Open RFQs',    icon: 'ph ph-list-magnifying-glass', roles: ['vendor', 'logistics_provider'] },
+  { to: '/rfqs',               label: 'Open RFQs',    icon: 'ph ph-list-magnifying-glass', roles: ['vendor', 'logistics_provider'] },
   // ── Buyer & admins: quotes
   { to: '/quotes',             label: 'Quotes',       icon: 'ph ph-chat-dots',     roles: ['buyer', 'tenant_admin', 'super_admin'] },
   // ── Providers: their own quote history
-  { to: '/documents',          label: 'My Quotes',    icon: 'ph ph-chat-dots',     roles: ['vendor', 'logistics_provider'] },
+  { to: '/quotes',             label: 'My Quotes',    icon: 'ph ph-chat-dots',     roles: ['vendor', 'logistics_provider'] },
   // ── Providers: their catalogue
-  { to: '/vendors/' + 'me',    label: 'My Catalogue', icon: 'ph ph-storefront',    roles: ['vendor', 'logistics_provider'] },
+  { to: '/my-catalogue',       label: 'My Catalogue', icon: 'ph ph-storefront',    roles: ['vendor', 'logistics_provider'] },
   // ── Everyone: documents
   { to: '/documents',          label: 'Documents',    icon: 'ph ph-file-text' },
   // ── Buyer & admins: vendor directory
@@ -40,6 +132,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/compliance',         label: 'Compliance',   icon: 'ph ph-shield-check',  roles: ['vendor', 'tenant_admin', 'super_admin'] },
   // ── Admins only
   { to: '/admin',              label: 'Admin Panel',  icon: 'ph ph-gear',          roles: ['tenant_admin', 'super_admin'] },
+  { to: '/settings',           label: 'Settings',     icon: 'ph ph-gear-six',      roles: ['tenant_admin', 'super_admin'] },
 ];
 
 export function NavBar(): React.JSX.Element {
@@ -188,6 +281,8 @@ export function NavBar(): React.JSX.Element {
             </div>
           </div>
         )}
+        {/* Super-admin tenant switcher */}
+        {role === 'super_admin' && <TenantSwitcher collapsed={collapsed} />}
         <button
           onClick={() => { void handleSignOut(); }}
           disabled={signingOut}
