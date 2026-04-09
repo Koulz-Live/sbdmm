@@ -37,6 +37,7 @@ interface AuthState {
 
 interface AuthContextValue extends AuthState {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signInWithGoogle: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -121,6 +122,33 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
     [],
   );
 
+  /**
+   * signInWithGoogle — initiates the OAuth redirect flow.
+   * Supabase handles the callback; onAuthStateChange picks up the session.
+   * Blocked at the UI layer for tenant_admin / super_admin (email+password only).
+   */
+  const signInWithGoogle = useCallback(
+    async (): Promise<{ error: string | null }> => {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+          queryParams: {
+            // Request refresh token so session can be extended
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+      if (error) {
+        return { error: 'Could not initiate Google sign-in. Please try again.' };
+      }
+      // Redirect happens — no further action needed here
+      return { error: null };
+    },
+    [],
+  );
+
   const signOut = useCallback(async (): Promise<void> => {
     await supabase.auth.signOut();
     // State is cleared by the onAuthStateChange listener
@@ -132,7 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
 
   return (
     <AuthContext.Provider
-      value={{ ...state, signIn, signOut, refreshProfile }}
+      value={{ ...state, signIn, signInWithGoogle, signOut, refreshProfile }}
     >
       {children}
     </AuthContext.Provider>
