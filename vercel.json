@@ -1,28 +1,29 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "version": 2,
 
-  "builds": [
-    {
-      "src": "api/index.ts",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "apps/web/dist"
-      }
+  "buildCommand": "npm run build --workspace=apps/web && npm run build --workspace=apps/api",
+  "outputDirectory": "apps/web/dist",
+  "installCommand": "npm ci",
+  "framework": null,
+
+  "regions": ["lhr1"],
+
+  "functions": {
+    "apps/api/api/index.ts": {
+      "runtime": "nodejs20.x",
+      "maxDuration": 30
     }
-  ],
+  },
 
-  "routes": [
-    { "src": "/api/(.*)",      "dest": "/api/index.ts" },
-    { "src": "/webhooks/(.*)", "dest": "/api/index.ts" },
-    { "src": "/health",        "dest": "/api/index.ts" },
-    { "src": "/readiness",     "dest": "/api/index.ts" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)",          "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/api/:path*",      "destination": "/apps/api/api/index.ts" },
+    { "source": "/webhooks/:path*", "destination": "/apps/api/api/index.ts" },
+    { "source": "/health",          "destination": "/apps/api/api/index.ts" },
+    { "source": "/readiness",       "destination": "/apps/api/api/index.ts" },
+    {
+      "source": "/((?!api|webhooks|health|readiness|assets|_next|favicon.ico).*)",
+      "destination": "/index.html"
+    }
   ],
 
   "headers": [
@@ -45,10 +46,15 @@
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
+    },
+    {
+      "source": "/((?!assets).*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, proxy-revalidate" },
+        { "key": "Pragma",        "value": "no-cache" }
+      ]
     }
   ],
-
-  "regions": ["lhr1"],
 
   "github": {
     "autoJobCancelation": true
