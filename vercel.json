@@ -3,7 +3,7 @@
 
   "buildCommand": "npm run build:vercel",
   "outputDirectory": "apps/web/dist",
-  "installCommand": "npm ci",
+  "installCommand": "rm -rf node_modules && npm ci",
   "framework": null,
 
   "regions": ["lhr1"],
