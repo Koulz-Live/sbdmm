@@ -54,6 +54,7 @@ const RfqFeedPage        = lazy(() => import('./pages/RFQFeedPage'));
 const MyCataloguePage    = lazy(() => import('./pages/MyCataloguePage'));
 const TenantSettingsPage = lazy(() => import('./pages/TenantSettingsPage'));
 const DesignMyTablePage  = lazy(() => import('./pages/DesignMyTablePage'));
+const AuthCallbackPage   = lazy(() => import('./pages/AuthCallbackPage'));
 
 function PageLoader(): React.JSX.Element {
   return (
@@ -70,6 +71,7 @@ export default function App(): React.JSX.Element {
         {/* Public routes — no auth required, no layout shell */}
         <Route path="/"                  element={<LandingPage />} />
         <Route path="/login"             element={<LoginPage />} />
+        <Route path="/auth/callback"     element={<AuthCallbackPage />} />
         <Route path="/forgot-password"   element={<ForgotPasswordPage />} />
         <Route path="/unauthorized"      element={<UnauthorizedPage />} />
 
