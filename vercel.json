@@ -1,9 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
 
-  "buildCommand": "npm run build:vercel",
+  "buildCommand": "bash build.sh",
   "outputDirectory": "apps/web/dist",
-  "installCommand": "npm ci --include=dev",
+  "installCommand": "echo 'Dependencies installed in build.sh'",
   "framework": null,
 
   "regions": ["lhr1"],
