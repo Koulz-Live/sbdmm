@@ -10,7 +10,6 @@
 
   "functions": {
     "apps/api/api/index.ts": {
-      "runtime": "nodejs20.x",
       "maxDuration": 30
     }
   },
