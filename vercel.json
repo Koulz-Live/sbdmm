@@ -1,64 +1,43 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
 
-  "buildCommand": "npm run build --workspace=apps/web && npm run build --workspace=apps/api",
-  "outputDirectory": "apps/web/dist",
   "installCommand": "npm ci",
   "framework": null,
 
   "regions": ["lhr1"],
 
-  "functions": {
-    "apps/api/api/index.ts": {
-      "maxDuration": 30
-    }
-  },
-
-  "rewrites": [
-    { "source": "/api/:path*",      "destination": "/apps/api/api/index.ts" },
-    { "source": "/webhooks/:path*", "destination": "/apps/api/api/index.ts" },
-    { "source": "/health",          "destination": "/apps/api/api/index.ts" },
-    { "source": "/readiness",       "destination": "/apps/api/api/index.ts" },
+  "builds": [
     {
-      "source": "/((?!api|webhooks|health|readiness|assets|_next|favicon.ico).*)",
-      "destination": "/index.html"
+      "src": "apps/web/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist",
+        "buildCommand": "npm run build"
+      }
+    },
+    {
+      "src": "apps/api/api/index.ts",
+      "use": "@vercel/node",
+      "config": {
+        "maxDuration": 30
+      }
     }
   ],
 
-  "headers": [
+  "routes": [
+    { "src": "/api/(.*)",      "dest": "/apps/api/api/index.ts" },
+    { "src": "/webhooks/(.*)", "dest": "/apps/api/api/index.ts" },
+    { "src": "/health",        "dest": "/apps/api/api/index.ts" },
+    { "src": "/readiness",     "dest": "/apps/api/api/index.ts" },
     {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "Strict-Transport-Security",   "value": "max-age=63072000; includeSubDomains" },
-        { "key": "X-Content-Type-Options",       "value": "nosniff" },
-        { "key": "X-Frame-Options",              "value": "DENY" },
-        { "key": "X-XSS-Protection",             "value": "1; mode=block" },
-        { "key": "Referrer-Policy",              "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy",           "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()" },
-        { "key": "Cross-Origin-Opener-Policy",   "value": "same-origin" },
-        { "key": "Cross-Origin-Resource-Policy", "value": "same-origin" },
-        { "key": "Content-Security-Policy",      "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" }
-      ]
+      "src": "/assets/(.*)",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" },
+      "dest": "/assets/$1"
     },
-    {
-      "source": "/assets/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
-      ]
-    },
-    {
-      "source": "/((?!assets).*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, proxy-revalidate" },
-        { "key": "Pragma",        "value": "no-cache" }
-      ]
-    }
+    { "src": "/(.*)", "dest": "/index.html" }
   ],
 
   "github": {
     "autoJobCancelation": true
-  },
-
-  "trailingSlash": false,
-  "cleanUrls": true
+  }
 }
