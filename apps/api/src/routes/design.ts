@@ -677,12 +677,13 @@ router.post('/sessions/:id/convert', async (req: Request, res: Response): Promis
   ].join('\n');
 
   // Create the order — carpenters will bid on this
+  // Status is 'pending_quote' so it immediately appears in the vendor RFQ feed
   const { data: order, error: orderErr } = await supabase
     .from('orders')
     .insert({
       tenant_id:            actor.tenant_id,
       created_by:           actor.id,
-      status:               'draft',
+      status:               'pending_quote',
       origin_location:      'Carpenter Workshop (confirmed on quote acceptance)',
       destination_location: delivery_address.trim(),
       cargo_type:           `Custom ${concept.label} — ${session.table_type?.replace('_', ' ') ?? 'Furniture'}`,

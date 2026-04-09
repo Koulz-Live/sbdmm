@@ -1016,6 +1016,14 @@ export default function DesignMyTablePage(): React.JSX.Element {
                 View Your Order
               </Link>
             )}
+            <Link
+              to="/quotes"
+              className="btn btn-lg fw-semibold px-5"
+              style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 12 }}
+            >
+              <i className="ph ph-chat-dots me-2" />
+              View Incoming Quotes
+            </Link>
             <button
               className="btn btn-lg btn-outline-secondary fw-semibold px-5"
               style={{ borderRadius: 12 }}

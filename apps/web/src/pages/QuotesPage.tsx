@@ -259,7 +259,7 @@ export default function QuotesPage(): React.JSX.Element {
   const [action, setAction] = useState<'accept' | 'reject' | null>(null);
   const [actioning, setActioning] = useState(false);
 
-  const isProvider = user?.role === 'logistics_provider';
+  const isProvider = user?.role === 'vendor' || user?.role === 'logistics_provider';
   const isAdmin = user?.role === 'tenant_admin' || user?.role === 'super_admin';
   const canBuyerAction = user?.role === 'buyer' || isAdmin;
 
