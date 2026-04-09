@@ -50,7 +50,7 @@ const VendorProfilePage = lazy(() => import('./pages/VendorProfilePage'));
 const CompliancePage  = lazy(() => import('./pages/CompliancePage'));
 const AdminPage       = lazy(() => import('./pages/AdminPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
-const RfqFeedPage        = lazy(() => import('./pages/RfqFeedPage'));
+const RfqFeedPage        = lazy(() => import('./pages/RFQFeedPage'));
 const MyCataloguePage    = lazy(() => import('./pages/MyCataloguePage'));
 const TenantSettingsPage = lazy(() => import('./pages/TenantSettingsPage'));
 const DesignMyTablePage  = lazy(() => import('./pages/DesignMyTablePage'));
