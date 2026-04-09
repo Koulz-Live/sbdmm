@@ -22,7 +22,10 @@
 import { supabase } from './supabaseClient';
 import type { ApiResponse } from '@sbdmm/shared';
 
-const API_BASE_URL = (import.meta.env['VITE_API_BASE_URL'] as string | undefined) ?? 'http://localhost:3001';
+// In production (Vercel) the API is same-origin (/api/* routes handled by @vercel/node).
+// In local dev the Express server runs on port 3001.
+const API_BASE_URL = (import.meta.env['VITE_API_BASE_URL'] as string | undefined)
+  ?? (import.meta.env.DEV ? 'http://localhost:3001' : '');
 
 // ─── Super-admin tenant override ─────────────────────────────────────────────
 // Super admins can impersonate a specific tenant context.
