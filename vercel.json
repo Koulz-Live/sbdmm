@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
 
-  "buildCommand": "npm run vercel-build --workspace=apps/web",
+  "buildCommand": "cd apps/web && npx vite build",
   "outputDirectory": "apps/web/dist",
   "installCommand": "npm ci",
   "framework": null,
