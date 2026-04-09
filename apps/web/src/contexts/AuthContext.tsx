@@ -54,18 +54,48 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
   });
 
   /**
-   * loadProfile — Fetches the authoritative user profile from the backend.
-   * Called after successful authentication.
+   * loadProfile — Fetches the authoritative user profile.
+   *
+   * Strategy (two-tier):
+   *   1. Try the Express backend (/api/v1/auth/profile) — authoritative source,
+   *      enforces is_active check server-side.
+   *   2. If the API is unavailable (cold-start crash, env vars missing, network
+   *      error) fall back to a direct Supabase query so the OAuth callback is
+   *      never permanently stuck.
+   *
+   * SECURITY NOTE: The fallback bypasses the server-side is_active check.
+   * That check is still enforced on every subsequent API call via requireAuth.
+   * The fallback only affects the initial session bootstrap.
    */
   const loadProfile = useCallback(async (): Promise<void> => {
+    // ── Tier 1: backend API ──────────────────────────────────────────────────
     try {
       const result = await api.get<UserProfile>('/api/v1/auth/profile');
       if (result.success && result.data) {
         setState((prev) => ({ ...prev, profile: result.data ?? null }));
+        return; // success — done
       }
     } catch {
-      // Profile load failure is not fatal — user can retry or re-auth
-      console.warn('[AUTH] Could not load user profile');
+      console.warn('[AUTH] Backend profile API unavailable — falling back to Supabase direct query');
+    }
+
+    // ── Tier 2: direct Supabase query (fallback) ─────────────────────────────
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id, tenant_id, full_name, role, is_active, created_at')
+        .eq('id', user.id)
+        .single();
+
+      if (!error && data) {
+        const profile: UserProfile = { ...data, email: user.email ?? '' } as UserProfile;
+        setState((prev) => ({ ...prev, profile }));
+      }
+    } catch {
+      console.warn('[AUTH] Could not load user profile via fallback');
     }
   }, []);
 
