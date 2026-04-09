@@ -1,0 +1,31 @@
+{
+  // Root tsconfig — used by @vercel/node (esbuild) when bundling api/index.ts.
+  // apps/api and apps/web each have their own tsconfig for local dev / tsc builds.
+  // This file exists solely to give Vercel's bundler the correct path aliases
+  // and compiler settings so it can resolve @sbdmm/shared from source.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "@sbdmm/shared": ["packages/shared/src/index.ts"]
+    }
+  },
+  "include": [
+    "api/**/*",
+    "apps/api/src/**/*",
+    "packages/shared/src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "apps/web",
+    "**/*.test.ts"
+  ]
+}
