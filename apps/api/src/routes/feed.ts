@@ -8,8 +8,7 @@
  *
  * Query params:
  *   q          — free-text search (title, description, tags)
- *   mode       — filter by service_mode (FCL | LCL | AIR | ROAD | RAIL | COURIER | OTHER)
- *   tag        — filter by a specific tag (exact, case-insensitive array contains)
+ *   tag        — filter by a furniture category or tag (case-insensitive array contains)
  *   sort       — 'newest' (default) | 'price_asc' | 'price_desc' | 'popular'
  *   page       — page number (default 1)
  *   per_page   — items per page (default 24, max 60)
@@ -39,7 +38,6 @@ router.use(requireAuth);
 
 const feedQuerySchema = z.object({
   q:        z.string().max(200).trim().optional(),
-  mode:     z.enum(['FCL', 'LCL', 'AIR', 'ROAD', 'RAIL', 'COURIER', 'OTHER']).optional(),
   tag:      z.string().max(100).trim().optional(),
   sort:     z.enum(['newest', 'price_asc', 'price_desc', 'popular']).optional().default('newest'),
   page:     z.coerce.number().int().min(1).optional().default(1),
@@ -186,7 +184,7 @@ router.get(
     const log = createChildLogger({ request_id: req.requestId });
     const supabase = getAdminClient();
 
-    const { q, mode, tag, sort, page, per_page } = req.query as unknown as z.infer<typeof feedQuerySchema>;
+    const { q, tag, sort, page, per_page } = req.query as unknown as z.infer<typeof feedQuerySchema>;
     const tenantId = req.user!.tenant_id;
 
     const offset = (page - 1) * per_page;
@@ -233,11 +231,6 @@ router.get(
       query = query.or(
         `title.ilike.%${q}%,description.ilike.%${q}%`,
       );
-    }
-
-    // Mode filter
-    if (mode) {
-      query = query.eq('service_mode', mode);
     }
 
     // Tag filter — filter items where the tags array contains the given tag (case-insensitive)
@@ -316,7 +309,7 @@ router.get(
           has_next: page < totalPages,
           has_prev: page > 1,
         },
-        filters: { q: q ?? null, mode: mode ?? null, tag: tag ?? null, sort },
+        filters: { q: q ?? null, tag: tag ?? null, sort },
       },
     });
   },

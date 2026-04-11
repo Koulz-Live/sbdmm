@@ -8,17 +8,17 @@
  * Features:
  * - Masonry CSS column layout (pure CSS, no JS library)
  * - Live search (debounced 350ms)
- * - Signal-driven filter chips: top tags, collection keywords, popular routes
- *   sourced from GET /api/v1/feed/signals (tenant-wide save activity)
- * - Service mode quick-filter pills (ranked by popularity)
+ * - Furniture category filter chips (Sofas, Beds, Tables, Chairs, etc.) — filter via tag=
+ * - Signal-driven trending chips: top tags + collection keywords from save activity
+ *   sourced from GET /api/v1/feed/signals (tenant-wide)
  * - Sort: Newest | Popular | Price ↑ | Price ↓
  * - Load More pagination
  * - Skeleton loading state
  * - Click card → vendor profile
  *
  * API:
- *   GET /api/v1/feed/signals        — social signals for filter chips
- *   GET /api/v1/feed?q=&mode=&tag=&sort=&page=&per_page=
+ *   GET /api/v1/feed/signals        — social signals for trending chips
+ *   GET /api/v1/feed?q=&tag=&sort=&page=&per_page=
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -40,7 +40,6 @@ interface SaveCheckResult {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ServiceMode = 'FCL' | 'LCL' | 'AIR' | 'ROAD' | 'RAIL' | 'COURIER' | 'OTHER';
 type SortOption  = 'newest' | 'price_asc' | 'price_desc' | 'popular';
 
 interface VendorInfo {
@@ -56,7 +55,7 @@ interface FeedItem {
   vendor_id: string;
   title: string;
   description: string | null;
-  service_mode: ServiceMode;
+  service_mode: string;
   origin_region: string;
   destination_region: string;
   transit_days_min: number;
@@ -93,14 +92,20 @@ interface FeedSignals {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const ALL_MODES: { key: ServiceMode; label: string; icon: string }[] = [
-  { key: 'FCL',     label: 'FCL',     icon: 'ph-container' },
-  { key: 'LCL',     label: 'LCL',     icon: 'ph-package' },
-  { key: 'AIR',     label: 'Air',     icon: 'ph-airplane' },
-  { key: 'ROAD',    label: 'Road',    icon: 'ph-truck' },
-  { key: 'RAIL',    label: 'Rail',    icon: 'ph-train' },
-  { key: 'COURIER', label: 'Courier', icon: 'ph-lightning' },
-  { key: 'OTHER',   label: 'Other',   icon: 'ph-cube' },
+// Curated furniture category chips — each maps to a tag filter on the catalogue
+const FURNITURE_CATEGORIES: { key: string; label: string; icon: string }[] = [
+  { key: 'sofa',      label: 'Sofas',      icon: 'ph-armchair' },
+  { key: 'bed',       label: 'Beds',       icon: 'ph-bed' },
+  { key: 'table',     label: 'Tables',     icon: 'ph-table' },
+  { key: 'chair',     label: 'Chairs',     icon: 'ph-office-chair' },
+  { key: 'storage',   label: 'Storage',    icon: 'ph-archive-box' },
+  { key: 'lighting',  label: 'Lighting',   icon: 'ph-lamp' },
+  { key: 'outdoor',   label: 'Outdoor',    icon: 'ph-tree' },
+  { key: 'decor',     label: 'Decor',      icon: 'ph-paint-brush' },
+  { key: 'dining',    label: 'Dining',     icon: 'ph-fork-knife' },
+  { key: 'office',    label: 'Office',     icon: 'ph-briefcase' },
+  { key: 'kids',      label: 'Kids',       icon: 'ph-baby' },
+  { key: 'bathroom',  label: 'Bathroom',   icon: 'ph-bathtub' },
 ];
 
 const SORT_OPTIONS: { key: SortOption; label: string; icon: string }[] = [
@@ -368,7 +373,10 @@ function FeedCard({ item, onClickVendor, onOpenSave, isSaved }: FeedCardProps): 
   // Vary card image height deterministically for the masonry effect
   const imgHeight = 120 + (hashStr(item.id + 'h') % 100);
 
-  const modeInfo = ALL_MODES.find(m => m.key === item.service_mode);
+  const modeIcon: Record<string, string> = {
+    FCL: 'ph-container', LCL: 'ph-package', AIR: 'ph-airplane',
+    ROAD: 'ph-truck', RAIL: 'ph-train', COURIER: 'ph-lightning', OTHER: 'ph-cube',
+  };
 
   const price = item.base_price_amount != null
     ? `${item.base_price_currency} ${item.base_price_amount.toLocaleString()} ${item.price_unit}`
@@ -422,7 +430,7 @@ function FeedCard({ item, onClickVendor, onOpenSave, isSaved }: FeedCardProps): 
           alignItems: 'center',
           gap: 5,
         }}>
-          <i className={`ph ${modeInfo?.icon ?? 'ph-cube'}`} style={{ fontSize: 13 }} />
+          <i className={`ph ${modeIcon[item.service_mode] ?? 'ph-cube'}`} style={{ fontSize: 13 }} />
           {item.service_mode}
         </div>
 
@@ -577,8 +585,7 @@ export default function FurnitureFeedPage(): React.JSX.Element {
   const [error, setError]       = useState<string | null>(null);
 
   const [search, setSearch]     = useState('');
-  const [mode, setMode]         = useState<ServiceMode | ''>('');
-  const [activeTag, setActiveTag] = useState('');          // tag chip filter
+  const [activeTag, setActiveTag] = useState('');  // furniture category or trending tag filter
   const [sort, setSort]         = useState<SortOption>('newest');
   const [page, setPage]         = useState(1);
 
@@ -612,7 +619,7 @@ export default function FurnitureFeedPage(): React.JSX.Element {
   }, [search]);
 
   // Reset page when filters change
-  useEffect(() => { setPage(1); }, [mode, sort, activeTag]);
+  useEffect(() => { setPage(1); }, [sort, activeTag]);
 
   const fetchFeed = useCallback(async (p: number, append: boolean) => {
     if (append) setLoadingMore(true);
@@ -620,7 +627,6 @@ export default function FurnitureFeedPage(): React.JSX.Element {
 
     const params = new URLSearchParams({ sort, page: String(p), per_page: '24' });
     if (debouncedSearch) params.set('q', debouncedSearch);
-    if (mode)      params.set('mode', mode);
     if (activeTag) params.set('tag', activeTag);
 
     const res = await api.get<{ data: FeedItem[]; meta: FeedMeta }>(`/api/v1/feed?${params.toString()}`);
@@ -637,7 +643,7 @@ export default function FurnitureFeedPage(): React.JSX.Element {
     }
     setLoading(false);
     setLoadingMore(false);
-  }, [debouncedSearch, mode, activeTag, sort]);
+  }, [debouncedSearch, activeTag, sort]);
 
   // Initial load + filter changes
   useEffect(() => {
@@ -656,24 +662,10 @@ export default function FurnitureFeedPage(): React.JSX.Element {
     navigate(`/vendors/${vendorId}`);
   };
 
-  // Build ordered mode chips: signal-ranked first, then remaining
-  const orderedModes = (() => {
-    if (!signals || signals.top_modes.length === 0) return ALL_MODES;
-    const signalOrder = signals.top_modes.map(m => m.mode.toUpperCase());
-    return [...ALL_MODES].sort((a, b) => {
-      const ai = signalOrder.indexOf(a.key);
-      const bi = signalOrder.indexOf(b.key);
-      if (ai === -1 && bi === -1) return 0;
-      if (ai === -1) return 1;
-      if (bi === -1) return -1;
-      return ai - bi;
-    });
-  })();
-
   const hasMore = meta ? meta.pagination.has_next : false;
   const total   = meta?.pagination.total ?? 0;
 
-  // Has any signal data with saves
+  // Has any signal data with saves (used to show trending row)
   const hasSocialSignals = signals && signals.total_saves > 0;
 
   return (
@@ -782,37 +774,30 @@ export default function FurnitureFeedPage(): React.JSX.Element {
           </div>
         </div>
 
-        {/* ── Row 1: Service mode chips (ranked by popularity) ─────────────── */}
+        {/* ── Row 1: Furniture category chips ──────────────────────────────── */}
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 7 }}>
+          {/* All — clears category filter */}
           <button
-            className={`feed-chip${mode === '' ? ' feed-chip-active' : ''}`}
-            onClick={() => setMode('')}
-            style={{ padding: '4px 13px', border: '1.5px solid #e2e8f0', borderRadius: 20, fontSize: 12, fontWeight: 600, background: mode === '' ? '#299E60' : '#fff', color: mode === '' ? '#fff' : '#64748b', cursor: 'pointer', transition: 'background 0.15s, color 0.15s' }}
+            className={`feed-chip${activeTag === '' ? ' feed-chip-active' : ''}`}
+            onClick={() => setActiveTag('')}
+            style={{ padding: '4px 13px', border: '1.5px solid #e2e8f0', borderRadius: 20, fontSize: 12, fontWeight: 600, background: activeTag === '' ? '#299E60' : '#fff', color: activeTag === '' ? '#fff' : '#64748b', cursor: 'pointer', transition: 'background 0.15s, color 0.15s' }}
           >
-            All modes
+            All
           </button>
-          {orderedModes.map(m => {
-            const saveCount = signals?.top_modes.find(s => s.mode.toUpperCase() === m.key)?.count;
-            return (
-              <button
-                key={m.key}
-                className={`feed-chip${mode === m.key ? ' feed-chip-active' : ''}`}
-                onClick={() => { setMode(prev => prev === m.key ? '' : m.key); setActiveTag(''); }}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 11px', border: '1.5px solid #e2e8f0', borderRadius: 20, fontSize: 12, fontWeight: 600, background: mode === m.key ? '#299E60' : '#fff', color: mode === m.key ? '#fff' : '#64748b', cursor: 'pointer', transition: 'background 0.15s, color 0.15s' }}
-              >
-                <i className={`ph ${m.icon}`} style={{ fontSize: 12 }} />
-                {m.label}
-                {saveCount !== undefined && saveCount > 0 && (
-                  <span style={{ background: mode === m.key ? 'rgba(255,255,255,0.3)' : '#f1f5f9', borderRadius: 10, padding: '0 5px', fontSize: 10, fontWeight: 700 }}>
-                    {saveCount}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+          {FURNITURE_CATEGORIES.map(cat => (
+            <button
+              key={cat.key}
+              className={`feed-chip${activeTag === cat.key ? ' feed-chip-active' : ''}`}
+              onClick={() => setActiveTag(prev => prev === cat.key ? '' : cat.key)}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 11px', border: '1.5px solid #e2e8f0', borderRadius: 20, fontSize: 12, fontWeight: 600, background: activeTag === cat.key ? '#299E60' : '#fff', color: activeTag === cat.key ? '#fff' : '#64748b', cursor: 'pointer', transition: 'background 0.15s, color 0.15s' }}
+            >
+              <i className={`ph ${cat.icon}`} style={{ fontSize: 12 }} />
+              {cat.label}
+            </button>
+          ))}
         </div>
 
-        {/* ── Row 2: Signal chips — top tags + collection keywords ─────────── */}
+        {/* ── Row 2: Signal chips — trending tags + collection keywords ─────── */}
         {signalsLoaded && hasSocialSignals && (
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.05em', marginRight: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -824,7 +809,7 @@ export default function FurnitureFeedPage(): React.JSX.Element {
               <button
                 key={`tag:${tag}`}
                 className={`feed-tag-chip${activeTag === tag ? ' feed-tag-chip-active' : ''}`}
-                onClick={() => { setActiveTag(prev => prev === tag ? '' : tag); setMode(''); }}
+                onClick={() => setActiveTag(prev => prev === tag ? '' : tag)}
                 style={{
                   padding: '4px 11px',
                   border: `1.5px solid ${activeTag === tag ? '#299E60' : '#e2e8f0'}`,
@@ -853,7 +838,7 @@ export default function FurnitureFeedPage(): React.JSX.Element {
                 <button
                   key={`kw:${keyword}`}
                   className={`feed-tag-chip${activeTag === keyword ? ' feed-tag-chip-active' : ''}`}
-                  onClick={() => { setActiveTag(prev => prev === keyword ? '' : keyword); setMode(''); }}
+                  onClick={() => setActiveTag(prev => prev === keyword ? '' : keyword)}
                   style={{
                     padding: '4px 11px',
                     border: `1.5px solid ${activeTag === keyword ? '#299E60' : '#e2e8f0'}`,
@@ -876,9 +861,9 @@ export default function FurnitureFeedPage(): React.JSX.Element {
             })}
 
             {/* Active filter clear button */}
-            {(mode || activeTag) && (
+            {activeTag && (
               <button
-                onClick={() => { setMode(''); setActiveTag(''); }}
+                onClick={() => setActiveTag('')}
                 style={{ padding: '4px 10px', border: '1.5px solid #fecaca', borderRadius: 20, fontSize: 12, fontWeight: 600, background: '#fef2f2', color: '#b91c1c', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
               >
                 <i className="ph ph-x" style={{ fontSize: 11 }} /> Clear
@@ -887,15 +872,10 @@ export default function FurnitureFeedPage(): React.JSX.Element {
           </div>
         )}
 
-        {/* No signals yet — show top routes teaser if any */}
-        {signalsLoaded && !hasSocialSignals && signals && signals.top_routes.length > 0 && (
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', marginRight: 2 }}>Popular routes</span>
-            {signals.top_routes.slice(0, 5).map(r => (
-              <span key={r.route} style={{ fontSize: 11, color: '#64748b', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 20, padding: '3px 10px' }}>
-                {r.origin} → {r.destination}
-              </span>
-            ))}
+        {/* No signals yet — placeholder */}
+        {signalsLoaded && !hasSocialSignals && (
+          <div style={{ fontSize: 11, color: '#cbd5e1', fontStyle: 'italic' }}>
+            Save items to collections to see trending picks here.
           </div>
         )}
       </div>
@@ -930,13 +910,13 @@ export default function FurnitureFeedPage(): React.JSX.Element {
             No listings found
           </div>
           <div style={{ fontSize: 14 }}>
-            {debouncedSearch || mode || activeTag
+            {debouncedSearch || activeTag
               ? 'Try clearing your filters to see more results.'
               : 'No vendors have published active catalogue items yet.'}
           </div>
-          {(debouncedSearch || mode || activeTag) && (
+          {(debouncedSearch || activeTag) && (
             <button
-              onClick={() => { setSearch(''); setMode(''); setActiveTag(''); }}
+              onClick={() => { setSearch(''); setActiveTag(''); }}
               style={{
                 marginTop: 16,
                 padding: '8px 20px',
