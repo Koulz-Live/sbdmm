@@ -22,6 +22,7 @@ import { useAuth } from '../contexts/AuthContext';
 /** Map route paths → human-readable page titles for the top bar */
 const PAGE_TITLES: Record<string, string> = {
   '/home':               'Home',
+  '/saves':              'Saved Items',
   '/dashboard':          'Dashboard',
   '/provider/dashboard': 'My Dashboard',
   '/orders':             'Orders',

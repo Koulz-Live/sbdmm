@@ -202,6 +202,8 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   // ── Feed: all authenticated users
   { to: '/home',               label: 'Home',         icon: 'ph ph-house-simple' },
+  // ── Saved items: all authenticated users
+  { to: '/saves',              label: 'Saved',        icon: 'ph ph-bookmark-simple' },
   // ── Buyer / Admin: main dashboard
   { to: '/dashboard',          label: 'Dashboard',    icon: 'ph ph-chart-line-up', roles: ['buyer', 'tenant_admin', 'super_admin'] },
   // ── Provider: their own dashboard

@@ -44,6 +44,7 @@ import { aiRouter } from './ai/aiProxy.route';
 import { webhookRouter } from './webhooks/webhookVerifier';
 import { designRouter } from './routes/design';
 import { feedRouter } from './routes/feed';
+import { savesRouter } from './routes/saves';
 import { logger } from './lib/logger';
 
 export function createApp() {
@@ -103,6 +104,7 @@ export function createApp() {
   app.use('/api/v1/ai', aiRouter);
   app.use('/api/v1/design', designRouter);
   app.use('/api/v1/feed', feedRouter);
+  app.use('/api/v1/saves', savesRouter);
 
   // ─── 8. 404 Handler ─────────────────────────────────────────────────────────
   app.use((_req: Request, res: Response) => {

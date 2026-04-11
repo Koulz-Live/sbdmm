@@ -57,6 +57,7 @@ const DesignMyTablePage  = lazy(() => import('./pages/DesignMyTablePage'));
 const AuthCallbackPage   = lazy(() => import('./pages/AuthCallbackPage'));
 const MfaSetupPage       = lazy(() => import('./pages/MfaSetupPage'));
 const FurnitureFeedPage  = lazy(() => import('./pages/FurnitureFeedPage'));
+const SavesPage          = lazy(() => import('./pages/SavesPage'));
 
 function PageLoader(): React.JSX.Element {
   return (
@@ -164,6 +165,13 @@ export default function App(): React.JSX.Element {
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
             <Route path="/home" element={<FurnitureFeedPage />} />
+          </Route>
+        </Route>
+
+        {/* Protected — Saved Items / Collections: all authenticated users */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppLayout />}>
+            <Route path="/saves" element={<SavesPage />} />
           </Route>
         </Route>
 

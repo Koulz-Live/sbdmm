@@ -21,6 +21,19 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/apiClient';
 
+// ─── Saved-items types (for bookmark overlay) ─────────────────────────────────
+
+interface SavedCollection {
+  id: string;
+  name: string;
+  item_count: number;
+}
+
+interface SaveCheckResult {
+  saved: boolean;
+  saves: { id: string; collection_id: string }[];
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ServiceMode = 'FCL' | 'LCL' | 'AIR' | 'ROAD' | 'RAIL' | 'COURIER' | 'OTHER';
@@ -134,13 +147,206 @@ function SkeletonCard(): React.JSX.Element {
   );
 }
 
+// ─── Save-to-collection modal ─────────────────────────────────────────────────
+
+interface SaveToCollectionModalProps {
+  item: FeedItem;
+  onClose: () => void;
+}
+
+function SaveToCollectionModal({ item, onClose }: SaveToCollectionModalProps): React.JSX.Element {
+  const [collections, setCollections] = useState<SavedCollection[]>([]);
+  const [savedIds, setSavedIds]       = useState<Set<string>>(new Set()); // collection ids where item is saved
+  const [loading, setLoading]         = useState(true);
+  const [savingId, setSavingId]       = useState<string | null>(null);
+
+  // New collection inline creation
+  const [newColName, setNewColName]     = useState('');
+  const [creatingCol, setCreatingCol]   = useState(false);
+  const [showNewField, setShowNewField] = useState(false);
+
+  // Load collections + check save state
+  useEffect(() => {
+    void (async () => {
+      const [colsRes, checkRes] = await Promise.all([
+        api.get<SavedCollection[]>('/api/v1/saves/collections'),
+        api.get<SaveCheckResult>(`/api/v1/saves/check/${item.id}`),
+      ]);
+      setLoading(false);
+      if (colsRes.success && colsRes.data) setCollections(colsRes.data);
+      if (checkRes.success && checkRes.data) {
+        setSavedIds(new Set(checkRes.data.saves.map(s => s.collection_id)));
+      }
+    })();
+  }, [item.id]);
+
+  const handleSave = async (collectionId: string): Promise<void> => {
+    if (savedIds.has(collectionId)) return; // already saved — no toggle-off here (use Saves page)
+    setSavingId(collectionId);
+    const body = {
+      collection_id: collectionId,
+      catalogue_item_id: item.id,
+      vendor_id: item.vendor_id,
+      vendor_name: item.vendors.company_name,
+      title: item.title,
+      description: item.description,
+      service_mode: item.service_mode,
+      origin_region: item.origin_region,
+      destination_region: item.destination_region,
+      transit_days_min: item.transit_days_min,
+      transit_days_max: item.transit_days_max,
+      base_price_amount: item.base_price_amount,
+      base_price_currency: item.base_price_currency,
+      price_unit: item.price_unit,
+      tags: item.tags,
+    };
+    await api.post('/api/v1/saves/items', body);
+    setSavedIds(prev => new Set([...prev, collectionId]));
+    setCollections(prev => prev.map(c => c.id === collectionId ? { ...c, item_count: c.item_count + 1 } : c));
+    setSavingId(null);
+  };
+
+  const handleCreateAndSave = async (): Promise<void> => {
+    if (!newColName.trim()) return;
+    setCreatingCol(true);
+    const colRes = await api.post<SavedCollection>('/api/v1/saves/collections', { name: newColName.trim() });
+    if (colRes.success && colRes.data) {
+      const newCol = colRes.data;
+      setCollections(prev => [newCol, ...prev]);
+      await handleSave(newCol.id);
+      setNewColName('');
+      setShowNewField(false);
+    }
+    setCreatingCol(false);
+  };
+
+  const isSavedAnywhere = savedIds.size > 0;
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 400,
+        background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(3px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 380, overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }}
+      >
+        {/* Header */}
+        <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Save to collection</div>
+            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2, maxWidth: 280, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {item.title}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 20, padding: 4 }}>
+            <i className="ph ph-x" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ maxHeight: 340, overflowY: 'auto', padding: '10px 0' }}>
+          {loading ? (
+            <div style={{ padding: '20px 20px', color: '#94a3b8', fontSize: 13, textAlign: 'center' }}>
+              <i className="ph ph-circle-notch" style={{ fontSize: 24, display: 'block', marginBottom: 6, animation: 'spin 1s linear infinite' }} />
+              Loading collections…
+            </div>
+          ) : collections.length === 0 && !showNewField ? (
+            <div style={{ padding: '16px 20px', color: '#64748b', fontSize: 13, textAlign: 'center' }}>
+              No collections yet.
+            </div>
+          ) : (
+            collections.map(col => {
+              const isSaved = savedIds.has(col.id);
+              const isSaving = savingId === col.id;
+              return (
+                <div key={col.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '9px 20px',
+                  borderRadius: 8, cursor: isSaved ? 'default' : 'pointer',
+                  background: 'transparent', transition: 'background 0.12s',
+                }}
+                  onMouseEnter={e => { if (!isSaved) (e.currentTarget as HTMLDivElement).style.background = '#f8fafc'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
+                  onClick={() => { if (!isSaved && !isSaving) void handleSave(col.id); }}
+                >
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 8, background: 'linear-gradient(135deg,#e8f5e9,#c8e6c9)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}>
+                    <i className="ph ph-bookmark-simple" style={{ fontSize: 17, color: '#299E60' }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{col.name}</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>{col.item_count} item{col.item_count !== 1 ? 's' : ''}</div>
+                  </div>
+                  {isSaving ? (
+                    <i className="ph ph-circle-notch" style={{ fontSize: 18, color: '#299E60' }} />
+                  ) : isSaved ? (
+                    <i className="ph ph-check-circle" style={{ fontSize: 20, color: '#299E60' }} />
+                  ) : (
+                    <i className="ph ph-plus" style={{ fontSize: 18, color: '#94a3b8' }} />
+                  )}
+                </div>
+              );
+            })
+          )}
+
+          {/* New collection inline */}
+          {showNewField && (
+            <div style={{ padding: '8px 20px', display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input
+                autoFocus
+                type="text"
+                value={newColName}
+                onChange={e => setNewColName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') void handleCreateAndSave(); }}
+                placeholder="Collection name…"
+                style={{ flex: 1, padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 13, color: '#0f172a' }}
+              />
+              <button
+                onClick={() => { void handleCreateAndSave(); }}
+                disabled={creatingCol || !newColName.trim()}
+                style={{ padding: '7px 12px', background: '#299E60', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                {creatingCol ? '…' : 'Create'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <button
+            onClick={() => { setShowNewField(s => !s); setNewColName(''); }}
+            style={{ background: 'none', border: 'none', color: '#299E60', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
+          >
+            <i className="ph ph-plus" /> New collection
+          </button>
+          {isSavedAnywhere && (
+            <span style={{ fontSize: 12, color: '#299E60', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <i className="ph ph-check-circle" /> Saved
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface FeedCardProps {
   item: FeedItem;
   onClickVendor: (vendorId: string) => void;
+  onOpenSave: (item: FeedItem) => void;
+  isSaved: boolean;
 }
 
-function FeedCard({ item, onClickVendor }: FeedCardProps): React.JSX.Element {
+function FeedCard({ item, onClickVendor, onOpenSave, isSaved }: FeedCardProps): React.JSX.Element {
   const [hovered, setHovered] = useState(false);
+  const [bookmarkHovered, setBookmarkHovered] = useState(false);
   const gradient = cardGradient(item.id);
   const icon = cardIcon(item.id);
 
@@ -205,7 +411,7 @@ function FeedCard({ item, onClickVendor }: FeedCardProps): React.JSX.Element {
           {item.service_mode}
         </div>
 
-        {/* Price badge */}
+        {/* Price badge — top right (when item has a price) */}
         {item.base_price_amount != null && (
           <div style={{
             position: 'absolute',
@@ -221,6 +427,37 @@ function FeedCard({ item, onClickVendor }: FeedCardProps): React.JSX.Element {
             {item.base_price_currency} {item.base_price_amount.toLocaleString()}
           </div>
         )}
+
+        {/* Bookmark button — bottom right of visual (always visible on hover) */}
+        <button
+          onClick={e => { e.stopPropagation(); onOpenSave(item); }}
+          onMouseEnter={() => setBookmarkHovered(true)}
+          onMouseLeave={() => setBookmarkHovered(false)}
+          title={isSaved ? 'Saved to a collection' : 'Save to collection'}
+          style={{
+            position: 'absolute',
+            bottom: 8,
+            right: 8,
+            background: isSaved || bookmarkHovered ? '#299E60' : 'rgba(255,255,255,0.88)',
+            backdropFilter: 'blur(4px)',
+            border: 'none',
+            borderRadius: '50%',
+            width: 32,
+            height: 32,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            opacity: hovered || isSaved ? 1 : 0,
+            transition: 'opacity 0.2s, background 0.15s',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          }}
+        >
+          <i
+            className={isSaved || bookmarkHovered ? 'ph-fill ph-bookmark-simple' : 'ph ph-bookmark-simple'}
+            style={{ fontSize: 16, color: isSaved || bookmarkHovered ? '#fff' : '#374151' }}
+          />
+        </button>
       </div>
 
       {/* Content */}
@@ -328,6 +565,10 @@ export default function FurnitureFeedPage(): React.JSX.Element {
   const [mode, setMode]         = useState<ServiceMode | ''>('');
   const [sort, setSort]         = useState<SortOption>('newest');
   const [page, setPage]         = useState(1);
+
+  // ── Save modal ───────────────────────────────────────────────────────────
+  const [saveTarget, setSaveTarget]   = useState<FeedItem | null>(null);
+  const [savedItemIds, setSavedItemIds] = useState<Set<string>>(new Set());
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -602,6 +843,15 @@ export default function FurnitureFeedPage(): React.JSX.Element {
                 key={item.id}
                 item={item}
                 onClickVendor={handleClickVendor}
+                isSaved={savedItemIds.has(item.id)}
+                onOpenSave={target => {
+                  setSaveTarget(target);
+                  // Mark as saved optimistically when modal is opened after save
+                  setSavedItemIds(prev => {
+                    if (!prev.has(target.id)) return prev; // unchanged
+                    return new Set(prev);
+                  });
+                }}
               />
             ))}
           </div>
@@ -642,6 +892,22 @@ export default function FurnitureFeedPage(): React.JSX.Element {
             )}
           </div>
         </>
+      )}
+
+      {/* ── Save-to-collection modal ─────────────────────────────────────── */}
+      {saveTarget && (
+        <SaveToCollectionModal
+          item={saveTarget}
+          onClose={() => {
+            // When modal closes, mark item as saved if it was saved to any collection
+            void api.get<SaveCheckResult>(`/api/v1/saves/check/${saveTarget.id}`).then(res => {
+              if (res.success && res.data?.saved) {
+                setSavedItemIds(prev => new Set([...prev, saveTarget.id]));
+              }
+            });
+            setSaveTarget(null);
+          }}
+        />
       )}
     </div>
   );
