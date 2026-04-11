@@ -10,6 +10,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '../lib/apiClient';
+import { useAuth } from '../contexts/AuthContext';
 import type { TenantSummary, UserProfile, PaginationMeta, Vendor, PlatformRole } from '@sbdmm/shared';
 import { PLATFORM_ROLES } from '@sbdmm/shared';
 
@@ -1850,6 +1851,9 @@ function VendorQueueTab(): React.JSX.Element {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminPage(): React.JSX.Element {
+  const { profile } = useAuth();
+  const isSuperAdmin = profile?.role === 'super_admin';
+
   const [tab, setTab] = useState<AdminTab>('tenants');
   const [tenants, setTenants] = useState<TenantSummary[]>([]);
   const [pendingVendorCount, setPendingVendorCount] = useState<number | null>(null);
@@ -1864,12 +1868,15 @@ export default function AdminPage(): React.JSX.Element {
     });
   }, []);
 
-  const TAB_CONFIG: { key: AdminTab; label: string; icon: string }[] = [
-    { key: 'tenants', label: 'Tenants', icon: 'ph-buildings' },
-    { key: 'users',   label: 'Users',   icon: 'ph-users' },
-    { key: 'audit',   label: 'Audit Log', icon: 'ph-clock-clockwise' },
+  const ALL_TABS: { key: AdminTab; label: string; icon: string; superAdminOnly?: boolean }[] = [
+    { key: 'tenants', label: 'Tenants',   icon: 'ph-buildings' },
+    { key: 'users',   label: 'Users',     icon: 'ph-users' },
+    { key: 'audit',   label: 'Audit Log', icon: 'ph-clock-clockwise', superAdminOnly: true },
     { key: 'vendors', label: pendingVendorCount ? `Vendor Queue (${pendingVendorCount})` : 'Vendor Queue', icon: 'ph-storefront' },
   ];
+
+  // Filter audit tab out for tenant_admin; they will never see it in the UI
+  const TAB_CONFIG = ALL_TABS.filter(t => !t.superAdminOnly || isSuperAdmin);
 
   return (
     <div className="p-4" style={{ maxWidth: 1200 }}>
@@ -1906,7 +1913,7 @@ export default function AdminPage(): React.JSX.Element {
 
       {tab === 'tenants' && <TenantsTab />}
       {tab === 'users'   && <UsersTab tenants={tenants} />}
-      {tab === 'audit'   && <AuditTab />}
+      {tab === 'audit'   && isSuperAdmin && <AuditTab />}
       {tab === 'vendors' && <VendorQueueTab />}
     </div>
   );
