@@ -56,6 +56,7 @@ const TenantSettingsPage = lazy(() => import('./pages/TenantSettingsPage'));
 const DesignMyTablePage  = lazy(() => import('./pages/DesignMyTablePage'));
 const AuthCallbackPage   = lazy(() => import('./pages/AuthCallbackPage'));
 const MfaSetupPage       = lazy(() => import('./pages/MfaSetupPage'));
+const FurnitureFeedPage  = lazy(() => import('./pages/FurnitureFeedPage'));
 
 function PageLoader(): React.JSX.Element {
   return (
@@ -156,6 +157,13 @@ export default function App(): React.JSX.Element {
         <Route element={<ProtectedRoute roles={['buyer', 'vendor', 'logistics_provider', 'tenant_admin', 'super_admin']} />}>
           <Route element={<AppLayout />}>
             <Route path="/design" element={<DesignMyTablePage />} />
+          </Route>
+        </Route>
+
+        {/* Protected — Furniture Feed: all authenticated users */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppLayout />}>
+            <Route path="/home" element={<FurnitureFeedPage />} />
           </Route>
         </Route>
 
