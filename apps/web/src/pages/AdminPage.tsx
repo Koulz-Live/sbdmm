@@ -5,12 +5,13 @@
  * Route guard at the router level already blocks other roles;
  * the backend enforces role checks on every endpoint independently.
  *
- * Tabs: Tenants | Users | Audit Log
+ * Tabs: Tenants | Users | Audit Log | Vendor Queue
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '../lib/apiClient';
-import type { TenantSummary, UserProfile, PaginationMeta, Vendor } from '@sbdmm/shared';
+import type { TenantSummary, UserProfile, PaginationMeta, Vendor, PlatformRole } from '@sbdmm/shared';
+import { PLATFORM_ROLES } from '@sbdmm/shared';
 
 type AdminTab = 'tenants' | 'users' | 'audit' | 'vendors';
 
@@ -224,81 +225,482 @@ function TenantsTab(): React.JSX.Element {
   );
 }
 
-// ─── Users Tab ────────────────────────────────────────────────────────────────
+// ─── Users Tab — full CRUD ────────────────────────────────────────────────────
 
-function UsersTab(): React.JSX.Element {
+const ROLE_ICON: Record<string, string> = {
+  buyer: 'ph-user', vendor: 'ph-storefront', logistics_provider: 'ph-truck',
+  tenant_admin: 'ph-shield-check', super_admin: 'ph-crown-simple',
+};
+
+interface EditDraft {
+  full_name: string;
+  role: PlatformRole;
+  is_active: boolean;
+}
+
+interface InviteDraft {
+  email: string;
+  full_name: string;
+  role: PlatformRole;
+  tenant_id: string;
+}
+
+function UserEditModal({
+  user, onClose, onSaved,
+}: { user: UserProfile; onClose: () => void; onSaved: (updated: UserProfile) => void }): React.JSX.Element {
+  const [draft, setDraft] = useState<EditDraft>({
+    full_name: user.full_name,
+    role: user.role,
+    is_active: user.is_active,
+  });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const handleSave = async (): Promise<void> => {
+    setSaving(true); setErr(null);
+    const result = await api.patch<UserProfile>(`/api/v1/admin/users/${user.id}`, draft);
+    if (result.success && result.data) {
+      onSaved(result.data);
+    } else {
+      setErr(result.error?.message ?? 'Update failed.');
+    }
+    setSaving(false);
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8,
+    fontSize: 14, color: '#0f172a', background: '#fff', outline: 'none',
+  };
+  const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4, display: 'block' };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 1000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: 440, maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+        {/* Header */}
+        <div className="d-flex align-items-center justify-content-between mb-20">
+          <div>
+            <div className="fw-bold" style={{ fontSize: 17, color: '#0f172a' }}>Edit User</div>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{user.id.slice(0, 12)}…</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 20 }}>
+            <i className="ph ph-x" />
+          </button>
+        </div>
+
+        {err && <div style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', fontSize: 13, marginBottom: 16 }}>{err}</div>}
+
+        {/* Full name */}
+        <div className="mb-16">
+          <label style={labelStyle}>Full Name</label>
+          <input style={inputStyle} value={draft.full_name} onChange={e => setDraft(d => ({ ...d, full_name: e.target.value }))} />
+        </div>
+
+        {/* Role selector */}
+        <div className="mb-16">
+          <label style={labelStyle}>Role</label>
+          <select style={inputStyle} value={draft.role} onChange={e => setDraft(d => ({ ...d, role: e.target.value as PlatformRole }))}>
+            {PLATFORM_ROLES.map(r => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>)}
+          </select>
+        </div>
+
+        {/* Active toggle */}
+        <div className="d-flex align-items-center justify-content-between mb-24 p-12" style={{ background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+          <div>
+            <div className="fw-semibold" style={{ fontSize: 14, color: '#0f172a' }}>Account Active</div>
+            <div style={{ fontSize: 12, color: '#94a3b8' }}>Inactive users cannot sign in</div>
+          </div>
+          <button
+            onClick={() => setDraft(d => ({ ...d, is_active: !d.is_active }))}
+            style={{
+              width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', position: 'relative',
+              background: draft.is_active ? '#299E60' : '#cbd5e1', transition: 'background 0.2s',
+            }}>
+            <span style={{
+              position: 'absolute', top: 3, left: draft.is_active ? 22 : 3, width: 18, height: 18,
+              borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+            }} />
+          </button>
+        </div>
+
+        {/* Actions */}
+        <div className="d-flex gap-10 justify-content-end">
+          <button onClick={onClose} className="btn btn-sm"
+            style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 20px', color: '#64748b', background: '#f8fafc', fontSize: 14 }}>
+            Cancel
+          </button>
+          <button onClick={() => void handleSave()} disabled={saving} className="btn btn-sm"
+            style={{ borderRadius: 8, padding: '8px 24px', background: '#299E60', color: '#fff', border: 'none', fontWeight: 600, fontSize: 14, opacity: saving ? 0.7 : 1 }}>
+            {saving ? <><span className="spinner-border spinner-border-sm me-1" />Saving…</> : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InviteUserModal({
+  tenants, onClose, onInvited,
+}: { tenants: TenantSummary[]; onClose: () => void; onInvited: () => void }): React.JSX.Element {
+  const [draft, setDraft] = useState<InviteDraft>({ email: '', full_name: '', role: 'buyer', tenant_id: '' });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const handleSend = async (): Promise<void> => {
+    if (!draft.email || !draft.full_name) { setErr('Email and name are required.'); return; }
+    setSaving(true); setErr(null);
+    const payload: Record<string, string> = { email: draft.email, full_name: draft.full_name, role: draft.role };
+    if (draft.tenant_id) payload['tenant_id'] = draft.tenant_id;
+    const result = await api.post('/api/v1/admin/users/invite', payload);
+    if (result.success) {
+      onInvited();
+    } else {
+      setErr(result.error?.message ?? 'Invite failed.');
+    }
+    setSaving(false);
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8,
+    fontSize: 14, color: '#0f172a', background: '#fff', outline: 'none',
+  };
+  const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4, display: 'block' };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 1000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: 460, maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+        <div className="d-flex align-items-center justify-content-between mb-20">
+          <div className="fw-bold" style={{ fontSize: 17, color: '#0f172a' }}>Invite New User</div>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 20 }}>
+            <i className="ph ph-x" />
+          </button>
+        </div>
+
+        {err && <div style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', fontSize: 13, marginBottom: 16 }}>{err}</div>}
+
+        <div className="mb-14">
+          <label style={labelStyle}>Email Address</label>
+          <input type="email" style={inputStyle} placeholder="user@example.com" value={draft.email} onChange={e => setDraft(d => ({ ...d, email: e.target.value }))} />
+        </div>
+        <div className="mb-14">
+          <label style={labelStyle}>Full Name</label>
+          <input style={inputStyle} placeholder="Jane Smith" value={draft.full_name} onChange={e => setDraft(d => ({ ...d, full_name: e.target.value }))} />
+        </div>
+        <div className="mb-14">
+          <label style={labelStyle}>Role</label>
+          <select style={inputStyle} value={draft.role} onChange={e => setDraft(d => ({ ...d, role: e.target.value as PlatformRole }))}>
+            {PLATFORM_ROLES.map(r => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>)}
+          </select>
+        </div>
+        <div className="mb-24">
+          <label style={labelStyle}>Tenant <span style={{ fontWeight: 400, color: '#94a3b8' }}>(leave blank to use your own)</span></label>
+          <select style={inputStyle} value={draft.tenant_id} onChange={e => setDraft(d => ({ ...d, tenant_id: e.target.value }))}>
+            <option value="">— My tenant (default) —</option>
+            {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </div>
+
+        <div className="d-flex gap-10 justify-content-end">
+          <button onClick={onClose} className="btn btn-sm"
+            style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 20px', color: '#64748b', background: '#f8fafc', fontSize: 14 }}>
+            Cancel
+          </button>
+          <button onClick={() => void handleSend()} disabled={saving} className="btn btn-sm"
+            style={{ borderRadius: 8, padding: '8px 24px', background: '#299E60', color: '#fff', border: 'none', fontWeight: 600, fontSize: 14, opacity: saving ? 0.7 : 1 }}>
+            {saving ? <><span className="spinner-border spinner-border-sm me-1" />Sending…</> : <><i className="ph ph-paper-plane-tilt me-1" />Send Invite</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UsersTab({ tenants }: { tenants: TenantSummary[] }): React.JSX.Element {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [suspendMsg, setSuspendMsg] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const fetchUsers = useCallback(async (p: number): Promise<void> => {
-    setIsLoading(true);
-    const result = await api.get<{ data: UserProfile[] }>(`/api/v1/admin/users?page=${p}&per_page=20`);
+  // Filters
+  const [search, setSearch]         = useState('');
+  const [filterRole, setFilterRole] = useState('');
+  const [filterActive, setFilterActive] = useState('');
+  const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Modals
+  const [editUser, setEditUser]       = useState<UserProfile | null>(null);
+  const [deleteUser, setDeleteUser]   = useState<UserProfile | null>(null);
+  const [showInvite, setShowInvite]   = useState(false);
+  const [deletingId, setDeletingId]   = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const showToast = (type: 'success' | 'error', text: string): void => {
+    setToast({ type, text });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const buildUrl = useCallback((p: number, s: string, role: string, active: string) => {
+    const params = new URLSearchParams({ page: String(p), per_page: '20' });
+    if (s)      params.set('search', s);
+    if (role)   params.set('role', role);
+    if (active) params.set('is_active', active);
+    return `/api/v1/admin/users?${params.toString()}`;
+  }, []);
+
+  const fetchUsers = useCallback(async (p: number, s = search, role = filterRole, active = filterActive): Promise<void> => {
+    setIsLoading(true); setError(null);
+    const result = await api.get<{ data: UserProfile[] }>(buildUrl(p, s, role, active));
     if (result.success && result.data) {
       setUsers(result.data.data ?? []);
       if (result.meta?.pagination) setPagination(result.meta.pagination);
-    } else setError(result.error?.message ?? 'Failed to load users.');
+    } else {
+      setError(result.error?.message ?? 'Failed to load users.');
+    }
     setIsLoading(false);
-  }, []);
+  }, [search, filterRole, filterActive, buildUrl]);
 
   useEffect(() => { void fetchUsers(page); }, [fetchUsers, page]);
+
+  // Debounce search input
+  const handleSearchChange = (val: string): void => {
+    setSearch(val);
+    if (searchRef.current) clearTimeout(searchRef.current);
+    searchRef.current = setTimeout(() => { setPage(1); void fetchUsers(1, val, filterRole, filterActive); }, 350);
+  };
+
+  const handleFilterChange = (role: string, active: string): void => {
+    setFilterRole(role); setFilterActive(active);
+    setPage(1);
+    void fetchUsers(1, search, role, active);
+  };
 
   const handleSuspend = async (userId: string): Promise<void> => {
     const result = await api.post(`/api/v1/admin/users/${userId}/suspend`, {});
     if (result.success) {
-      setSuspendMsg('User suspended.');
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, is_active: false } : u));
-      setTimeout(() => setSuspendMsg(null), 3000);
+      showToast('success', 'User suspended — all sessions invalidated.');
+    } else {
+      showToast('error', result.error?.message ?? 'Suspension failed.');
     }
+    setConfirmDeleteId(null);
+  };
+
+  const handleReinstate = async (userId: string): Promise<void> => {
+    const result = await api.post(`/api/v1/admin/users/${userId}/reinstate`, {});
+    if (result.success) {
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, is_active: true } : u));
+      showToast('success', 'User reinstated.');
+    } else {
+      showToast('error', result.error?.message ?? 'Reinstate failed.');
+    }
+  };
+
+  const handleDelete = async (userId: string): Promise<void> => {
+    setDeletingId(userId);
+    const result = await api.delete(`/api/v1/admin/users/${userId}`);
+    if (result.success) {
+      setUsers(prev => prev.filter(u => u.id !== userId));
+      showToast('success', 'User permanently deleted.');
+    } else {
+      showToast('error', result.error?.message ?? 'Delete failed.');
+    }
+    setDeletingId(null);
+    setDeleteUser(null);
+  };
+
+  const handleSaved = (updated: UserProfile): void => {
+    setUsers(prev => prev.map(u => u.id === updated.id ? updated : u));
+    setEditUser(null);
+    showToast('success', 'User updated.');
+  };
+
+  const selectStyle: React.CSSProperties = {
+    padding: '7px 12px', border: '1px solid #e2e8f0', borderRadius: 8,
+    fontSize: 13, color: '#374151', background: '#fff', cursor: 'pointer',
   };
 
   return (
     <>
-      {error && <ErrorBanner message={error} />}
-      {suspendMsg && (
-        <div className="d-flex align-items-center gap-8 mb-3"
-          style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', fontSize: 14 }}>
-          <i className="ph ph-warning-circle" />{suspendMsg}
+      {/* Modals */}
+      {editUser && <UserEditModal user={editUser} onClose={() => setEditUser(null)} onSaved={handleSaved} />}
+      {showInvite && <InviteUserModal tenants={tenants} onClose={() => setShowInvite(false)} onInvited={() => { setShowInvite(false); void fetchUsers(1); showToast('success', 'Invitation sent!'); }} />}
+
+      {/* Delete confirm modal */}
+      {deleteUser && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: 400, maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div className="d-flex align-items-center gap-12 mb-16">
+              <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <i className="ph ph-trash" style={{ fontSize: 22, color: '#b91c1c' }} />
+              </div>
+              <div>
+                <div className="fw-bold" style={{ fontSize: 16, color: '#0f172a' }}>Delete User?</div>
+                <div style={{ fontSize: 13, color: '#64748b' }}>This removes them from auth — cannot be undone.</div>
+              </div>
+            </div>
+            <div style={{ background: '#f8fafc', borderRadius: 8, padding: '10px 14px', marginBottom: 20 }}>
+              <div className="fw-semibold" style={{ fontSize: 14, color: '#0f172a' }}>{deleteUser.full_name}</div>
+              <div style={{ fontSize: 12, color: '#94a3b8' }}>{deleteUser.role.replace(/_/g, ' ')}</div>
+            </div>
+            <div className="d-flex gap-10 justify-content-end">
+              <button onClick={() => setDeleteUser(null)} className="btn btn-sm"
+                style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 18px', color: '#64748b', background: '#f8fafc', fontSize: 14 }}>
+                Cancel
+              </button>
+              <button onClick={() => void handleDelete(deleteUser.id)} disabled={deletingId === deleteUser.id} className="btn btn-sm"
+                style={{ borderRadius: 8, padding: '8px 20px', background: '#b91c1c', color: '#fff', border: 'none', fontWeight: 600, fontSize: 14 }}>
+                {deletingId === deleteUser.id ? <><span className="spinner-border spinner-border-sm me-1" />Deleting…</> : <><i className="ph ph-trash me-1" />Delete</>}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      {isLoading ? <LoadingState label="Loading users…" /> : users.length === 0 ? <EmptyState label="No users found." /> : (
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 2000,
+          background: toast.type === 'success' ? '#f0fdf4' : '#fef2f2',
+          color: toast.type === 'success' ? '#15803d' : '#b91c1c',
+          border: `1px solid ${toast.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
+          borderRadius: 10, padding: '12px 18px', fontSize: 14, fontWeight: 500,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <i className={`ph ${toast.type === 'success' ? 'ph-check-circle' : 'ph-warning-circle'}`} style={{ fontSize: 18 }} />
+          {toast.text}
+        </div>
+      )}
+
+      {error && <ErrorBanner message={error} />}
+
+      {/* Toolbar */}
+      <div className="d-flex align-items-center gap-10 mb-16 flex-wrap">
+        {/* Search */}
+        <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+          <i className="ph ph-magnifying-glass" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: 16 }} />
+          <input
+            type="text" placeholder="Search by name…"
+            value={search} onChange={e => handleSearchChange(e.target.value)}
+            style={{ width: '100%', padding: '8px 12px 8px 32px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, color: '#0f172a' }}
+          />
+        </div>
+        {/* Role filter */}
+        <select style={selectStyle} value={filterRole} onChange={e => handleFilterChange(e.target.value, filterActive)}>
+          <option value="">All roles</option>
+          {PLATFORM_ROLES.map(r => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>)}
+        </select>
+        {/* Active filter */}
+        <select style={selectStyle} value={filterActive} onChange={e => handleFilterChange(filterRole, e.target.value)}>
+          <option value="">All status</option>
+          <option value="true">Active</option>
+          <option value="false">Inactive</option>
+        </select>
+        {/* Invite button */}
+        <button onClick={() => setShowInvite(true)} className="btn btn-sm d-flex align-items-center gap-6"
+          style={{ background: '#299E60', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap' }}>
+          <i className="ph ph-user-plus" style={{ fontSize: 16 }} />Invite User
+        </button>
+      </div>
+
+      {/* Table */}
+      {isLoading ? <LoadingState label="Loading users…" /> : users.length === 0 ? <EmptyState label="No users match your filters." /> : (
         <div className="card border-0 shadow-sm" style={{ borderRadius: 12 }}>
           <div className="card-body p-0">
             <div className="table-responsive">
               <table className="table table-hover mb-0" style={{ fontSize: 14 }}>
-                <TableHead cols={['User', 'Role', 'Tenant', 'Active', 'Actions']} />
+                <TableHead cols={['User', 'Role', 'Tenant', 'Joined', 'Status', 'Actions']} />
                 <tbody>
                   {users.map(u => (
                     <tr key={u.id}>
+                      {/* User cell */}
                       <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
-                        <div className="d-flex align-items-center gap-8">
-                          <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
-                            style={{ width: 34, height: 34, background: '#f1f5f9', fontSize: 13, fontWeight: 700, color: '#475569' }}>
+                        <div className="d-flex align-items-center gap-10">
+                          <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#475569', fontSize: 13, flexShrink: 0 }}>
                             {u.full_name.charAt(0).toUpperCase()}
                           </div>
                           <div>
                             <div className="fw-semibold" style={{ color: '#0f172a', fontSize: 13 }}>{u.full_name}</div>
-                            <div style={{ fontSize: 11, color: '#94a3b8' }}>{u.email}</div>
+                            <div style={{ fontSize: 11, color: '#94a3b8', fontFamily: 'monospace' }}>{u.id.slice(0, 12)}…</div>
                           </div>
                         </div>
                       </td>
-                      <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}><RoleBadge role={u.role} /></td>
-                      <td style={{ padding: '12px 16px', verticalAlign: 'middle', fontFamily: 'monospace', fontSize: 12, color: '#64748b' }}>{u.tenant_id.slice(0, 8)}…</td>
-                      <td style={{ padding: '12px 16px', verticalAlign: 'middle', textAlign: 'center' }}>
-                        {u.is_active
-                          ? <i className="ph ph-check-circle" style={{ color: '#15803d', fontSize: 18 }} />
-                          : <i className="ph ph-x-circle" style={{ color: '#b91c1c', fontSize: 18 }} />}
-                      </td>
+                      {/* Role cell */}
                       <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
-                        {u.is_active && (
-                          <MiniBtn color="#b91c1c" onClick={() => void handleSuspend(u.id)}>
-                            <i className="ph ph-prohibit" />Suspend
-                          </MiniBtn>
+                        <span className="d-inline-flex align-items-center gap-5"
+                          style={{ background: `${ROLE_COLORS[u.role] ?? '#64748b'}18`, color: ROLE_COLORS[u.role] ?? '#64748b', border: `1px solid ${ROLE_COLORS[u.role] ?? '#64748b'}44`, borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
+                          <i className={`ph ${ROLE_ICON[u.role] ?? 'ph-user'}`} style={{ fontSize: 12 }} />
+                          {u.role.replace(/_/g, ' ')}
+                        </span>
+                      </td>
+                      {/* Tenant cell */}
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#64748b', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 4, padding: '2px 6px' }}>
+                          {u.tenant_id.slice(0, 8)}…
+                        </span>
+                      </td>
+                      {/* Joined */}
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle', fontSize: 12, color: '#64748b', whiteSpace: 'nowrap' }}>
+                        {new Date(u.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </td>
+                      {/* Status */}
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                        {u.is_active ? (
+                          <span className="d-inline-flex align-items-center gap-4"
+                            style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
+                            <i className="ph ph-check-circle" style={{ fontSize: 13 }} />Active
+                          </span>
+                        ) : (
+                          <span className="d-inline-flex align-items-center gap-4"
+                            style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
+                            <i className="ph ph-x-circle" style={{ fontSize: 13 }} />Suspended
+                          </span>
                         )}
+                      </td>
+                      {/* Actions */}
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                        <div className="d-flex gap-6 align-items-center">
+                          {/* Edit */}
+                          <button title="Edit user" onClick={() => setEditUser(u)}
+                            style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: '#475569', fontSize: 14, lineHeight: 1 }}>
+                            <i className="ph ph-pencil-simple" />
+                          </button>
+                          {/* Suspend / Reinstate */}
+                          {confirmDeleteId === u.id ? (
+                            <div className="d-flex gap-4">
+                              <button onClick={() => void handleSuspend(u.id)}
+                                style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: '#b91c1c', fontSize: 12, fontWeight: 600 }}>
+                                Confirm
+                              </button>
+                              <button onClick={() => setConfirmDeleteId(null)}
+                                style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: '#64748b', fontSize: 12 }}>
+                                Cancel
+                              </button>
+                            </div>
+                          ) : u.is_active ? (
+                            <button title="Suspend user" onClick={() => setConfirmDeleteId(u.id)}
+                              style={{ background: '#fef9c3', border: '1px solid #fde047', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: '#854d0e', fontSize: 14, lineHeight: 1 }}>
+                              <i className="ph ph-prohibit" />
+                            </button>
+                          ) : (
+                            <button title="Reinstate user" onClick={() => void handleReinstate(u.id)}
+                              style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: '#15803d', fontSize: 14, lineHeight: 1 }}>
+                              <i className="ph ph-arrow-u-up-left" />
+                            </button>
+                          )}
+                          {/* Delete */}
+                          <button title="Delete user" onClick={() => setDeleteUser(u)}
+                            style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: '#b91c1c', fontSize: 14, lineHeight: 1 }}>
+                            <i className="ph ph-trash" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -308,8 +710,15 @@ function UsersTab(): React.JSX.Element {
           </div>
         </div>
       )}
+
+      {/* Pagination */}
       {pagination && pagination.total_pages > 1 && (
-        <PagerRow page={page} totalPages={pagination.total_pages} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
+        <div className="d-flex align-items-center justify-content-between mt-3">
+          <div style={{ fontSize: 13, color: '#94a3b8' }}>
+            {pagination.total} user{pagination.total !== 1 ? 's' : ''} · page {pagination.page} of {pagination.total_pages}
+          </div>
+          <PagerRow page={page} totalPages={pagination.total_pages} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
+        </div>
       )}
     </>
   );
@@ -489,10 +898,14 @@ function VendorQueueTab(): React.JSX.Element {
 
 export default function AdminPage(): React.JSX.Element {
   const [tab, setTab] = useState<AdminTab>('tenants');
-
+  const [tenants, setTenants] = useState<TenantSummary[]>([]);
   const [pendingVendorCount, setPendingVendorCount] = useState<number | null>(null);
 
   useEffect(() => {
+    // Load tenants list (used by UsersTab's invite modal)
+    void api.get<{ data: TenantSummary[] }>('/api/v1/admin/tenants?per_page=100').then(res => {
+      if (res.success && res.data) setTenants(res.data.data ?? []);
+    });
     void api.get<Vendor[]>('/api/v1/vendors?status=pending_review').then(res => {
       if (res.success && res.data) setPendingVendorCount(res.data.filter(v => v.status === 'pending_review').length);
     });
@@ -539,7 +952,7 @@ export default function AdminPage(): React.JSX.Element {
       </div>
 
       {tab === 'tenants' && <TenantsTab />}
-      {tab === 'users'   && <UsersTab />}
+      {tab === 'users'   && <UsersTab tenants={tenants} />}
       {tab === 'audit'   && <AuditTab />}
       {tab === 'vendors' && <VendorQueueTab />}
     </div>
