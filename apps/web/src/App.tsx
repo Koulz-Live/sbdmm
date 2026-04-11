@@ -55,6 +55,7 @@ const MyCataloguePage    = lazy(() => import('./pages/MyCataloguePage'));
 const TenantSettingsPage = lazy(() => import('./pages/TenantSettingsPage'));
 const DesignMyTablePage  = lazy(() => import('./pages/DesignMyTablePage'));
 const AuthCallbackPage   = lazy(() => import('./pages/AuthCallbackPage'));
+const MfaSetupPage       = lazy(() => import('./pages/MfaSetupPage'));
 
 function PageLoader(): React.JSX.Element {
   return (
@@ -74,6 +75,7 @@ export default function App(): React.JSX.Element {
         <Route path="/auth/callback"     element={<AuthCallbackPage />} />
         <Route path="/forgot-password"   element={<ForgotPasswordPage />} />
         <Route path="/unauthorized"      element={<UnauthorizedPage />} />
+        <Route path="/mfa-setup"         element={<MfaSetupPage />} />
 
         {/* Protected — buyer + admins: main dashboard, orders, documents */}
         <Route element={<ProtectedRoute roles={['buyer', 'tenant_admin', 'super_admin']} />}>
@@ -134,7 +136,8 @@ export default function App(): React.JSX.Element {
         </Route>
 
         {/* Protected — admin panel: tenant_admin + super_admin */}
-        <Route element={<ProtectedRoute roles={['tenant_admin', 'super_admin']} />}>
+        {/* requireMfa gates super_admin users: must have verified TOTP before entering */}
+        <Route element={<ProtectedRoute roles={['tenant_admin', 'super_admin']} requireMfa />}>
           <Route element={<AppLayout />}>
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/settings" element={<TenantSettingsPage />} />

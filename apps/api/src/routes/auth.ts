@@ -211,4 +211,72 @@ router.get(
   },
 );
 
+// ─── DELETE /api/v1/auth/mfa/unenroll/:factorId ───────────────────────────────
+// Unenroll (delete) a specific TOTP factor for the current user.
+// Uses the admin API so no additional challenge is needed server-side.
+router.delete(
+  '/mfa/unenroll/:factorId',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    const actor = req.user!;
+    const { factorId } = req.params as { factorId: string };
+
+    if (!factorId) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'factorId is required.' },
+        meta: { request_id: req.requestId, timestamp: new Date().toISOString() },
+      });
+      return;
+    }
+
+    const supabase = getAdminClient();
+
+    // Verify the factor actually belongs to this user
+    const { data: factorData, error: listError } = await supabase.auth.admin.mfa.listFactors({ userId: actor.id });
+    if (listError) {
+      throw new AppError('Failed to verify MFA factor ownership.', 500);
+    }
+
+    const ownsFactor = factorData?.factors?.some((f) => f.id === factorId);
+    if (!ownsFactor) {
+      res.status(403).json({
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Factor not found or does not belong to this user.' },
+        meta: { request_id: req.requestId, timestamp: new Date().toISOString() },
+      });
+      return;
+    }
+
+    const { error: unenrollError } = await supabase.auth.admin.mfa.deleteFactor({
+      userId: actor.id,
+      id: factorId,
+    });
+
+    if (unenrollError) {
+      log.error('[MFA] Unenroll failed', { error: unenrollError.message, user_id: actor.id });
+      throw new AppError('Failed to unenroll MFA factor.', 500);
+    }
+
+    await writeAuditLog({
+      event_type: 'user.mfa_challenge',
+      actor_id: actor.id,
+      tenant_id: actor.tenant_id,
+      outcome: 'success',
+      details: { action: 'unenroll', factor_id: factorId },
+      ip_address: req.ip,
+      user_agent: req.headers['user-agent'],
+      request_id: req.requestId,
+    });
+
+    log.info('[MFA] Factor unenrolled', { user_id: actor.id, factor_id: factorId });
+
+    res.status(200).json({
+      success: true,
+      data: { message: 'MFA factor removed successfully.' },
+      meta: { request_id: req.requestId, timestamp: new Date().toISOString() },
+    });
+  },
+);
+
 export { router as authRouter };
