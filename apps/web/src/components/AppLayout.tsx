@@ -17,6 +17,7 @@ import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { NavBar } from './NavBar';
 import { NotificationsDropdown } from './NotificationsDropdown';
+import { useAuth } from '../contexts/AuthContext';
 
 /** Map route paths → human-readable page titles for the top bar */
 const PAGE_TITLES: Record<string, string> = {
@@ -33,6 +34,7 @@ const PAGE_TITLES: Record<string, string> = {
 
 export function AppLayout(): React.JSX.Element {
   const { pathname } = useLocation();
+  const { simulatedRole, setSimulatedRole } = useAuth();
   // Match exact path first, then try prefix match for dynamic routes (e.g. /vendors/:id)
   const pageTitle =
     PAGE_TITLES[pathname] ??
@@ -70,6 +72,43 @@ export function AppLayout(): React.JSX.Element {
           >
             {pageTitle}
           </h1>
+
+          {/* Role preview banner — shown when super_admin is simulating a role */}
+          {simulatedRole && (
+            <div
+              className="d-flex align-items-center gap-8"
+              style={{
+                padding: '5px 12px',
+                background: '#fef3c7',
+                border: '1px solid #fcd34d',
+                borderRadius: 8,
+                color: '#92400e',
+                fontSize: 12,
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <i className="ph ph-eye" style={{ fontSize: 14 }} />
+              Previewing: {simulatedRole.replace(/_/g, ' ')}
+              <button
+                onClick={() => setSimulatedRole(null)}
+                title="Exit role preview"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#92400e',
+                  padding: '0 0 0 6px',
+                  fontSize: 14,
+                  lineHeight: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <i className="ph ph-x" />
+              </button>
+            </div>
+          )}
 
           {/* Quick actions */}
           <div className="d-flex align-items-center gap-12">

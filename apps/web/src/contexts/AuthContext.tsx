@@ -12,6 +12,12 @@
  *
  * IMPORTANT: Frontend role checks are for UX only — not security.
  * The backend is the authoritative authorization enforcer.
+ *
+ * ROLE SIMULATION (super_admin only):
+ * - super_admin users can simulate any role for UI testing via setSimulatedRole()
+ * - The simulated role is stored in sessionStorage (clears on tab close)
+ * - ONLY affects the UI — API calls still use the real super_admin JWT
+ * - The real underlying role is always available via profile.role
  */
 
 import React, {
@@ -25,7 +31,14 @@ import React, {
 import { type User, type Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
 import { api } from '../lib/apiClient';
-import type { UserProfile } from '@sbdmm/shared';
+import type { UserProfile, PlatformRole } from '@sbdmm/shared';
+
+// ─── Session-scoped role simulation key ──────────────────────────────────────
+const SIMULATED_ROLE_KEY = 'sbdmm_simulated_role';
+
+export function getSimulatedRole(): PlatformRole | null {
+  return (sessionStorage.getItem(SIMULATED_ROLE_KEY) as PlatformRole | null);
+}
 
 interface AuthState {
   user: User | null;
@@ -33,6 +46,10 @@ interface AuthState {
   session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  /** The real role from the database — always super_admin for super admins */
+  realRole: PlatformRole | null;
+  /** Effective role used for all UI decisions — may be simulated */
+  simulatedRole: PlatformRole | null;
 }
 
 interface AuthContextValue extends AuthState {
@@ -40,6 +57,8 @@ interface AuthContextValue extends AuthState {
   signInWithGoogle: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  /** super_admin only — set to null to restore real role */
+  setSimulatedRole: (role: PlatformRole | null) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -51,7 +70,18 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
     session: null,
     isLoading: true,
     isAuthenticated: false,
+    realRole: null,
+    simulatedRole: getSimulatedRole(),
   });
+
+  const setSimulatedRole = useCallback((role: PlatformRole | null): void => {
+    if (role === null) {
+      sessionStorage.removeItem(SIMULATED_ROLE_KEY);
+    } else {
+      sessionStorage.setItem(SIMULATED_ROLE_KEY, role);
+    }
+    setState((prev) => ({ ...prev, simulatedRole: role }));
+  }, []);
 
   /**
    * loadProfile — Fetches the authoritative user profile.
@@ -72,7 +102,12 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
     try {
       const result = await api.get<UserProfile>('/api/v1/auth/profile');
       if (result.success && result.data) {
-        setState((prev) => ({ ...prev, profile: result.data ?? null }));
+        const profile = result.data;
+        setState((prev) => ({
+          ...prev,
+          profile,
+          realRole: (profile.role as PlatformRole) ?? null,
+        }));
         return; // success — done
       }
     } catch {
@@ -92,7 +127,11 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
 
       if (!error && data) {
         const profile: UserProfile = { ...data, email: user.email ?? '' } as UserProfile;
-        setState((prev) => ({ ...prev, profile }));
+        setState((prev) => ({
+          ...prev,
+          profile,
+          realRole: (profile.role as PlatformRole) ?? null,
+        }));
       }
     } catch {
       console.warn('[AUTH] Could not load user profile via fallback');
@@ -131,8 +170,10 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
           await loadProfile();
         }
 
-        if (event === 'SIGNED_OUT') {
-          setState((prev) => ({ ...prev, profile: null }));
+    // When signed out, also clear any simulated role
+    if (event === 'SIGNED_OUT') {
+          setState((prev) => ({ ...prev, profile: null, realRole: null, simulatedRole: null }));
+          sessionStorage.removeItem(SIMULATED_ROLE_KEY);
         }
       },
     );
@@ -188,9 +229,23 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
     await loadProfile();
   }, [loadProfile]);
 
+  // When a role is simulated, override profile.role so all UI consumers
+  // automatically see the simulated role without any changes to call-sites.
+  const effectiveProfile = state.profile && state.simulatedRole
+    ? { ...state.profile, role: state.simulatedRole }
+    : state.profile;
+
   return (
     <AuthContext.Provider
-      value={{ ...state, signIn, signInWithGoogle, signOut, refreshProfile }}
+      value={{
+        ...state,
+        profile: effectiveProfile,
+        signIn,
+        signInWithGoogle,
+        signOut,
+        refreshProfile,
+        setSimulatedRole,
+      }}
     >
       {children}
     </AuthContext.Provider>

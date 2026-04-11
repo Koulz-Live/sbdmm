@@ -11,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/apiClient';
 import { getTenantOverride, setTenantOverride } from '../lib/apiClient';
 import type { PlatformRole } from '@sbdmm/shared';
+import { PLATFORM_ROLES } from '@sbdmm/shared';
 
 interface TenantOption { id: string; name: string }
 
@@ -100,6 +101,95 @@ function TenantSwitcher({ collapsed }: { collapsed: boolean }): React.JSX.Elemen
   );
 }
 
+// ─── Role Switcher (super_admin only) ────────────────────────────────────────
+// Lets a super_admin preview the UI as any platform role.
+// Only affects the frontend — API calls still use the real JWT / real role.
+const ROLE_ICONS: Record<PlatformRole, string> = {
+  buyer:              'ph ph-user',
+  vendor:             'ph ph-storefront',
+  logistics_provider: 'ph ph-truck',
+  tenant_admin:       'ph ph-shield-check',
+  super_admin:        'ph ph-crown-simple',
+};
+
+const ROLE_LABELS: Record<PlatformRole, string> = {
+  buyer:              'Buyer',
+  vendor:             'Vendor',
+  logistics_provider: 'Logistics Provider',
+  tenant_admin:       'Tenant Admin',
+  super_admin:        'Super Admin (real)',
+};
+
+function RoleSwitcher({ collapsed }: { collapsed: boolean }): React.JSX.Element {
+  const { simulatedRole, setSimulatedRole } = useAuth();
+  const [open, setOpen] = useState(false);
+
+  const activeRole = simulatedRole ?? 'super_admin';
+  const isSimulating = simulatedRole !== null;
+
+  const handleSelect = (role: PlatformRole): void => {
+    setSimulatedRole(role === 'super_admin' ? null : role);
+    setOpen(false);
+  };
+
+  return (
+    <div style={{ position: 'relative', marginBottom: 8 }}>
+      <button
+        title={collapsed ? 'Preview role' : undefined}
+        onClick={() => setOpen(o => !o)}
+        className="d-flex align-items-center gap-8"
+        style={{
+          width: '100%',
+          padding: collapsed ? '8px' : '8px 12px',
+          background: isSimulating ? 'rgba(251,191,36,0.15)' : 'transparent',
+          color: isSimulating ? '#fbbf24' : '#94a3b8',
+          border: `1px solid ${isSimulating ? 'rgba(251,191,36,0.4)' : 'rgba(255,255,255,0.08)'}`,
+          borderRadius: 8,
+          cursor: 'pointer',
+          fontSize: 12,
+          fontWeight: 500,
+          justifyContent: collapsed ? 'center' : 'flex-start',
+          overflow: 'hidden',
+        }}>
+        <i className={ROLE_ICONS[activeRole]} style={{ fontSize: 16, flexShrink: 0 }} />
+        {!collapsed && (
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textAlign: 'left' }}>
+            {isSimulating ? `Preview: ${ROLE_LABELS[simulatedRole!]}` : 'Preview Role'}
+          </span>
+        )}
+        {!collapsed && <i className={`ph ${open ? 'ph-caret-up' : 'ph-caret-down'}`} style={{ fontSize: 12, flexShrink: 0 }} />}
+      </button>
+
+      {open && !collapsed && (
+        <div style={{
+          position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 4,
+          background: '#1e293b', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)', zIndex: 200, overflow: 'hidden',
+        }}>
+          <div style={{ padding: '8px 14px 6px', borderBottom: '1px solid rgba(255,255,255,0.08)', color: '#fbbf24', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            <i className="ph ph-eye me-6" />UI Role Preview
+          </div>
+          {PLATFORM_ROLES.map(r => (
+            <button key={r} onClick={() => handleSelect(r)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                width: '100%', padding: '9px 14px', textAlign: 'left',
+                background: activeRole === r ? 'rgba(251,191,36,0.12)' : 'transparent',
+                color: activeRole === r ? '#fbbf24' : '#cbd5e1',
+                border: 'none', fontSize: 13, fontWeight: activeRole === r ? 600 : 400, cursor: 'pointer',
+                borderTop: '1px solid rgba(255,255,255,0.05)',
+              }}>
+              <i className={ROLE_ICONS[r]} style={{ fontSize: 15, flexShrink: 0 }} />
+              <span style={{ flex: 1 }}>{ROLE_LABELS[r]}</span>
+              {activeRole === r && <i className="ph ph-check" style={{ fontSize: 12, color: '#fbbf24' }} />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 interface NavItem {
@@ -138,7 +228,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export function NavBar(): React.JSX.Element {
-  const { profile, user, signOut } = useAuth();
+  const { profile, user, signOut, realRole, simulatedRole } = useAuth();
   const navigate = useNavigate();
   const [signingOut, setSigningOut] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -269,7 +359,7 @@ export function NavBar(): React.JSX.Element {
           <div className="d-flex align-items-center gap-10 mb-10">
             <div
               className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 fw-bold text-white"
-              style={{ width: 36, height: 36, background: '#299E60', fontSize: 13 }}
+              style={{ width: 36, height: 36, background: simulatedRole ? '#d97706' : '#299E60', fontSize: 13 }}
             >
               {initials}
             </div>
@@ -277,14 +367,25 @@ export function NavBar(): React.JSX.Element {
               <div style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {displayName}
               </div>
-              <div style={{ color: '#64748b', fontSize: 11, textTransform: 'capitalize' }}>
-                {role?.replace(/_/g, ' ') ?? '—'}
-              </div>
+              {simulatedRole ? (
+                <div style={{ fontSize: 11 }}>
+                  <span style={{ color: '#fbbf24', textTransform: 'capitalize' }}>
+                    <i className="ph ph-eye me-4" style={{ fontSize: 10 }} />
+                    {simulatedRole.replace(/_/g, ' ')}
+                  </span>
+                  <span style={{ color: '#475569' }}> (preview)</span>
+                </div>
+              ) : (
+                <div style={{ color: '#64748b', fontSize: 11, textTransform: 'capitalize' }}>
+                  {role?.replace(/_/g, ' ') ?? '—'}
+                </div>
+              )}
             </div>
           </div>
         )}
-        {/* Super-admin tenant switcher */}
-        {role === 'super_admin' && <TenantSwitcher collapsed={collapsed} />}
+        {/* Super-admin tools (always gated on real role, not simulated) */}
+        {realRole === 'super_admin' && <RoleSwitcher collapsed={collapsed} />}
+        {realRole === 'super_admin' && <TenantSwitcher collapsed={collapsed} />}
         <button
           onClick={() => { void handleSignOut(); }}
           disabled={signingOut}
