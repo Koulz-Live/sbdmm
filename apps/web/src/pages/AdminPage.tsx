@@ -21,7 +21,7 @@ type AdminTab = 'tenants' | 'users' | 'audit' | 'vendors';
 function ErrorBanner({ message }: { message: string }): React.JSX.Element {
   return (
     <div role="alert" className="d-flex align-items-center gap-8 mb-3"
-      style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', fontSize: 14 }}>
+      style={{ background: 'var(--badge-red-bg)', color: 'var(--badge-red-fg)', border: '1px solid var(--badge-red-fg)', borderRadius: 8, padding: '10px 14px', fontSize: 14 }}>
       <i className="ph ph-warning-circle" />{message}
     </div>
   );
@@ -29,23 +29,23 @@ function ErrorBanner({ message }: { message: string }): React.JSX.Element {
 
 function LoadingState({ label }: { label: string }): React.JSX.Element {
   return (
-    <div className="d-flex align-items-center justify-content-center p-5" style={{ color: '#64748b' }}>
+    <div className="d-flex align-items-center justify-content-center p-5" style={{ color: 'var(--text-muted)' }}>
       <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />{label}
     </div>
   );
 }
 
 function EmptyState({ label }: { label: string }): React.JSX.Element {
-  return <div className="text-center py-5" style={{ color: '#94a3b8', fontSize: 14 }}>{label}</div>;
+  return <div className="text-center py-5" style={{ color: 'var(--text-muted)', fontSize: 14 }}>{label}</div>;
 }
 
 function TableHead({ cols }: { cols: string[] }): React.JSX.Element {
   return (
-    <thead style={{ background: '#f8fafc' }}>
+    <thead style={{ background: 'var(--bg-surface-2)' }}>
       <tr>
         {cols.map(h => (
           <th key={h} className="fw-semibold border-bottom"
-            style={{ padding: '12px 16px', fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+            style={{ padding: '12px 16px', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
         ))}
       </tr>
     </thead>
@@ -56,22 +56,30 @@ function PagerRow({ page, totalPages, onPrev, onNext }: { page: number; totalPag
   return (
     <div className="d-flex justify-content-end gap-8 mt-3">
       <button onClick={onPrev} disabled={page <= 1} className="btn btn-sm"
-        style={{ border: '1px solid #e2e8f0', borderRadius: 6, padding: '5px 14px', background: page <= 1 ? '#f8fafc' : '#fff', color: page <= 1 ? '#94a3b8' : '#374151' }}>
+        style={{ border: '1px solid var(--border)', borderRadius: 6, padding: '5px 14px', background: 'var(--bg-surface)', color: page <= 1 ? 'var(--text-faint)' : 'var(--text-secondary)', opacity: page <= 1 ? 0.5 : 1 }}>
         <i className="ph ph-caret-left me-1" /> Prev
       </button>
       <button onClick={onNext} disabled={page >= totalPages} className="btn btn-sm"
-        style={{ border: '1px solid #e2e8f0', borderRadius: 6, padding: '5px 14px', background: page >= totalPages ? '#f8fafc' : '#fff', color: page >= totalPages ? '#94a3b8' : '#374151' }}>
+        style={{ border: '1px solid var(--border)', borderRadius: 6, padding: '5px 14px', background: 'var(--bg-surface)', color: page >= totalPages ? 'var(--text-faint)' : 'var(--text-secondary)', opacity: page >= totalPages ? 0.5 : 1 }}>
         Next <i className="ph ph-caret-right ms-1" />
       </button>
     </div>
   );
 }
 
-function MiniBtn({ children, color, onClick, disabled }: { children: React.ReactNode; color: string; onClick: () => void; disabled?: boolean }): React.JSX.Element {
+type MiniBtnVariant = 'green' | 'red' | 'muted' | 'amber';
+
+function MiniBtn({ children, variant, onClick, disabled }: { children: React.ReactNode; variant: MiniBtnVariant; onClick: () => void; disabled?: boolean }): React.JSX.Element {
   return (
     <button onClick={onClick} disabled={disabled}
       className="btn btn-sm d-inline-flex align-items-center gap-4"
-      style={{ background: `${color}18`, color, border: `1px solid ${color}44`, borderRadius: 6, fontSize: 12, fontWeight: 500, padding: '3px 10px', opacity: disabled ? 0.6 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}>
+      style={{
+        background: `var(--badge-${variant}-bg)`,
+        color: `var(--badge-${variant}-fg)`,
+        border: `1px solid var(--badge-${variant}-fg)`,
+        borderRadius: 6, fontSize: 12, fontWeight: 600, padding: '4px 12px',
+        opacity: disabled ? 0.6 : 1, cursor: disabled ? 'not-allowed' : 'pointer',
+      }}>
       {children}
     </button>
   );
@@ -79,25 +87,32 @@ function MiniBtn({ children, color, onClick, disabled }: { children: React.React
 
 // ─── Status / role badges ─────────────────────────────────────────────────────
 
-const TENANT_STATUS_COLORS: Record<string, string> = { active: '#15803d', suspended: '#b91c1c', pending_verification: '#b45309' };
-const TENANT_STATUS_ICONS: Record<string, string> = { active: 'ph-check-circle', suspended: 'ph-prohibit', pending_verification: 'ph-clock' };
+const TENANT_STATUS_VARIANT: Record<string, string> = {
+  active: 'green', suspended: 'red', pending_verification: 'amber',
+};
+const TENANT_STATUS_ICONS: Record<string, string> = {
+  active: 'ph-check-circle', suspended: 'ph-prohibit', pending_verification: 'ph-clock',
+};
 function TenantStatusBadge({ status }: { status: string }): React.JSX.Element {
-  const c = TENANT_STATUS_COLORS[status] ?? '#64748b';
+  const v = TENANT_STATUS_VARIANT[status] ?? 'muted';
   return (
     <span className="d-inline-flex align-items-center gap-4"
-      style={{ background: `${c}18`, color: c, border: `1px solid ${c}44`, borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
+      style={{ background: `var(--badge-${v}-bg)`, color: `var(--badge-${v}-fg)`, border: `1px solid var(--badge-${v}-fg)`, borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
       <i className={`ph ${TENANT_STATUS_ICONS[status] ?? 'ph-question'}`} style={{ fontSize: 13 }} />
       {status.replace(/_/g, ' ')}
     </span>
   );
 }
 
-const ROLE_COLORS: Record<string, string> = { buyer: '#2563eb', vendor: '#7c3aed', logistics_provider: '#0891b2', tenant_admin: '#b45309', super_admin: '#b91c1c' };
+const ROLE_VARIANT: Record<string, string> = {
+  buyer: 'blue', vendor: 'purple', logistics_provider: 'cyan',
+  tenant_admin: 'amber', super_admin: 'red',
+};
 function RoleBadge({ role }: { role: string }): React.JSX.Element {
-  const c = ROLE_COLORS[role] ?? '#64748b';
+  const v = ROLE_VARIANT[role] ?? 'muted';
   return (
     <span className="d-inline-flex align-items-center"
-      style={{ background: `${c}18`, color: c, border: `1px solid ${c}44`, borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
+      style={{ background: `var(--badge-${v}-bg)`, color: `var(--badge-${v}-fg)`, border: `1px solid var(--badge-${v}-fg)`, borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
       {role.replace(/_/g, ' ')}
     </span>
   );
@@ -155,7 +170,7 @@ function TenantsTab(): React.JSX.Element {
       {error && <ErrorBanner message={error} />}
       {actionMsg && (
         <div className="d-flex align-items-center gap-8 mb-3"
-          style={{ background: actionMsg.type === 'success' ? '#f0fdf4' : '#fef2f2', color: actionMsg.type === 'success' ? '#15803d' : '#b91c1c', border: `1px solid ${actionMsg.type === 'success' ? '#bbf7d0' : '#fecaca'}`, borderRadius: 8, padding: '10px 14px', fontSize: 14 }}>
+          style={{ background: `var(--badge-${actionMsg.type === 'success' ? 'green' : 'red'}-bg)`, color: `var(--badge-${actionMsg.type === 'success' ? 'green' : 'red'}-fg)`, border: `1px solid var(--badge-${actionMsg.type === 'success' ? 'green' : 'red'}-fg)`, borderRadius: 8, padding: '10px 14px', fontSize: 14 }}>
           <i className={`ph ${actionMsg.type === 'success' ? 'ph-check-circle' : 'ph-warning-circle'}`} />{actionMsg.text}
         </div>
       )}
@@ -170,32 +185,32 @@ function TenantsTab(): React.JSX.Element {
                   {tenants.map(t => (
                     <tr key={t.id}>
                       <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
-                        <div className="fw-semibold" style={{ color: '#0f172a' }}>{t.name}</div>
-                        <div style={{ fontSize: 11, color: '#94a3b8', fontFamily: 'monospace' }}>{t.slug}</div>
+                        <div className="fw-semibold" style={{ color: 'var(--text-primary)' }}>{t.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{t.slug}</div>
                       </td>
                       <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
-                        <span style={{ background: '#f1f5f9', color: '#475569', borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 500 }}>{t.plan}</span>
+                        <span style={{ background: 'var(--bg-surface-2)', color: 'var(--text-secondary)', borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 500 }}>{t.plan}</span>
                       </td>
                       <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}><TenantStatusBadge status={t.status} /></td>
-                      <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: '#475569', textAlign: 'center' }}>{t.user_count}</td>
-                      <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: '#475569', textAlign: 'center' }}>{t.order_count}</td>
-                      <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: '#475569', textAlign: 'center' }}>{t.vendor_count}</td>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: 'var(--text-secondary)', textAlign: 'center' }}>{t.user_count}</td>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: 'var(--text-secondary)', textAlign: 'center' }}>{t.order_count}</td>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: 'var(--text-secondary)', textAlign: 'center' }}>{t.vendor_count}</td>
                       <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
                         {confirmId === t.id ? (
                           <div className="d-flex gap-4">
-                            <MiniBtn color="#b91c1c" onClick={() => void handleSuspend(t.id)} disabled={suspendingId === t.id}>
+                            <MiniBtn variant="red" onClick={() => void handleSuspend(t.id)} disabled={suspendingId === t.id}>
                               <i className="ph ph-check" />{suspendingId === t.id ? '…' : 'Confirm'}
                             </MiniBtn>
-                            <MiniBtn color="#64748b" onClick={() => setConfirmId(null)}>
+                            <MiniBtn variant="muted" onClick={() => setConfirmId(null)}>
                               <i className="ph ph-x" />Cancel
                             </MiniBtn>
                           </div>
                         ) : t.status === 'suspended' ? (
-                          <MiniBtn color="#15803d" onClick={() => void handleReinstate(t.id)} disabled={suspendingId === t.id}>
+                          <MiniBtn variant="green" onClick={() => void handleReinstate(t.id)} disabled={suspendingId === t.id}>
                             <i className="ph ph-arrow-u-up-left" />Reinstate
                           </MiniBtn>
                         ) : (
-                          <MiniBtn color="#b91c1c" onClick={() => setConfirmId(t.id)}>
+                          <MiniBtn variant="red" onClick={() => setConfirmId(t.id)}>
                             <i className="ph ph-prohibit" />Suspend
                           </MiniBtn>
                         )}
@@ -216,11 +231,6 @@ function TenantsTab(): React.JSX.Element {
 }
 
 // ─── Users Tab — full CRUD ────────────────────────────────────────────────────
-
-const ROLE_ICON: Record<string, string> = {
-  buyer: 'ph-user', vendor: 'ph-storefront', logistics_provider: 'ph-truck',
-  tenant_admin: 'ph-shield-check', super_admin: 'ph-crown-simple',
-};
 
 interface EditDraft {
   full_name: string;
@@ -258,29 +268,29 @@ function UserEditModal({
   };
 
   const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8,
-    fontSize: 14, color: '#0f172a', background: '#fff', outline: 'none',
+    width: '100%', padding: '8px 12px', border: '1px solid var(--input-border)', borderRadius: 8,
+    fontSize: 14, color: 'var(--text-primary)', background: 'var(--input-bg)', outline: 'none',
   };
-  const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4, display: 'block' };
+  const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' };
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 1000,
+      position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 1000,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: 440, maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+      <div style={{ background: 'var(--card-bg)', borderRadius: 16, padding: 28, width: 440, maxWidth: '95vw', boxShadow: 'var(--shadow-lg)' }}>
         {/* Header */}
         <div className="d-flex align-items-center justify-content-between mb-20">
           <div>
-            <div className="fw-bold" style={{ fontSize: 17, color: '#0f172a' }}>Edit User</div>
-            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{user.id.slice(0, 12)}…</div>
+            <div className="fw-bold" style={{ fontSize: 17, color: 'var(--text-primary)' }}>Edit User</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{user.id.slice(0, 12)}…</div>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 20 }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 20 }}>
             <i className="ph ph-x" />
           </button>
         </div>
 
-        {err && <div style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', fontSize: 13, marginBottom: 16 }}>{err}</div>}
+        {err && <div style={{ background: 'var(--badge-red-bg)', color: 'var(--badge-red-fg)', border: '1px solid var(--badge-red-fg)', borderRadius: 8, padding: '8px 12px', fontSize: 13, marginBottom: 16 }}>{err}</div>}
 
         {/* Full name */}
         <div className="mb-16">
@@ -297,16 +307,16 @@ function UserEditModal({
         </div>
 
         {/* Active toggle */}
-        <div className="d-flex align-items-center justify-content-between mb-24 p-12" style={{ background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+        <div className="d-flex align-items-center justify-content-between mb-24 p-12" style={{ background: 'var(--bg-surface-2)', borderRadius: 8, border: '1px solid var(--border)' }}>
           <div>
-            <div className="fw-semibold" style={{ fontSize: 14, color: '#0f172a' }}>Account Active</div>
-            <div style={{ fontSize: 12, color: '#94a3b8' }}>Inactive users cannot sign in</div>
+            <div className="fw-semibold" style={{ fontSize: 14, color: 'var(--text-primary)' }}>Account Active</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Inactive users cannot sign in</div>
           </div>
           <button
             onClick={() => setDraft(d => ({ ...d, is_active: !d.is_active }))}
             style={{
               width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', position: 'relative',
-              background: draft.is_active ? '#299E60' : '#cbd5e1', transition: 'background 0.2s',
+              background: draft.is_active ? '#299E60' : 'var(--border)', transition: 'background 0.2s',
             }}>
             <span style={{
               position: 'absolute', top: 3, left: draft.is_active ? 22 : 3, width: 18, height: 18,
@@ -318,7 +328,7 @@ function UserEditModal({
         {/* Actions */}
         <div className="d-flex gap-10 justify-content-end">
           <button onClick={onClose} className="btn btn-sm"
-            style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 20px', color: '#64748b', background: '#f8fafc', fontSize: 14 }}>
+            style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '8px 20px', color: 'var(--text-secondary)', background: 'var(--bg-surface-2)', fontSize: 14 }}>
             Cancel
           </button>
           <button onClick={() => void handleSave()} disabled={saving} className="btn btn-sm"
@@ -353,25 +363,25 @@ function InviteUserModal({
   };
 
   const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8,
-    fontSize: 14, color: '#0f172a', background: '#fff', outline: 'none',
+    width: '100%', padding: '8px 12px', border: '1px solid var(--input-border)', borderRadius: 8,
+    fontSize: 14, color: 'var(--text-primary)', background: 'var(--input-bg)', outline: 'none',
   };
-  const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4, display: 'block' };
+  const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' };
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 1000,
+      position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 1000,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: 460, maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+      <div style={{ background: 'var(--card-bg)', borderRadius: 16, padding: 28, width: 460, maxWidth: '95vw', boxShadow: 'var(--shadow-lg)' }}>
         <div className="d-flex align-items-center justify-content-between mb-20">
-          <div className="fw-bold" style={{ fontSize: 17, color: '#0f172a' }}>Invite New User</div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 20 }}>
+          <div className="fw-bold" style={{ fontSize: 17, color: 'var(--text-primary)' }}>Invite New User</div>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 20 }}>
             <i className="ph ph-x" />
           </button>
         </div>
 
-        {err && <div style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', fontSize: 13, marginBottom: 16 }}>{err}</div>}
+        {err && <div style={{ background: 'var(--badge-red-bg)', color: 'var(--badge-red-fg)', border: '1px solid var(--badge-red-fg)', borderRadius: 8, padding: '8px 12px', fontSize: 13, marginBottom: 16 }}>{err}</div>}
 
         <div className="mb-14">
           <label style={labelStyle}>Email Address</label>
@@ -388,7 +398,7 @@ function InviteUserModal({
           </select>
         </div>
         <div className="mb-24">
-          <label style={labelStyle}>Tenant <span style={{ fontWeight: 400, color: '#94a3b8' }}>(leave blank to use your own)</span></label>
+          <label style={labelStyle}>Tenant <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(leave blank to use your own)</span></label>
           <select style={inputStyle} value={draft.tenant_id} onChange={e => setDraft(d => ({ ...d, tenant_id: e.target.value }))}>
             <option value="">— My tenant (default) —</option>
             {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -397,7 +407,7 @@ function InviteUserModal({
 
         <div className="d-flex gap-10 justify-content-end">
           <button onClick={onClose} className="btn btn-sm"
-            style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 20px', color: '#64748b', background: '#f8fafc', fontSize: 14 }}>
+            style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '8px 20px', color: 'var(--text-secondary)', background: 'var(--bg-surface-2)', fontSize: 14 }}>
             Cancel
           </button>
           <button onClick={() => void handleSend()} disabled={saving} className="btn btn-sm"
@@ -512,8 +522,8 @@ function UsersTab({ tenants }: { tenants: TenantSummary[] }): React.JSX.Element 
   };
 
   const selectStyle: React.CSSProperties = {
-    padding: '7px 12px', border: '1px solid #e2e8f0', borderRadius: 8,
-    fontSize: 13, color: '#374151', background: '#fff', cursor: 'pointer',
+    padding: '7px 12px', border: '1px solid var(--input-border)', borderRadius: 8,
+    fontSize: 13, color: 'var(--text-primary)', background: 'var(--input-bg)', cursor: 'pointer',
   };
 
   return (
@@ -524,24 +534,24 @@ function UsersTab({ tenants }: { tenants: TenantSummary[] }): React.JSX.Element 
 
       {/* Delete confirm modal */}
       {deleteUser && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: 400, maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--card-bg)', borderRadius: 16, padding: 28, width: 400, maxWidth: '95vw', boxShadow: 'var(--shadow-lg)' }}>
             <div className="d-flex align-items-center gap-12 mb-16">
-              <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <i className="ph ph-trash" style={{ fontSize: 22, color: '#b91c1c' }} />
+              <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--badge-red-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <i className="ph ph-trash" style={{ fontSize: 22, color: 'var(--badge-red-fg)' }} />
               </div>
               <div>
-                <div className="fw-bold" style={{ fontSize: 16, color: '#0f172a' }}>Delete User?</div>
-                <div style={{ fontSize: 13, color: '#64748b' }}>This removes them from auth — cannot be undone.</div>
+                <div className="fw-bold" style={{ fontSize: 16, color: 'var(--text-primary)' }}>Delete User?</div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>This removes them from auth — cannot be undone.</div>
               </div>
             </div>
-            <div style={{ background: '#f8fafc', borderRadius: 8, padding: '10px 14px', marginBottom: 20 }}>
-              <div className="fw-semibold" style={{ fontSize: 14, color: '#0f172a' }}>{deleteUser.full_name}</div>
-              <div style={{ fontSize: 12, color: '#94a3b8' }}>{deleteUser.role.replace(/_/g, ' ')}</div>
+            <div style={{ background: 'var(--bg-surface-2)', borderRadius: 8, padding: '10px 14px', marginBottom: 20 }}>
+              <div className="fw-semibold" style={{ fontSize: 14, color: 'var(--text-primary)' }}>{deleteUser.full_name}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{deleteUser.role.replace(/_/g, ' ')}</div>
             </div>
             <div className="d-flex gap-10 justify-content-end">
               <button onClick={() => setDeleteUser(null)} className="btn btn-sm"
-                style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 18px', color: '#64748b', background: '#f8fafc', fontSize: 14 }}>
+                style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '8px 18px', color: 'var(--text-secondary)', background: 'var(--bg-surface-2)', fontSize: 14 }}>
                 Cancel
               </button>
               <button onClick={() => void handleDelete(deleteUser.id)} disabled={deletingId === deleteUser.id} className="btn btn-sm"
@@ -575,11 +585,11 @@ function UsersTab({ tenants }: { tenants: TenantSummary[] }): React.JSX.Element 
       <div className="d-flex align-items-center gap-10 mb-16 flex-wrap">
         {/* Search */}
         <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
-          <i className="ph ph-magnifying-glass" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: 16 }} />
+          <i className="ph ph-magnifying-glass" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 16 }} />
           <input
             type="text" placeholder="Search by name…"
             value={search} onChange={e => handleSearchChange(e.target.value)}
-            style={{ width: '100%', padding: '8px 12px 8px 32px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, color: '#0f172a' }}
+            style={{ width: '100%', padding: '8px 12px 8px 32px', border: '1px solid var(--input-border)', borderRadius: 8, fontSize: 14, color: 'var(--text-primary)', background: 'var(--input-bg)' }}
           />
         </div>
         {/* Role filter */}
@@ -613,43 +623,39 @@ function UsersTab({ tenants }: { tenants: TenantSummary[] }): React.JSX.Element 
                       {/* User cell */}
                       <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
                         <div className="d-flex align-items-center gap-10">
-                          <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#475569', fontSize: 13, flexShrink: 0 }}>
+                          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg-surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: 'var(--text-secondary)', fontSize: 13, flexShrink: 0 }}>
                             {u.full_name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <div className="fw-semibold" style={{ color: '#0f172a', fontSize: 13 }}>{u.full_name}</div>
-                            <div style={{ fontSize: 11, color: '#94a3b8', fontFamily: 'monospace' }}>{u.id.slice(0, 12)}…</div>
+                            <div className="fw-semibold" style={{ color: 'var(--text-primary)', fontSize: 13 }}>{u.full_name}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{u.id.slice(0, 12)}…</div>
                           </div>
                         </div>
                       </td>
                       {/* Role cell */}
                       <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
-                        <span className="d-inline-flex align-items-center gap-5"
-                          style={{ background: `${ROLE_COLORS[u.role] ?? '#64748b'}18`, color: ROLE_COLORS[u.role] ?? '#64748b', border: `1px solid ${ROLE_COLORS[u.role] ?? '#64748b'}44`, borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
-                          <i className={`ph ${ROLE_ICON[u.role] ?? 'ph-user'}`} style={{ fontSize: 12 }} />
-                          {u.role.replace(/_/g, ' ')}
-                        </span>
+                        <RoleBadge role={u.role} />
                       </td>
                       {/* Tenant cell */}
                       <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
-                        <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#64748b', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 4, padding: '2px 6px' }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-muted)', background: 'var(--bg-surface-2)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 6px' }}>
                           {u.tenant_id.slice(0, 8)}…
                         </span>
                       </td>
                       {/* Joined */}
-                      <td style={{ padding: '12px 16px', verticalAlign: 'middle', fontSize: 12, color: '#64748b', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle', fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                         {new Date(u.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </td>
                       {/* Status */}
                       <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
                         {u.is_active ? (
                           <span className="d-inline-flex align-items-center gap-4"
-                            style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
+                            style={{ background: 'var(--badge-green-bg)', color: 'var(--badge-green-fg)', border: '1px solid var(--badge-green-fg)', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
                             <i className="ph ph-check-circle" style={{ fontSize: 13 }} />Active
                           </span>
                         ) : (
                           <span className="d-inline-flex align-items-center gap-4"
-                            style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
+                            style={{ background: 'var(--badge-red-bg)', color: 'var(--badge-red-fg)', border: '1px solid var(--badge-red-fg)', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
                             <i className="ph ph-x-circle" style={{ fontSize: 13 }} />Suspended
                           </span>
                         )}
@@ -659,35 +665,35 @@ function UsersTab({ tenants }: { tenants: TenantSummary[] }): React.JSX.Element 
                         <div className="d-flex gap-6 align-items-center">
                           {/* Edit */}
                           <button title="Edit user" onClick={() => setEditUser(u)}
-                            style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: '#475569', fontSize: 14, lineHeight: 1 }}>
+                            style={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1 }}>
                             <i className="ph ph-pencil-simple" />
                           </button>
                           {/* Suspend / Reinstate */}
                           {confirmDeleteId === u.id ? (
                             <div className="d-flex gap-4">
                               <button onClick={() => void handleSuspend(u.id)}
-                                style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: '#b91c1c', fontSize: 12, fontWeight: 600 }}>
+                                style={{ background: 'var(--badge-red-bg)', border: '1px solid var(--badge-red-fg)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: 'var(--badge-red-fg)', fontSize: 12, fontWeight: 600 }}>
                                 Confirm
                               </button>
                               <button onClick={() => setConfirmDeleteId(null)}
-                                style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: '#64748b', fontSize: 12 }}>
+                                style={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12 }}>
                                 Cancel
                               </button>
                             </div>
                           ) : u.is_active ? (
                             <button title="Suspend user" onClick={() => setConfirmDeleteId(u.id)}
-                              style={{ background: '#fef9c3', border: '1px solid #fde047', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: '#854d0e', fontSize: 14, lineHeight: 1 }}>
+                              style={{ background: 'var(--badge-amber-bg)', border: '1px solid var(--badge-amber-fg)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: 'var(--badge-amber-fg)', fontSize: 14, lineHeight: 1 }}>
                               <i className="ph ph-prohibit" />
                             </button>
                           ) : (
                             <button title="Reinstate user" onClick={() => void handleReinstate(u.id)}
-                              style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: '#15803d', fontSize: 14, lineHeight: 1 }}>
+                              style={{ background: 'var(--badge-green-bg)', border: '1px solid var(--badge-green-fg)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: 'var(--badge-green-fg)', fontSize: 14, lineHeight: 1 }}>
                               <i className="ph ph-arrow-u-up-left" />
                             </button>
                           )}
                           {/* Delete */}
                           <button title="Delete user" onClick={() => setDeleteUser(u)}
-                            style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: '#b91c1c', fontSize: 14, lineHeight: 1 }}>
+                            style={{ background: 'var(--badge-red-bg)', border: '1px solid var(--badge-red-fg)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: 'var(--badge-red-fg)', fontSize: 14, lineHeight: 1 }}>
                             <i className="ph ph-trash" />
                           </button>
                         </div>
@@ -1353,9 +1359,9 @@ function AuditUsersPanel({ showToast }: { showToast: (type: 'success' | 'error',
       {error && <ErrorBanner message={error} />}
 
       <div style={{ position: 'relative', maxWidth: 360, marginBottom: 16 }}>
-        <i className="ph ph-magnifying-glass" style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: 15 }} />
+        <i className="ph ph-magnifying-glass" style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 15 }} />
         <input type="text" placeholder="Search users…" value={search} onChange={e => handleSearch(e.target.value)}
-          style={{ width: '100%', padding: '8px 12px 8px 30px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, color: '#0f172a' }} />
+          style={{ width: '100%', padding: '8px 12px 8px 30px', border: '1px solid var(--input-border)', borderRadius: 8, fontSize: 14, color: 'var(--text-primary)', background: 'var(--input-bg)' }} />
       </div>
 
       {isLoading ? <LoadingState label="Loading users…" /> : users.length === 0 ? <EmptyState label="No users found." /> : (
@@ -1369,32 +1375,30 @@ function AuditUsersPanel({ showToast }: { showToast: (type: 'success' | 'error',
                     <tr key={u.id} style={{ cursor: 'pointer' }}>
                       <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
                         <div className="d-flex align-items-center gap-10">
-                          <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#475569', fontSize: 12, flexShrink: 0 }}>
+                          <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--bg-surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: 'var(--text-secondary)', fontSize: 12, flexShrink: 0 }}>
                             {u.full_name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <div className="fw-semibold" style={{ color: '#0f172a', fontSize: 13 }}>{u.full_name}</div>
-                            <div style={{ fontSize: 10, color: '#94a3b8', fontFamily: 'monospace' }}>{u.id.slice(0, 14)}…</div>
+                            <div className="fw-semibold" style={{ color: 'var(--text-primary)', fontSize: 13 }}>{u.full_name}</div>
+                            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{u.id.slice(0, 14)}…</div>
                           </div>
                         </div>
                       </td>
                       <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
-                        <span style={{ background: `${ROLE_COLORS[u.role] ?? '#64748b'}18`, color: ROLE_COLORS[u.role] ?? '#64748b', border: `1px solid ${ROLE_COLORS[u.role] ?? '#64748b'}44`, borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
-                          {u.role.replace(/_/g, ' ')}
-                        </span>
+                        <RoleBadge role={u.role} />
                       </td>
                       <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
-                        <span style={{ background: u.is_active ? '#f0fdf4' : '#fef2f2', color: u.is_active ? '#15803d' : '#b91c1c', border: `1px solid ${u.is_active ? '#bbf7d0' : '#fecaca'}`, borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
+                        <span style={{ background: u.is_active ? 'var(--badge-green-bg)' : 'var(--badge-red-bg)', color: u.is_active ? 'var(--badge-green-fg)' : 'var(--badge-red-fg)', border: `1px solid ${u.is_active ? 'var(--badge-green-fg)' : 'var(--badge-red-fg)'}`, borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
                           {u.is_active ? 'Active' : 'Suspended'}
                         </span>
                       </td>
-                      <td style={{ padding: '12px 16px', verticalAlign: 'middle', fontSize: 12, color: '#64748b' }}>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'middle', fontSize: 12, color: 'var(--text-muted)' }}>
                         {new Date(u.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </td>
                       <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
                         <button onClick={() => { setDrawerUserId(u.id); void showToast; }}
                           className="btn btn-sm d-inline-flex align-items-center gap-6"
-                          style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 8, padding: '5px 12px', fontSize: 12, color: '#374151' }}>
+                          style={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 12px', fontSize: 12, color: 'var(--text-secondary)' }}>
                           <i className="ph ph-clock-clockwise" style={{ fontSize: 14 }} />Activity
                         </button>
                       </td>
@@ -1408,7 +1412,7 @@ function AuditUsersPanel({ showToast }: { showToast: (type: 'success' | 'error',
       )}
       {pagination && pagination.total_pages > 1 && (
         <div className="d-flex align-items-center justify-content-between mt-3">
-          <div style={{ fontSize: 13, color: '#94a3b8' }}>{pagination.total} users · page {pagination.page} of {pagination.total_pages}</div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{pagination.total} users · page {pagination.page} of {pagination.total_pages}</div>
           <PagerRow page={page} totalPages={pagination.total_pages} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
         </div>
       )}
@@ -1759,7 +1763,7 @@ function VendorQueueTab(): React.JSX.Element {
     try {
       const res = await api.get<Vendor[]>('/api/v1/vendors?status=pending_review');
       if (res.success && res.data) {
-        setVendors(res.data.filter(v => v.status === 'pending_review'));
+        setVendors(res.data.filter(v => v.onboarding_status === 'pending_review'));
       } else {
         setError(res.error?.message ?? 'Failed to load vendors.');
       }
@@ -1828,10 +1832,10 @@ function VendorQueueTab(): React.JSX.Element {
                       </td>
                       <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
                         <div className="d-flex gap-6">
-                          <MiniBtn color="#15803d" onClick={() => { void handleAction(v.id, 'approved'); }} disabled={actioning === v.id}>
+                          <MiniBtn variant="green" onClick={() => { void handleAction(v.id, 'approved'); }} disabled={actioning === v.id}>
                             <i className="ph ph-check" /> Approve
                           </MiniBtn>
-                          <MiniBtn color="#b91c1c" onClick={() => { void handleAction(v.id, 'rejected'); }} disabled={actioning === v.id}>
+                          <MiniBtn variant="red" onClick={() => { void handleAction(v.id, 'rejected'); }} disabled={actioning === v.id}>
                             <i className="ph ph-x" /> Reject
                           </MiniBtn>
                         </div>
@@ -1864,7 +1868,7 @@ export default function AdminPage(): React.JSX.Element {
       if (res.success && res.data) setTenants(res.data.data ?? []);
     });
     void api.get<Vendor[]>('/api/v1/vendors?status=pending_review').then(res => {
-      if (res.success && res.data) setPendingVendorCount(res.data.filter(v => v.status === 'pending_review').length);
+      if (res.success && res.data) setPendingVendorCount(res.data.filter(v => v.onboarding_status === 'pending_review').length);
     });
   }, []);
 

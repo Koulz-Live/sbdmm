@@ -40,6 +40,12 @@
   --badge-red-fg:    #b91c1c;   // 8.7:1 on badge-red-bg ✓
   --badge-orange-bg: #fff7ed;
   --badge-orange-fg: #c2410c;   // 6.9:1 on badge-orange-bg ✓
+  --badge-blue-bg:   #eff6ff;
+  --badge-blue-fg:   #1d4ed8;   // 8.6:1 on badge-blue-bg ✓
+  --badge-purple-bg: #f5f3ff;
+  --badge-purple-fg: #6d28d9;   // 8.2:1 on badge-purple-bg ✓
+  --badge-cyan-bg:   #ecfeff;
+  --badge-cyan-fg:   #0e7490;   // 6.8:1 on badge-cyan-bg ✓
 
   // Brand stays constant
   --brand:           #299E60;
@@ -81,6 +87,12 @@
   --badge-red-fg:    #fca5a5;   // 6.5:1 on badge-red-bg ✓
   --badge-orange-bg: rgba(194,65,12,0.20);
   --badge-orange-fg: #fb923c;   // 5.8:1 on badge-orange-bg ✓
+  --badge-blue-bg:   rgba(29,78,216,0.20);
+  --badge-blue-fg:   #93c5fd;   // 7.4:1 on badge-blue-bg ✓
+  --badge-purple-bg: rgba(109,40,217,0.20);
+  --badge-purple-fg: #c4b5fd;   // 8.1:1 on badge-purple-bg ✓
+  --badge-cyan-bg:   rgba(14,116,144,0.20);
+  --badge-cyan-fg:   #67e8f9;   // 9.2:1 on badge-cyan-bg ✓
 }
 
 // ── Global element resets to pick up tokens ───────────────────────────────
