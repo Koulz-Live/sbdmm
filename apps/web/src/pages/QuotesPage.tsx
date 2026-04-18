@@ -13,6 +13,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/apiClient';
 import type { Quote, QuoteStatus, PaginationMeta, Order } from '@sbdmm/shared';
@@ -258,6 +259,7 @@ export default function QuotesPage(): React.JSX.Element {
   const [actionQuoteId, setActionQuoteId] = useState<string | null>(null);
   const [action, setAction] = useState<'accept' | 'reject' | null>(null);
   const [actioning, setActioning] = useState(false);
+  const [confirmedOrderId, setConfirmedOrderId] = useState<string | null>(null);
 
   const isProvider = user?.role === 'vendor' || user?.role === 'logistics_provider';
   const isAdmin = user?.role === 'tenant_admin' || user?.role === 'super_admin';
@@ -292,9 +294,10 @@ export default function QuotesPage(): React.JSX.Element {
     setActioning(true);
     setError(null);
     try {
-      const res = await api.patch<Quote>(`/api/v1/quotes/${quoteId}/${act}`, {});
+      const res = await api.patch<Quote & { order_id?: string }>(`/api/v1/quotes/${quoteId}/${act}`, {});
       if (res.success) {
         setQuotes(qs => qs.map(q => q.id === quoteId ? { ...q, status: act === 'accept' ? 'accepted' : 'rejected' } : q));
+        if (act === 'accept' && res.data?.order_id) setConfirmedOrderId(res.data.order_id);
         setActionQuoteId(null);
         setAction(null);
       } else setError(res.error?.message ?? `Failed to ${act} quote.`);
@@ -331,6 +334,20 @@ export default function QuotesPage(): React.JSX.Element {
           style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', fontSize: 14 }}>
           <span><i className="ph ph-warning-circle me-2" />{error}</span>
           <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b91c1c', fontSize: 18, lineHeight: 1 }}>×</button>
+        </div>
+      )}
+
+      {/* Order confirmed banner */}
+      {confirmedOrderId && (
+        <div className="d-flex align-items-center justify-content-between mb-3"
+          style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 8, padding: '10px 14px', fontSize: 14, fontWeight: 600 }}>
+          <span><i className="ph ph-check-circle me-2" />Order confirmed!</span>
+          <div className="d-flex align-items-center gap-12">
+            <Link to={`/orders/${confirmedOrderId}`} style={{ color: '#15803d', fontWeight: 700, textDecoration: 'underline' }}>
+              View Order →
+            </Link>
+            <button onClick={() => setConfirmedOrderId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#15803d', fontSize: 18, lineHeight: 1 }}>×</button>
+          </div>
         </div>
       )}
 

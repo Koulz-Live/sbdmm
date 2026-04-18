@@ -29,6 +29,8 @@ interface SavedCollection {
   description: string | null;
   item_count: number;
   cover_gradient: string | null;
+  share_token: string | null;
+  is_shared: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -501,6 +503,45 @@ export default function SavesPage(): React.JSX.Element {
     }
   };
 
+  // ── Share collection ─────────────────────────────────────────────────────
+
+  const [shareToast, setShareToast] = useState<string | null>(null);
+
+  const handleShare = async (): Promise<void> => {
+    if (!openCollection) return;
+    const res = await api.patch<SavedCollection>(`/api/v1/saves/collections/${openCollection.id}`, { is_shared: true });
+    if (!res.success || !res.data) { setError('Failed to enable sharing.'); return; }
+    setOpenCollection(res.data);
+    setCollections(prev => prev.map(c => c.id === res.data!.id ? res.data! : c));
+    const url = `${window.location.origin}/shared/${res.data.share_token ?? ''}`;
+    await navigator.clipboard.writeText(url);
+    setShareToast('Share link copied!');
+    setTimeout(() => setShareToast(null), 3000);
+  };
+
+  // ── Export CSV ───────────────────────────────────────────────────────────
+
+  const handleExportCsv = (): void => {
+    if (openItems.length === 0) return;
+    const header = ['Title', 'Vendor', 'Origin', 'Destination', 'Price', 'Currency', 'Tags'];
+    const rows = openItems.map(i => [
+      `"${i.title.replace(/"/g, '""')}"`,
+      `"${i.vendor_name.replace(/"/g, '""')}"`,
+      i.origin_region,
+      i.destination_region,
+      i.base_price_amount ?? '',
+      i.base_price_currency,
+      `"${(i.tags ?? []).join(', ')}"`,
+    ]);
+    const csv = [header, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${openCollection?.name ?? 'collection'}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -545,7 +586,31 @@ export default function SavesPage(): React.JSX.Element {
             <i className="ph ph-plus" /> Create
           </button>
         )}
+        {openCollection && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => void handleShare()}
+              title={openCollection.is_shared ? 'Sharing enabled — copy link again' : 'Share collection'}
+              style={{ background: openCollection.is_shared ? '#f0fdf4' : '#fff', color: openCollection.is_shared ? '#15803d' : '#374151', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '7px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <i className="ph ph-share-network" /> {openCollection.is_shared ? 'Copy Link' : 'Share'}
+            </button>
+            <button
+              onClick={handleExportCsv}
+              disabled={openItems.length === 0}
+              title="Export items as CSV"
+              style={{ background: '#fff', color: '#374151', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '7px 14px', fontSize: 13, fontWeight: 600, cursor: openItems.length > 0 ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6, opacity: openItems.length === 0 ? 0.5 : 1 }}>
+              <i className="ph ph-download-simple" /> Export CSV
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Share toast */}
+      {shareToast && (
+        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: '#0f172a', color: '#fff', borderRadius: 10, padding: '10px 20px', fontSize: 14, fontWeight: 600, zIndex: 9999, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <i className="ph ph-check-circle" style={{ color: '#6ee7a0' }} /> {shareToast}
+        </div>
+      )}
 
       {/* ── Error ───────────────────────────────────────────────────────── */}
       {error && (

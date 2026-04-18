@@ -308,6 +308,40 @@ router.delete(
   },
 );
 
+// ─── GET /api/v1/saves/collections/shared/:shareToken ────────────────────────
+// Public endpoint — no auth required. Returns collection + items if is_shared=true.
+
+router.get('/collections/shared/:shareToken', async (req: Request, res: Response): Promise<void> => {
+  const log = createChildLogger({ request_id: req.requestId });
+  const supabase = getAdminClient();
+  const { shareToken } = req.params as { shareToken: string };
+
+  const { data: col, error: colErr } = await supabase
+    .from('saved_collections')
+    .select('id, name, description, is_shared')
+    .eq('share_token', shareToken)
+    .eq('is_shared', true)
+    .single();
+
+  if (colErr || !col) {
+    res.status(404).json({ success: false, error: { message: 'Collection not found or no longer shared.' } });
+    return;
+  }
+
+  const { data: items, error: itemsErr } = await supabase
+    .from('saved_items')
+    .select('id, title, vendor_name, service_mode, origin_region, destination_region, transit_days_min, transit_days_max, base_price_amount, base_price_currency, tags, note')
+    .eq('collection_id', col.id)
+    .order('created_at', { ascending: false });
+
+  if (itemsErr) {
+    log.error('[SAVES] Shared collection items failed', { error: itemsErr.message });
+    throw new AppError('Failed to load collection items.', 500);
+  }
+
+  res.status(200).json({ success: true, data: { ...col, items: items ?? [] } });
+});
+
 // ─── GET /api/v1/saves/check/:catalogueItemId ────────────────────────────────
 // Returns the IDs of collections that contain this catalogue item.
 // Used by the feed to show the bookmark filled/outline state per card.

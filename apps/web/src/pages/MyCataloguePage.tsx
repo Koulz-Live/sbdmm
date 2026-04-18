@@ -15,6 +15,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/apiClient';
+import { supabase } from '../lib/supabaseClient';
 import type { CatalogueItem, ServiceMode, Vendor } from '@sbdmm/shared';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -33,6 +34,34 @@ const SERVICE_MODE_ICONS: Record<ServiceMode, string> = {
   FCL: 'ph-container', LCL: 'ph-package', AIR: 'ph-airplane',
   ROAD: 'ph-truck', RAIL: 'ph-train', COURIER: 'ph-lightning', OTHER: 'ph-cube',
 };
+
+// Furniture category keyword → tag mapping for auto-suggestions
+const TAG_KEYWORDS: Record<string, string[]> = {
+  sofa:     ['sofa','sofas','couch','couches','sectional','lounge'],
+  bed:      ['bed','beds','bedroom','mattress','frame','headboard'],
+  table:    ['table','tables','desk','desks','coffee','dining table'],
+  chair:    ['chair','chairs','stool','stools','seating','armchair'],
+  storage:  ['storage','cabinet','cabinets','shelf','shelves','wardrobe','dresser'],
+  lighting: ['light','lights','lighting','lamp','lamps','pendant','chandelier'],
+  outdoor:  ['outdoor','garden','patio','exterior','balcony'],
+  decor:    ['decor','decoration','art','rug','rugs','cushion','curtain'],
+  dining:   ['dining','kitchen','table','chairs','set'],
+  office:   ['office','desk','chair','workspace','workstation'],
+  kids:     ['kids','children','baby','nursery','toddler','bunk'],
+  bathroom: ['bathroom','bath','vanity','mirror','shower'],
+};
+
+function suggestTags(title: string, existingTags: string[]): string[] {
+  const lower = title.toLowerCase();
+  const existing = new Set(existingTags.map(t => t.toLowerCase().trim()));
+  const suggestions: string[] = [];
+  for (const [tag, keywords] of Object.entries(TAG_KEYWORDS)) {
+    if (!existing.has(tag) && keywords.some(kw => lower.includes(kw))) {
+      suggestions.push(tag);
+    }
+  }
+  return suggestions;
+}
 
 interface CatalogueForm {
   title: string;
@@ -198,6 +227,55 @@ function ItemFormModal({ vendorId, editItem, onSuccess, onClose }: ItemFormModal
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // ── Tag suggestions based on title ──────────────────────────────────────────
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
+  useEffect(() => {
+    const currentTags = form.tags.split(',').map(t => t.trim()).filter(Boolean);
+    setTagSuggestions(suggestTags(form.title, currentTags));
+  }, [form.title, form.tags]);
+
+  const addSuggestedTag = (tag: string): void => {
+    const existing = form.tags.split(',').map(t => t.trim()).filter(Boolean);
+    if (!existing.includes(tag)) {
+      const joined = [...existing, tag].join(', ');
+      setForm(f => ({ ...f, tags: joined }));
+    }
+  };
+
+  // ── Image upload ─────────────────────────────────────────────────────────────
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [mediaUrls, setMediaUrls] = useState<string[]>(
+    (editItem as unknown as { media_urls?: string[] })?.media_urls ?? []
+  );
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setSubmitError('Image must be under 5 MB.'); return; }
+
+    setUploadingImage(true);
+    setSubmitError(null);
+    const ext = file.name.split('.').pop() ?? 'jpg';
+    const path = `catalogue/${vendorId}/${Date.now()}.${ext}`;
+    const { error: uploadErr } = await supabase.storage
+      .from('vendor-assets')
+      .upload(path, file, { upsert: false });
+
+    if (uploadErr) {
+      setSubmitError('Image upload failed. Please try again.');
+      setUploadingImage(false);
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from('vendor-assets').getPublicUrl(path);
+    setMediaUrls(prev => [...prev, publicUrl]);
+    setUploadingImage(false);
+  };
+
+  const removeImage = (url: string): void => {
+    setMediaUrls(prev => prev.filter(u => u !== url));
+  };
+
   const set = (field: keyof CatalogueForm) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
       setForm(f => ({ ...f, [field]: e.target.value }));
@@ -221,6 +299,7 @@ function ItemFormModal({ vendorId, editItem, onSuccess, onClose }: ItemFormModal
     setSubmitting(true);
     setSubmitError(null);
     const payload = formToPayload(form);
+    payload['media_urls'] = mediaUrls;
 
     let res;
     if (editItem) {
@@ -342,6 +421,51 @@ function ItemFormModal({ vendorId, editItem, onSuccess, onClose }: ItemFormModal
                   </label>
                   <input type="text" className="form-control" style={inputStyle} value={form.tags} onChange={set('tags')}
                     placeholder="hazmat, reefer, oversize" maxLength={300} />
+                  {/* Tag suggestions */}
+                  {tagSuggestions.length > 0 && (
+                    <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
+                      <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>Suggested:</span>
+                      {tagSuggestions.map(tag => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => addSuggestedTag(tag)}
+                          style={{ fontSize: 11, background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 20, padding: '2px 9px', cursor: 'pointer', fontWeight: 600 }}
+                        >
+                          + {tag}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Image upload */}
+                <div className="col-12">
+                  <label className="form-label fw-semibold" style={{ fontSize: 13 }}>
+                    Product Images <span className="fw-normal" style={{ color: '#94a3b8' }}>(optional, max 5 MB each)</span>
+                  </label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                    {mediaUrls.map(url => (
+                      <div key={url} style={{ position: 'relative', width: 72, height: 72 }}>
+                        <img src={url} alt="product" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0' }} />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(url)}
+                          style={{ position: 'absolute', top: -6, right: -6, background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: 18, height: 18, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <i className="ph ph-x" />
+                        </button>
+                      </div>
+                    ))}
+                    {mediaUrls.length < 6 && (
+                      <label style={{ width: 72, height: 72, border: '1.5px dashed #cbd5e1', borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: uploadingImage ? 'not-allowed' : 'pointer', gap: 4, color: '#94a3b8' }}>
+                        {uploadingImage
+                          ? <span className="spinner-border spinner-border-sm" role="status" />
+                          : <><i className="ph ph-image" style={{ fontSize: 20 }} /><span style={{ fontSize: 10 }}>Add</span></>}
+                        <input type="file" accept="image/*" style={{ display: 'none' }} disabled={uploadingImage} onChange={e => { void handleImageUpload(e); }} />
+                      </label>
+                    )}
+                  </div>
                 </div>
 
                 <div className="col-12">

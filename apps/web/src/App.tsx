@@ -52,12 +52,13 @@ const AdminPage       = lazy(() => import('./pages/AdminPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const RfqFeedPage        = lazy(() => import('./pages/RFQFeedPage'));
 const MyCataloguePage    = lazy(() => import('./pages/MyCataloguePage'));
-const TenantSettingsPage = lazy(() => import('./pages/TenantSettingsPage'));
-const DesignMyTablePage  = lazy(() => import('./pages/DesignMyTablePage'));
-const AuthCallbackPage   = lazy(() => import('./pages/AuthCallbackPage'));
-const MfaSetupPage       = lazy(() => import('./pages/MfaSetupPage'));
-const FurnitureFeedPage  = lazy(() => import('./pages/FurnitureFeedPage'));
-const SavesPage          = lazy(() => import('./pages/SavesPage'));
+const TenantSettingsPage    = lazy(() => import('./pages/TenantSettingsPage'));
+const DesignMyTablePage     = lazy(() => import('./pages/DesignMyTablePage'));
+const AuthCallbackPage      = lazy(() => import('./pages/AuthCallbackPage'));
+const MfaSetupPage          = lazy(() => import('./pages/MfaSetupPage'));
+const FurnitureFeedPage     = lazy(() => import('./pages/FurnitureFeedPage'));
+const SavesPage             = lazy(() => import('./pages/SavesPage'));
+const SharedCollectionPage  = lazy(() => import('./pages/SharedCollectionPage'));
 
 function PageLoader(): React.JSX.Element {
   return (
@@ -78,6 +79,7 @@ export default function App(): React.JSX.Element {
         <Route path="/forgot-password"   element={<ForgotPasswordPage />} />
         <Route path="/unauthorized"      element={<UnauthorizedPage />} />
         <Route path="/mfa-setup"         element={<MfaSetupPage />} />
+        <Route path="/shared/:shareToken" element={<SharedCollectionPage />} />
 
         {/* Protected — buyer + admins: main dashboard, orders, documents */}
         <Route element={<ProtectedRoute roles={['buyer', 'tenant_admin', 'super_admin']} />}>

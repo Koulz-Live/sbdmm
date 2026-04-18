@@ -58,6 +58,7 @@ function StatsSkeleton({ count }: { count: number }): React.JSX.Element {
   );
 }
 
+
 export default function ProviderDashboardPage(): React.JSX.Element {
   const { profile } = useAuth();
   const isLogistics = profile?.role === 'logistics_provider';
@@ -65,18 +66,35 @@ export default function ProviderDashboardPage(): React.JSX.Element {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [winRate, setWinRate] = useState<number | null>(null);
+  const [avgResponseHours, setAvgResponseHours] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     const load = async (): Promise<void> => {
       setIsLoading(true);
       setError(null);
-      const result = await api.get<DashboardStats>('/api/v1/dashboard/stats');
+      const [statsResult, quotesResult] = await Promise.all([
+        api.get<DashboardStats>('/api/v1/dashboard/stats'),
+        api.get<Array<{ status: string; created_at: string; orders?: { created_at: string } | null }>>('/api/v1/quotes'),
+      ]);
       if (cancelled) return;
-      if (!result.success) {
-        setError(result.error?.message ?? 'Failed to load dashboard data.');
+      if (!statsResult.success) {
+        setError(statsResult.error?.message ?? 'Failed to load dashboard data.');
       } else {
-        setStats(result.data ?? null);
+        setStats(statsResult.data ?? null);
+      }
+      if (quotesResult.success && quotesResult.data) {
+        const quotes = quotesResult.data;
+        const decided = quotes.filter(q => q.status === 'accepted' || q.status === 'rejected');
+        const accepted = decided.filter(q => q.status === 'accepted');
+        setWinRate(decided.length > 0 ? Math.round((accepted.length / decided.length) * 100) : null);
+        const responseTimes = quotes
+          .filter(q => q.orders?.created_at)
+          .map(q => (new Date(q.created_at).getTime() - new Date(q.orders!.created_at).getTime()) / 3_600_000);
+        setAvgResponseHours(responseTimes.length > 0
+          ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
+          : null);
       }
       setIsLoading(false);
     };
@@ -176,6 +194,36 @@ export default function ProviderDashboardPage(): React.JSX.Element {
               sublabel="Pending review"
             />
           </div>
+        </div>
+      )}
+
+      {/* KPI row — win rate + avg response time */}
+      {!isLoading && (winRate !== null || avgResponseHours !== null) && (
+        <div className="row g-16 mb-24">
+          {winRate !== null && (
+            <div className="col-md-6">
+              <StatCard
+                label="Quote Win Rate"
+                value={`${winRate}%`}
+                icon="ph ph-trophy"
+                iconBg="#f0fdf4"
+                iconColor="#15803d"
+                sublabel="Accepted / (Accepted + Rejected)"
+              />
+            </div>
+          )}
+          {avgResponseHours !== null && (
+            <div className="col-md-6">
+              <StatCard
+                label="Avg. Response Time"
+                value={avgResponseHours < 24 ? `${avgResponseHours}h` : `${Math.round(avgResponseHours / 24)}d`}
+                icon="ph ph-clock"
+                iconBg="#eff6ff"
+                iconColor="#2563eb"
+                sublabel="From RFQ posted to your quote"
+              />
+            </div>
+          )}
         </div>
       )}
 

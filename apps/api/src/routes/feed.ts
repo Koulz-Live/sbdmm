@@ -34,6 +34,11 @@ import { AppError } from '../middleware/errorHandler';
 const router = Router();
 router.use(requireAuth);
 
+// ─── Signals in-memory cache (60 s TTL per tenant) ───────────────────────────
+interface CacheEntry { data: unknown; ts: number }
+const signalsCache = new Map<string, CacheEntry>();
+const SIGNALS_TTL_MS = 60_000;
+
 // ─── Query schema ─────────────────────────────────────────────────────────────
 
 const feedQuerySchema = z.object({
@@ -62,6 +67,13 @@ router.get(
     const log = createChildLogger({ request_id: req.requestId });
     const supabase = getAdminClient();
     const tenantId = req.user!.tenant_id;
+
+    // Serve from cache if fresh
+    const cached = signalsCache.get(tenantId);
+    if (cached && Date.now() - cached.ts < SIGNALS_TTL_MS) {
+      res.status(200).json(cached.data);
+      return;
+    }
 
     try {
       // Run all aggregation queries in parallel
@@ -167,6 +179,18 @@ router.get(
           tenant_id:   tenantId,
         },
       });
+
+      // Populate cache (after send to avoid blocking)
+      const payload = {
+        success: true,
+        data: {
+          top_tags: topTags, top_modes: topModes, top_routes: topRoutes,
+          collection_keywords: collectionKeywords,
+          total_saves: savedItems.length, total_collections: collections.length,
+        },
+        meta: { request_id: req.requestId, timestamp: new Date().toISOString(), tenant_id: tenantId },
+      };
+      signalsCache.set(tenantId, { data: payload, ts: Date.now() });
     } catch (err) {
       if (err instanceof AppError) throw err;
       log.error('[FEED/SIGNALS] Unexpected error', { err });
@@ -208,6 +232,8 @@ router.get(
         base_price_currency,
         price_unit,
         tags,
+        save_count,
+        media_urls,
         created_at,
         vendors!inner (
           id,
@@ -254,6 +280,8 @@ router.get(
           .order('base_price_amount', { ascending: false, nullsFirst: false });
         break;
       case 'popular':
+        query = query.order('save_count', { ascending: false });
+        break;
       case 'newest':
       default:
         query = query.order('created_at', { ascending: false });
@@ -270,34 +298,12 @@ router.get(
       throw new AppError('Failed to load feed.', 500);
     }
 
-    // If sort=popular, re-order client-side by save count using signals data
-    let resultData = data ?? [];
-    if (sort === 'popular' && resultData.length > 0) {
-      // Fetch save counts for these specific catalogue item ids
-      const ids = resultData.map((r: { id: string }) => r.id);
-      const { data: saveCounts } = await getAdminClient()
-        .from('saved_items')
-        .select('catalogue_item_id')
-        .eq('tenant_id', tenantId)
-        .in('catalogue_item_id', ids);
-
-      const countMap = new Map<string, number>();
-      for (const row of saveCounts ?? []) {
-        if (row.catalogue_item_id) {
-          countMap.set(row.catalogue_item_id as string, (countMap.get(row.catalogue_item_id as string) ?? 0) + 1);
-        }
-      }
-      resultData = [...resultData].sort(
-        (a: { id: string }, b: { id: string }) => (countMap.get(b.id) ?? 0) - (countMap.get(a.id) ?? 0),
-      );
-    }
-
     const total = count ?? 0;
     const totalPages = Math.ceil(total / per_page);
 
     res.status(200).json({
       success: true,
-      data: resultData,
+      data: data ?? [],
       meta: {
         request_id: req.requestId,
         timestamp: new Date().toISOString(),

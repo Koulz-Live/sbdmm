@@ -13,6 +13,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../lib/apiClient';
+import { supabase } from '../lib/supabaseClient';
 import type { Notification } from '@sbdmm/shared';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -50,8 +51,16 @@ export function NotificationsDropdown(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [fetched, setFetched] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // ── Resolve current user id ──────────────────────────────────────────────────
+  useEffect(() => {
+    void supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setUserId(data.user.id);
+    });
+  }, []);
 
   // ── Poll unread count ────────────────────────────────────────────────────────
   const refreshCount = useCallback(async () => {
@@ -64,6 +73,30 @@ export function NotificationsDropdown(): React.JSX.Element {
     const interval = setInterval(() => { void refreshCount(); }, 60_000);
     return () => clearInterval(interval);
   }, [refreshCount]);
+
+  // ── Supabase Realtime — push new notifications to badge + list ───────────────
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel(`notifications:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const n = payload.new as NotifItem;
+          setUnreadCount(c => c + 1);
+          setItems(prev => [n, ...prev]);
+        },
+      )
+      .subscribe();
+
+    return () => { void supabase.removeChannel(channel); };
+  }, [userId]);
 
   // ── Fetch items on first open ────────────────────────────────────────────────
   useEffect(() => {

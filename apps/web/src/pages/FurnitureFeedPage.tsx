@@ -64,6 +64,8 @@ interface FeedItem {
   base_price_currency: string;
   price_unit: string;
   tags: string[];
+  save_count: number;
+  media_urls: string[];
   created_at: string;
   vendors: VendorInfo;
 }
@@ -403,16 +405,25 @@ function FeedCard({ item, onClickVendor, onOpenSave, isSaved }: FeedCardProps): 
       onMouseLeave={() => setHovered(false)}
       onClick={() => onClickVendor(item.vendor_id)}
     >
-      {/* Visual area — gradient + centred icon */}
-      <div style={{
-        height: imgHeight,
-        background: gradient,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-      }}>
-        <i className={`ph ${icon}`} style={{ fontSize: 48, color: 'rgba(0,0,0,0.15)' }} />
+      {/* Visual area — product image or gradient fallback */}
+      <div style={{ height: imgHeight, position: 'relative', overflow: 'hidden' }}>
+        {item.media_urls?.[0] ? (
+          <img
+            src={item.media_urls[0]}
+            alt={item.title}
+            style={{ width: '100%', height: imgHeight, objectFit: 'cover', display: 'block' }}
+          />
+        ) : (
+          <div style={{
+            height: imgHeight,
+            background: gradient,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <i className={`ph ${icon}`} style={{ fontSize: 48, color: 'rgba(0,0,0,0.15)' }} />
+          </div>
+        )}
 
         {/* Service mode badge */}
         <div style={{
