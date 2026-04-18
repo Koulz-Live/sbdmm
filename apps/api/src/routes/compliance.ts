@@ -69,6 +69,44 @@ router.post(
   },
 );
 
+// ─── GET /api/v1/compliance/results ───────────────────────────────────────────
+// Returns a paginated list of all compliance results for the tenant
+router.get(
+  '/results',
+  requireRole(['tenant_admin', 'super_admin']),
+  async (req: Request, res: Response): Promise<void> => {
+    const log = createChildLogger({ request_id: req.requestId });
+    const supabase = getAdminClient();
+    const actor = req.user!;
+    const perPage = Math.min(Number(req.query['per_page'] ?? 50), 100);
+    const page = Math.max(Number(req.query['page'] ?? 1), 1);
+    const offset = (page - 1) * perPage;
+
+    const tenantFilter = actor.role === 'super_admin'
+      ? supabase.from('compliance_results').select('*', { count: 'exact' })
+      : supabase.from('compliance_results').select('*', { count: 'exact' }).eq('tenant_id', actor.tenant_id);
+
+    const { data, error, count } = await tenantFilter
+      .order('evaluated_at', { ascending: false })
+      .range(offset, offset + perPage - 1);
+
+    if (error) {
+      log.error('[COMPLIANCE] List query failed', { error: error.message });
+      throw new AppError('Failed to retrieve compliance results.', 500);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: data ?? [],
+      meta: {
+        request_id: req.requestId,
+        timestamp: new Date().toISOString(),
+        pagination: { page, per_page: perPage, total: count ?? 0, total_pages: Math.ceil((count ?? 0) / perPage) },
+      },
+    });
+  },
+);
+
 // ─── GET /api/v1/compliance/results/:orderId ──────────────────────────────────
 // Returns compliance results for an order (all checks)
 router.get(

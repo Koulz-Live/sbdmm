@@ -249,7 +249,7 @@ router.get(
       .eq('tenant_id', tenantId)
       .eq('status', 'active')
       // Only items from approved vendors
-      .eq('vendors.status', 'approved');
+      .eq('vendors.onboarding_status', 'approved');
 
     // Free-text search across title, description and tags
     if (q) {
