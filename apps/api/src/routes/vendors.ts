@@ -227,7 +227,7 @@ router.patch(
 
     const { data: updated, error: updateError } = await supabase
       .from('vendors')
-      .update({ status, updated_at: new Date().toISOString() })
+      .update({ onboarding_status: status, updated_at: new Date().toISOString() })
       .eq('id', req.params['id'])
       .select()
       .single();
@@ -281,10 +281,10 @@ router.delete(
     if (fetchError || !existing) throw new NotFoundError('Vendor not found.');
     assertTenantOwnership(req, existing.tenant_id as string, res);
 
-    // Soft-delete: set status to suspended and add deleted_at
+    // Soft-delete: set onboarding_status to suspended and add deleted_at
     const { error: deleteError } = await supabase
       .from('vendors')
-      .update({ status: 'suspended', deleted_at: new Date().toISOString() })
+      .update({ onboarding_status: 'suspended', deleted_at: new Date().toISOString() })
       .eq('id', req.params['id']);
 
     if (deleteError) {
@@ -326,7 +326,7 @@ router.get(
     // Verify vendor belongs to this tenant (IDOR guard)
     const { data: vendor, error: vendorError } = await supabase
       .from('vendors')
-      .select('id, tenant_id, company_name, status')
+      .select('id, tenant_id, company_name, onboarding_status')
       .eq('id', req.params['id'])
       .eq('tenant_id', req.user!.tenant_id)
       .single();
