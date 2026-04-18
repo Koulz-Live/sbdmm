@@ -240,7 +240,7 @@ router.get(
           company_name,
           country_of_registration,
           business_category,
-          status,
+          onboarding_status,
           website_url
         )
         `,
