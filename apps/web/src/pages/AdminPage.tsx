@@ -117,9 +117,9 @@ function TenantsTab(): React.JSX.Element {
 
   const fetchTenants = useCallback(async (p: number): Promise<void> => {
     setIsLoading(true);
-    const result = await api.get<{ data: TenantSummary[] }>(`/api/v1/admin/tenants?page=${p}&per_page=20`);
+    const result = await api.get<TenantSummary[]>(`/api/v1/admin/tenants?page=${p}&per_page=20`);
     if (result.success && result.data) {
-      setTenants(result.data.data ?? []);
+      setTenants(result.data ?? []);
       if (result.meta?.pagination) setPagination(result.meta.pagination);
     } else setError(result.error?.message ?? 'Failed to load tenants.');
     setIsLoading(false);
@@ -446,9 +446,9 @@ function UsersTab({ tenants }: { tenants: TenantSummary[] }): React.JSX.Element 
 
   const fetchUsers = useCallback(async (p: number, s = search, role = filterRole, active = filterActive): Promise<void> => {
     setIsLoading(true); setError(null);
-    const result = await api.get<{ data: UserProfile[] }>(buildUrl(p, s, role, active));
+    const result = await api.get<UserProfile[]>(buildUrl(p, s, role, active));
     if (result.success && result.data) {
-      setUsers(result.data.data ?? []);
+      setUsers(result.data ?? []);
       if (result.meta?.pagination) setPagination(result.meta.pagination);
     } else {
       setError(result.error?.message ?? 'Failed to load users.');
@@ -1209,9 +1209,9 @@ function AuditEventsPanel(): React.JSX.Element {
 
   const fetchLogs = useCallback(async (p: number): Promise<void> => {
     setIsLoading(true); setError(null);
-    const result = await api.get<{ data: AuditLogEntry[] }>(buildUrl(p));
+    const result = await api.get<AuditLogEntry[]>(buildUrl(p));
     if (result.success && result.data) {
-      setEntries(result.data.data ?? []);
+      setEntries(result.data ?? []);
       if (result.meta?.pagination) setPagination(result.meta.pagination);
     } else setError(result.error?.message ?? 'Failed to load audit logs.');
     setIsLoading(false);
@@ -1331,9 +1331,9 @@ function AuditUsersPanel({ showToast }: { showToast: (type: 'success' | 'error',
     setIsLoading(true); setError(null);
     const params = new URLSearchParams({ page: String(p), per_page: '20' });
     if (s) params.set('search', s);
-    const result = await api.get<{ data: UserProfile[] }>(`/api/v1/admin/users?${params.toString()}`);
+    const result = await api.get<UserProfile[]>(`/api/v1/admin/users?${params.toString()}`);
     if (result.success && result.data) {
-      setUsers(result.data.data ?? []);
+      setUsers(result.data ?? []);
       if (result.meta?.pagination) setPagination(result.meta.pagination);
     } else setError(result.error?.message ?? 'Failed to load users.');
     setIsLoading(false);
@@ -1429,9 +1429,9 @@ function AuditIpsPanel({ showToast }: { showToast: (type: 'success' | 'error', t
 
   const fetchIps = useCallback(async (p: number, active: boolean): Promise<void> => {
     setIsLoading(true); setError(null);
-    const result = await api.get<{ data: BlockedIp[] }>(`/api/v1/admin/blocked-ips?page=${p}&per_page=50&active=${active}`);
+    const result = await api.get<BlockedIp[]>(`/api/v1/admin/blocked-ips?page=${p}&per_page=50&active=${active}`);
     if (result.success && result.data) {
-      setIps(result.data.data ?? []);
+      setIps(result.data ?? []);
       if (result.meta?.pagination) setPagination(result.meta.pagination);
     } else setError(result.error?.message ?? 'Failed to load blocked IPs.');
     setIsLoading(false);
@@ -1565,9 +1565,9 @@ function AuditAiPanel(): React.JSX.Element {
     if (filterModel)    params.set('model', filterModel);
     if (filterDateFrom) params.set('date_from', new Date(filterDateFrom).toISOString());
     if (filterDateTo)   params.set('date_to', new Date(filterDateTo).toISOString());
-    const result = await api.get<{ data: AiUsageLog[] }>(`/api/v1/admin/ai-usage?${params.toString()}`);
+    const result = await api.get<AiUsageLog[]>(`/api/v1/admin/ai-usage?${params.toString()}`);
     if (result.success && result.data) {
-      setLogs(result.data.data ?? []);
+      setLogs(result.data ?? []);
       if (result.meta?.pagination) setPagination(result.meta.pagination);
     } else setError(result.error?.message ?? 'Failed to load AI usage.');
     setIsLoading(false);
@@ -1662,9 +1662,9 @@ function AuditNavPanel(): React.JSX.Element {
     setIsLoading(true); setError(null);
     const params = new URLSearchParams({ page: String(p), per_page: '100' });
     if (path) params.set('path', path);
-    const result = await api.get<{ data: typeof logs }>(`/api/v1/admin/page-navigation?${params.toString()}`);
+    const result = await api.get<typeof logs>(`/api/v1/admin/page-navigation?${params.toString()}`);
     if (result.success && result.data) {
-      setLogs(result.data.data ?? []);
+      setLogs(result.data ?? []);
       if (result.meta?.pagination) setPagination(result.meta.pagination);
     } else setError(result.error?.message ?? 'Failed to load navigation logs.');
     setIsLoading(false);

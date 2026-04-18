@@ -343,7 +343,7 @@ export default function DashboardPage(): React.JSX.Element {
       setError(null);
       const [statsResult, ordersResult] = await Promise.all([
         api.get<DashboardStats>('/api/v1/dashboard/stats'),
-        api.get<{ data: Order[]; total: number }>('/api/v1/orders?limit=5'),
+        api.get<Order[]>('/api/v1/orders?limit=5'),
       ]);
       if (cancelled) return;
       if (!statsResult.success) {
@@ -352,7 +352,7 @@ export default function DashboardPage(): React.JSX.Element {
         setStats(statsResult.data ?? null);
       }
       if (ordersResult.success && ordersResult.data) {
-        setRecentOrders(ordersResult.data.data ?? []);
+        setRecentOrders(ordersResult.data ?? []);
       }
       setIsLoading(false);
     };

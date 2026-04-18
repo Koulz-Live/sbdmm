@@ -62,11 +62,11 @@ export default function VendorsPage(): React.JSX.Element {
   const fetchVendors = useCallback(async (p: number): Promise<void> => {
     setIsLoading(true);
     setError(null);
-    const result = await api.get<{ data: Vendor[]; total: number }>(
+    const result = await api.get<Vendor[]>(
       `/api/v1/vendors?page=${p}&per_page=${PAGE_SIZE}`,
     );
     if (result.success && result.data) {
-      setVendors(result.data.data ?? []);
+      setVendors(result.data ?? []);
       if (result.meta?.pagination) setPagination(result.meta.pagination);
     } else {
       setError(result.error?.message ?? 'Failed to load vendors.');

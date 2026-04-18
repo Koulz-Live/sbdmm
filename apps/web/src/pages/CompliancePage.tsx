@@ -171,8 +171,8 @@ export default function CompliancePage(): React.JSX.Element {
   const fetchResults = useCallback(async (): Promise<void> => {
     setIsLoading(true);
     setError(null);
-    const result = await api.get<{ data: ComplianceListItem[] }>('/api/v1/compliance/results?per_page=50');
-    if (result.success && result.data) setResults(result.data.data ?? []);
+    const result = await api.get<ComplianceListItem[]>('/api/v1/compliance/results?per_page=50');
+    if (result.success && result.data) setResults(result.data ?? []);
     else setError(result.error?.message ?? 'Failed to load compliance results.');
     setIsLoading(false);
   }, []);

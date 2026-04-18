@@ -300,11 +300,11 @@ export default function OrdersPage(): React.JSX.Element {
     if (search)   params.set('search',    search);
     if (dateFrom) params.set('date_from', dateFrom);
     if (dateTo)   params.set('date_to',   dateTo);
-    const result = await api.get<{ data: Order[]; total: number }>(
+    const result = await api.get<Order[]>(
       `/api/v1/orders?${params.toString()}`,
     );
     if (result.success && result.data) {
-      setOrders(result.data.data ?? []);
+      setOrders(result.data ?? []);
       if (result.meta?.pagination) setPagination(result.meta.pagination);
     } else {
       setError(result.error?.message ?? 'Failed to load orders.');
