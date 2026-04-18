@@ -21,8 +21,8 @@ function TenantSwitcher({ collapsed }: { collapsed: boolean }): React.JSX.Elemen
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    void api.get<{ data: TenantOption[] }>('/api/v1/admin/tenants?per_page=100').then(res => {
-      if (res.success && res.data) setTenants(res.data.data ?? []);
+    void api.get<TenantOption[]>('/api/v1/admin/tenants?per_page=100').then(res => {
+      if (res.success && res.data) setTenants(res.data ?? []);
     });
   }, []);
 
@@ -264,7 +264,7 @@ export function NavBar(): React.JSX.Element {
       style={{
         width: collapsed ? 64 : 240,
         minHeight: '100vh',
-        background: '#1e293b',
+        background: 'var(--nav-bg)',
         transition: 'width 0.2s ease',
         position: 'sticky',
         top: 0,
@@ -278,7 +278,7 @@ export function NavBar(): React.JSX.Element {
         className="d-flex align-items-center px-16 gap-8"
         style={{
           height: 72,
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          borderBottom: '1px solid var(--nav-border)',
           flexShrink: 0,
           justifyContent: collapsed ? 'center' : 'space-between',
         }}
@@ -358,7 +358,7 @@ export function NavBar(): React.JSX.Element {
       </div>
 
       {/* User footer */}
-      <div style={{ padding: collapsed ? '12px 8px' : '12px 16px', borderTop: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+      <div style={{ padding: collapsed ? '12px 8px' : '12px 16px', borderTop: '1px solid var(--nav-border)', flexShrink: 0 }}>
         {!collapsed && (
           <div className="d-flex align-items-center gap-10 mb-10">
             <div

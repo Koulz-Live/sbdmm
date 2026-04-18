@@ -18,6 +18,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { NavBar } from './NavBar';
 import { NotificationsDropdown } from './NotificationsDropdown';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 /** Map route paths → human-readable page titles for the top bar */
 const PAGE_TITLES: Record<string, string> = {
@@ -37,6 +38,7 @@ const PAGE_TITLES: Record<string, string> = {
 export function AppLayout(): React.JSX.Element {
   const { pathname } = useLocation();
   const { simulatedRole, setSimulatedRole } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   // Match exact path first, then try prefix match for dynamic routes (e.g. /vendors/:id)
   const pageTitle =
     PAGE_TITLES[pathname] ??
@@ -44,7 +46,7 @@ export function AppLayout(): React.JSX.Element {
     'SBDMM';
 
   return (
-    <div className="d-flex" style={{ minHeight: '100vh', background: '#f1f5f9' }}>
+    <div className="d-flex" style={{ minHeight: '100vh', background: 'var(--bg-app)' }}>
       {/* Skip-to-content link (a11y) */}
       <a
         href="#main-content"
@@ -62,15 +64,16 @@ export function AppLayout(): React.JSX.Element {
           className="d-flex align-items-center px-24"
           style={{
             height: 64,
-            background: '#ffffff',
-            borderBottom: '1px solid #e2e8f0',
+            background: 'var(--topbar-bg)',
+            borderBottom: '1px solid var(--topbar-border)',
             flexShrink: 0,
             gap: 16,
+            transition: 'background 0.2s ease, border-color 0.2s ease',
           }}
         >
           <h1
             className="mb-0 fw-bold"
-            style={{ fontSize: 18, color: '#0f172a', flex: 1 }}
+            style={{ fontSize: 18, color: 'var(--text-primary)', flex: 1 }}
           >
             {pageTitle}
           </h1>
@@ -115,8 +118,30 @@ export function AppLayout(): React.JSX.Element {
           {/* Quick actions */}
           <div className="d-flex align-items-center gap-12">
             <NotificationsDropdown />
+            {/* Dark / light mode toggle */}
             <button
-              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 20 }}
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--text-muted)',
+                fontSize: 20,
+                display: 'flex',
+                alignItems: 'center',
+                padding: 4,
+                borderRadius: 6,
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; }}
+            >
+              <i className={theme === 'dark' ? 'ph ph-sun' : 'ph ph-moon'} />
+            </button>
+            <button
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 20 }}
               aria-label="Settings"
             >
               <i className="ph ph-gear" />

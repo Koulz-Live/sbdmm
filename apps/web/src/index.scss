@@ -5,6 +5,121 @@
 // App-level overrides / additions
 :root {
   --sbdmm-sidebar-width: 240px;
+
+  // ── Light mode tokens (default) ──────────────────────────────────────
+  --bg-app:          #f1f5f9;
+  --bg-surface:      #ffffff;
+  --bg-surface-2:    #f8fafc;
+  --bg-surface-3:    #f1f5f9;
+  --border:          #e2e8f0;
+  --border-subtle:   #f1f5f9;
+  --text-primary:    #0f172a;
+  --text-secondary:  #374151;
+  --text-muted:      #64748b;
+  --text-faint:      #94a3b8;
+  --nav-bg:          #1e293b;
+  --nav-border:      rgba(255,255,255,0.08);
+  --topbar-bg:       #ffffff;
+  --topbar-border:   #e2e8f0;
+  --shadow-sm:       0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md:       0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg:       0 8px 24px rgba(0,0,0,0.10);
+  --card-bg:         #ffffff;
+  --input-bg:        #ffffff;
+  --input-border:    #e2e8f0;
+  --table-row-hover: #f8fafc;
+  --badge-muted-bg:  #f1f5f9;
+  --badge-muted-fg:  #475569;
+
+  // Brand stays constant
+  --brand:           #299E60;
+  --brand-hover:     #22844f;
+}
+
+// ── Dark mode tokens ──────────────────────────────────────────────────────
+[data-theme="dark"] {
+  --bg-app:          #0f172a;
+  --bg-surface:      #1e293b;
+  --bg-surface-2:    #1e293b;
+  --bg-surface-3:    #273549;
+  --border:          rgba(255,255,255,0.10);
+  --border-subtle:   rgba(255,255,255,0.06);
+  --text-primary:    #f1f5f9;
+  --text-secondary:  #cbd5e1;
+  --text-muted:      #94a3b8;
+  --text-faint:      #64748b;
+  --nav-bg:          #0f172a;
+  --nav-border:      rgba(255,255,255,0.07);
+  --topbar-bg:       #1e293b;
+  --topbar-border:   rgba(255,255,255,0.08);
+  --shadow-sm:       0 1px 3px rgba(0,0,0,0.30);
+  --shadow-md:       0 4px 12px rgba(0,0,0,0.35);
+  --shadow-lg:       0 8px 24px rgba(0,0,0,0.45);
+  --card-bg:         #1e293b;
+  --input-bg:        #273549;
+  --input-border:    rgba(255,255,255,0.12);
+  --table-row-hover: #273549;
+  --badge-muted-bg:  rgba(255,255,255,0.08);
+  --badge-muted-fg:  #94a3b8;
+}
+
+// ── Global element resets to pick up tokens ───────────────────────────────
+body {
+  background-color: var(--bg-app) !important;
+  color: var(--text-primary) !important;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+// Cards
+.card {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+
+// Tables
+.table {
+  color: var(--text-primary) !important;
+  --bs-table-bg: var(--card-bg);
+  --bs-table-striped-bg: var(--bg-surface-3);
+  --bs-table-hover-bg: var(--table-row-hover);
+  --bs-table-border-color: var(--border);
+}
+
+// Form controls
+.form-control,
+.form-select,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="date"],
+select,
+textarea {
+  background-color: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--text-primary) !important;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+
+  &::placeholder { color: var(--text-faint) !important; }
+}
+
+// Modals
+.modal-content {
+  background-color: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
+}
+
+// Dropdowns
+.dropdown-menu {
+  background-color: var(--bg-surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+.dropdown-item {
+  color: var(--text-secondary) !important;
+  &:hover { background-color: var(--bg-surface-3) !important; }
 }
 
 // Utility: visually hidden (a11y)
