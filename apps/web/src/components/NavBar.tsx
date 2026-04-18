@@ -293,7 +293,7 @@ export function NavBar(): React.JSX.Element {
             </span>
             <div>
               <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>SBDMM</div>
-              <div style={{ color: '#64748b', fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase' }}>5PL Platform</div>
+              <div style={{ color: '#94a3b8', fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase' }}>5PL Platform</div>
             </div>
           </div>
         )}
@@ -311,7 +311,7 @@ export function NavBar(): React.JSX.Element {
           style={{
             background: 'transparent',
             border: 'none',
-            color: '#64748b',
+            color: '#94a3b8',
             cursor: 'pointer',
             padding: 4,
             display: 'flex',
@@ -326,7 +326,7 @@ export function NavBar(): React.JSX.Element {
       {/* Nav links */}
       <div className="flex-grow-1 py-12 px-8 d-flex flex-column" style={{ gap: 4 }}>
         {!collapsed && (
-          <div style={{ color: '#475569', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '8px 8px 4px' }}>
+          <div style={{ color: '#94a3b8', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '8px 8px 4px' }}>
             Navigation
           </div>
         )}
@@ -377,10 +377,10 @@ export function NavBar(): React.JSX.Element {
                     <i className="ph ph-eye me-4" style={{ fontSize: 10 }} />
                     {simulatedRole.replace(/_/g, ' ')}
                   </span>
-                  <span style={{ color: '#475569' }}> (preview)</span>
+                  <span style={{ color: '#94a3b8' }}> (preview)</span>
                 </div>
               ) : (
-                <div style={{ color: '#64748b', fontSize: 11, textTransform: 'capitalize' }}>
+                <div style={{ color: '#94a3b8', fontSize: 11, textTransform: 'capitalize' }}>
                   {role?.replace(/_/g, ' ') ?? '—'}
                 </div>
               )}
@@ -399,7 +399,7 @@ export function NavBar(): React.JSX.Element {
             width: '100%',
             padding: collapsed ? '8px' : '8px 12px',
             background: 'transparent',
-            color: signingOut ? '#475569' : '#f87171',
+            color: signingOut ? '#8ba4b8' : '#f87171',
             border: '1px solid rgba(255,255,255,0.08)',
             borderRadius: 8,
             cursor: signingOut ? 'not-allowed' : 'pointer',
