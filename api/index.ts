@@ -6,6 +6,12 @@
  */
 import { createApp } from '../apps/api/src/app';
 
-const app = createApp();
+let app: ReturnType<typeof createApp>;
+try {
+  app = createApp();
+} catch (err) {
+  console.error('[VERCEL] createApp() failed at module load:', err);
+  throw err;
+}
 
-export default app;
+export default app!;

@@ -701,7 +701,7 @@ export default function FurnitureFeedPage(): React.JSX.Element {
         <div style={{ marginBottom: 14 }}>
           <h2 style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
             <i className="ph ph-storefront me-2" style={{ color: '#299E60' }} />
-            Furniture &amp; Logistics Marketplace
+            Furniture Marketplace
           </h2>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: '#64748b' }}>
             Browse {total > 0 ? total.toLocaleString() : ''} active listings from approved vendors
