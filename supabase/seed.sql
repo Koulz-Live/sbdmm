@@ -707,7 +707,7 @@ ON CONFLICT (id) DO NOTHING;
 
 -- ─── 12. Compliance Evaluations ───────────────────────────────────────────────
 
-INSERT INTO public.compliance_evaluations (
+INSERT INTO public.compliance_results (
   id, tenant_id, context_type, context_id, overall_status, check_results
 ) VALUES
   (
@@ -806,7 +806,7 @@ INSERT INTO public.vendor_ratings (
     '30000000-0000-0000-0000-000000000003',
     '50000000-0000-0000-0000-000000000005',
     '10000000-0000-0000-0000-000000000001',
-    '20000000-0000-0000-0000-000000000005',
+    '20000000-0000-0000-0000-000000000002',
     4,
     'Fast and reliable. Communication could be slightly more proactive during transit.'
   )
