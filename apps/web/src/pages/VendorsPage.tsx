@@ -154,11 +154,11 @@ export default function VendorsPage(): React.JSX.Element {
         </div>
       ) : vendors.length === 0 ? (
         <div className="d-flex flex-column align-items-center justify-content-center py-64 text-center">
-          <div className="d-inline-flex align-items-center justify-content-center rounded-circle mb-16" style={{ width: 64, height: 64, background: '#f1f5f9' }}>
-            <i className="ph ph-storefront" style={{ fontSize: 28, color: '#94a3b8' }} />
+          <div className="d-inline-flex align-items-center justify-content-center rounded-circle mb-16" style={{ width: 64, height: 64, background: 'var(--bg-surface-3)' }}>
+            <i className="ph ph-storefront" style={{ fontSize: 28, color: 'var(--text-muted)' }} />
           </div>
-          <p className="fw-semibold mb-4" style={{ color: '#374151' }}>No vendors yet</p>
-          <p style={{ color: '#94a3b8', fontSize: 13 }}>Use "Onboard Vendor" to add the first one.</p>
+          <p className="fw-semibold mb-4" style={{ color: 'var(--text-secondary)' }}>No vendors yet</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Use "Onboard Vendor" to add the first one.</p>
         </div>
       ) : (
         <>
@@ -179,16 +179,16 @@ export default function VendorsPage(): React.JSX.Element {
                         {vendor.company_name.charAt(0).toUpperCase()}
                       </div>
                       <div style={{ overflow: 'hidden' }}>
-                        <div className="fw-semibold text-truncate" style={{ fontSize: 14, color: '#0f172a' }}>{vendor.company_name}</div>
-                        <div style={{ fontSize: 12, color: '#64748b' }}>{vendor.business_category.replace(/_/g, ' ')}</div>
+                        <div className="fw-semibold text-truncate" style={{ fontSize: 14, color: 'var(--text-primary)' }}>{vendor.company_name}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{vendor.business_category.replace(/_/g, ' ')}</div>
                       </div>
                     </div>
 
-                    <div className="d-flex align-items-center gap-6 mb-8" style={{ fontSize: 12, color: '#64748b' }}>
+                    <div className="d-flex align-items-center gap-6 mb-8" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                       <i className="ph ph-map-pin" />
                       {vendor.country_of_registration}
                     </div>
-                    <div className="d-flex align-items-center gap-6 mb-16" style={{ fontSize: 12, color: '#64748b' }}>
+                    <div className="d-flex align-items-center gap-6 mb-16" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                       <i className="ph ph-envelope" />
                       <span className="text-truncate">{vendor.contact_email}</span>
                     </div>
@@ -199,17 +199,17 @@ export default function VendorsPage(): React.JSX.Element {
                     </div>
 
                     {isAdmin && (
-                      <div className="d-flex gap-8 flex-wrap mt-12 pt-12" style={{ borderTop: '1px solid #f1f5f9' }}>
+                      <div className="d-flex gap-8 flex-wrap mt-12 pt-12" style={{ borderTop: '1px solid var(--border-subtle)' }}>
                         {vendor.onboarding_status === 'pending_review' && (
                           <>
                             <button onClick={() => void handleStatusChange(vendor.id, 'approved')}
                               className="btn btn-sm d-flex align-items-center gap-4"
-                              style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 6, fontSize: 12 }}>
+                              style={{ background: 'var(--badge-green-bg)', color: 'var(--badge-green-fg)', border: '1px solid var(--badge-green-fg)', borderRadius: 6, fontSize: 12 }}>
                               <i className="ph ph-check" /> Approve
                             </button>
                             <button onClick={() => void handleStatusChange(vendor.id, 'rejected')}
                               className="btn btn-sm d-flex align-items-center gap-4"
-                              style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 6, fontSize: 12 }}>
+                              style={{ background: 'var(--badge-red-bg)', color: 'var(--badge-red-fg)', border: '1px solid var(--badge-red-fg)', borderRadius: 6, fontSize: 12 }}>
                               <i className="ph ph-x" /> Reject
                             </button>
                           </>
@@ -217,14 +217,14 @@ export default function VendorsPage(): React.JSX.Element {
                         {vendor.onboarding_status === 'approved' && (
                           <button onClick={() => void handleStatusChange(vendor.id, 'suspended')}
                             className="btn btn-sm d-flex align-items-center gap-4"
-                            style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa', borderRadius: 6, fontSize: 12 }}>
+                            style={{ background: 'var(--badge-orange-bg)', color: 'var(--badge-orange-fg)', border: '1px solid var(--badge-orange-fg)', borderRadius: 6, fontSize: 12 }}>
                             <i className="ph ph-pause-circle" /> Suspend
                           </button>
                         )}
                         {vendor.onboarding_status === 'suspended' && (
                           <button onClick={() => void handleStatusChange(vendor.id, 'approved')}
                             className="btn btn-sm d-flex align-items-center gap-4"
-                            style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 6, fontSize: 12 }}>
+                            style={{ background: 'var(--badge-green-bg)', color: 'var(--badge-green-fg)', border: '1px solid var(--badge-green-fg)', borderRadius: 6, fontSize: 12 }}>
                             <i className="ph ph-play-circle" /> Reinstate
                           </button>
                         )}
@@ -235,7 +235,7 @@ export default function VendorsPage(): React.JSX.Element {
                     <Link
                       to={`/vendors/${vendor.id}`}
                       className="btn btn-sm d-flex align-items-center justify-content-center gap-6 w-100 mt-10"
-                      style={{ background: '#f8fafc', color: '#334155', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, fontWeight: 600, padding: '7px 0', textDecoration: 'none' }}
+                      style={{ background: 'var(--bg-surface-2)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, fontWeight: 600, padding: '7px 0', textDecoration: 'none' }}
                     >
                       <i className="ph ph-storefront" style={{ color: '#299E60' }} /> View Profile &amp; Catalogue
                     </Link>
@@ -247,16 +247,16 @@ export default function VendorsPage(): React.JSX.Element {
 
           {pagination && (
             <div className="d-flex align-items-center justify-content-between mt-8">
-              <span style={{ fontSize: 13, color: '#64748b' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                 Showing {((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, pagination.total)} of {pagination.total} vendors
               </span>
               <div className="d-flex gap-8">
                 <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                  className="btn btn-sm" style={{ background: '#fff', border: '1px solid #e2e8f0', color: '#374151', borderRadius: 8, fontSize: 13, opacity: page === 1 ? 0.4 : 1 }}>
+                  className="btn btn-sm" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: 8, fontSize: 13, opacity: page === 1 ? 0.4 : 1 }}>
                   <i className="ph ph-caret-left" /> Prev
                 </button>
                 <button onClick={() => setPage((p) => p + 1)} disabled={page >= pagination.total_pages}
-                  className="btn btn-sm" style={{ background: '#fff', border: '1px solid #e2e8f0', color: '#374151', borderRadius: 8, fontSize: 13, opacity: page >= pagination.total_pages ? 0.4 : 1 }}>
+                  className="btn btn-sm" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: 8, fontSize: 13, opacity: page >= pagination.total_pages ? 0.4 : 1 }}>
                   Next <i className="ph ph-caret-right" />
                 </button>
               </div>
@@ -276,8 +276,8 @@ export default function VendorsPage(): React.JSX.Element {
           <div className="card border-0 shadow-lg" style={{ borderRadius: 16, width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto', margin: 16 }}>
             <div className="card-body p-32">
               <div className="d-flex align-items-center justify-content-between mb-24">
-                <h2 className="fw-bold mb-0" style={{ fontSize: 18, color: '#0f172a' }}>Onboard Vendor</h2>
-                <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 20 }}>
+                <h2 className="fw-bold mb-0" style={{ fontSize: 18, color: 'var(--text-primary)' }}>Onboard Vendor</h2>
+                <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 20 }}>
                   <i className="ph ph-x" />
                 </button>
               </div>
@@ -288,7 +288,7 @@ export default function VendorsPage(): React.JSX.Element {
                     <i className="ph ph-check-circle" style={{ fontSize: 32, color: '#15803d' }} />
                   </div>
                   <p className="fw-semibold mb-4" style={{ color: '#15803d' }}>Vendor onboarded successfully!</p>
-                  <p style={{ color: '#64748b', fontSize: 13 }}>Compliance check is now running in the background.</p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Compliance check is now running in the background.</p>
                 </div>
               ) : (
                 <form onSubmit={(e) => void handleSubmit(e)}>
@@ -336,7 +336,7 @@ export default function VendorsPage(): React.JSX.Element {
 
                   <div className="d-flex justify-content-end gap-8 mt-24">
                     <button type="button" onClick={() => setShowModal(false)} disabled={isSubmitting}
-                      className="btn" style={{ background: '#fff', border: '1px solid #e2e8f0', color: '#374151', borderRadius: 8, fontSize: 14 }}>
+                      className="btn" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: 8, fontSize: 14 }}>
                       Cancel
                     </button>
                     <button type="submit" disabled={isSubmitting}
@@ -358,10 +358,10 @@ export default function VendorsPage(): React.JSX.Element {
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
 const VENDOR_STATUS_META: Record<string, { bg: string; text: string }> = {
-  pending_review: { bg: '#fffbeb', text: '#d97706' },
-  approved:       { bg: '#f0fdf4', text: '#15803d' },
-  rejected:       { bg: '#fef2f2', text: '#b91c1c' },
-  suspended:      { bg: '#f9fafb', text: '#6b7280' },
+  pending_review: { bg: 'var(--badge-amber-bg)', text: 'var(--badge-amber-fg)' },
+  approved:       { bg: 'var(--badge-green-bg)', text: 'var(--badge-green-fg)' },
+  rejected:       { bg: 'var(--badge-red-bg)',   text: 'var(--badge-red-fg)' },
+  suspended:      { bg: 'var(--badge-muted-bg)', text: 'var(--badge-muted-fg)' },
 };
 
 function VendorStatusBadge({ status }: { status: string }): React.JSX.Element {
@@ -374,10 +374,10 @@ function VendorStatusBadge({ status }: { status: string }): React.JSX.Element {
 }
 
 const COMPLIANCE_META: Record<string, { bg: string; text: string; icon: string }> = {
-  pending:       { bg: '#fffbeb', text: '#d97706',  icon: 'ph ph-clock' },
-  passed:        { bg: '#f0fdf4', text: '#15803d',  icon: 'ph ph-shield-check' },
-  failed:        { bg: '#fef2f2', text: '#b91c1c',  icon: 'ph ph-shield-warning' },
-  manual_review: { bg: '#fff7ed', text: '#c2410c',  icon: 'ph ph-magnifying-glass' },
+  pending:       { bg: 'var(--badge-amber-bg)',  text: 'var(--badge-amber-fg)',  icon: 'ph ph-clock' },
+  passed:        { bg: 'var(--badge-green-bg)',  text: 'var(--badge-green-fg)',  icon: 'ph ph-shield-check' },
+  failed:        { bg: 'var(--badge-red-bg)',    text: 'var(--badge-red-fg)',    icon: 'ph ph-shield-warning' },
+  manual_review: { bg: 'var(--badge-orange-bg)', text: 'var(--badge-orange-fg)', icon: 'ph ph-magnifying-glass' },
 };
 
 function ComplianceBadge({ status }: { status: string }): React.JSX.Element {

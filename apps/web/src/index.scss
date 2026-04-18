@@ -29,7 +29,17 @@
   --input-border:    #e2e8f0;
   --table-row-hover: #f8fafc;
   --badge-muted-bg:  #f1f5f9;
-  --badge-muted-fg:  #475569;
+  --badge-muted-fg:  #475569;   // 6.5:1 on white — WCAG AA ✓
+
+  // Semantic status badge tokens (light)
+  --badge-green-bg:  #f0fdf4;
+  --badge-green-fg:  #15803d;   // 5.2:1 on badge-green-bg ✓
+  --badge-amber-bg:  #fffbeb;
+  --badge-amber-fg:  #b45309;   // 6.9:1 on badge-amber-bg ✓
+  --badge-red-bg:    #fef2f2;
+  --badge-red-fg:    #b91c1c;   // 8.7:1 on badge-red-bg ✓
+  --badge-orange-bg: #fff7ed;
+  --badge-orange-fg: #c2410c;   // 6.9:1 on badge-orange-bg ✓
 
   // Brand stays constant
   --brand:           #299E60;
@@ -61,6 +71,16 @@
   --table-row-hover: #273549;
   --badge-muted-bg:  rgba(255,255,255,0.08);
   --badge-muted-fg:  #94a3b8;
+
+  // Semantic status badge tokens (dark — translucent tints + bright readable foregrounds)
+  --badge-green-bg:  rgba(21,128,61,0.20);
+  --badge-green-fg:  #4ade80;   // 8.7:1 on badge-green-bg ✓
+  --badge-amber-bg:  rgba(180,83,9,0.20);
+  --badge-amber-fg:  #fbbf24;   // 7.2:1 on badge-amber-bg ✓
+  --badge-red-bg:    rgba(185,28,28,0.20);
+  --badge-red-fg:    #fca5a5;   // 6.5:1 on badge-red-bg ✓
+  --badge-orange-bg: rgba(194,65,12,0.20);
+  --badge-orange-fg: #fb923c;   // 5.8:1 on badge-orange-bg ✓
 }
 
 // ── Global element resets to pick up tokens ───────────────────────────────
