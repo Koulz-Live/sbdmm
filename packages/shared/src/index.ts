@@ -166,7 +166,7 @@ export interface Vendor {
   contact_phone: string | null;
   business_category: BusinessCategory;
   website_url: string | null;
-  status: VendorStatus;
+  onboarding_status: VendorStatus;
   compliance_status: ComplianceStatus;
   onboarded_by: string;
   created_at: string;

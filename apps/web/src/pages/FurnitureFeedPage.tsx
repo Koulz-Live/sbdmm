@@ -613,8 +613,8 @@ export default function FurnitureFeedPage(): React.JSX.Element {
 
   // Load signals once on mount
   useEffect(() => {
-    void api.get<{ data: FeedSignals }>('/api/v1/feed/signals').then(res => {
-      if (res.success && res.data) setSignals(res.data.data);
+    void api.get<FeedSignals>('/api/v1/feed/signals').then(res => {
+      if (res.success && res.data) setSignals(res.data);
       setSignalsLoaded(true);
     });
   }, []);
@@ -640,17 +640,17 @@ export default function FurnitureFeedPage(): React.JSX.Element {
     if (debouncedSearch) params.set('q', debouncedSearch);
     if (activeTag) params.set('tag', activeTag);
 
-    const res = await api.get<{ data: FeedItem[]; meta: FeedMeta }>(`/api/v1/feed?${params.toString()}`);
+    const res = await api.get<FeedItem[]>(`/api/v1/feed?${params.toString()}`);
 
     if (!res.success || !res.data) {
       setError('Failed to load the feed. Please try again.');
     } else {
       if (append) {
-        setItems(prev => [...prev, ...res.data!.data]);
+        setItems(prev => [...prev, ...res.data!]);
       } else {
-        setItems(res.data.data);
+        setItems(res.data);
       }
-      setMeta(res.data.meta);
+      if (res.meta) setMeta(res.meta as unknown as FeedMeta);
     }
     setLoading(false);
     setLoadingMore(false);

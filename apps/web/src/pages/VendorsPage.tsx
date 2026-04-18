@@ -194,13 +194,13 @@ export default function VendorsPage(): React.JSX.Element {
                     </div>
 
                     <div className="d-flex align-items-center gap-8 flex-wrap mb-12">
-                      <VendorStatusBadge status={vendor.status} />
+                      <VendorStatusBadge status={vendor.onboarding_status} />
                       <ComplianceBadge status={vendor.compliance_status} />
                     </div>
 
                     {isAdmin && (
                       <div className="d-flex gap-8 flex-wrap mt-12 pt-12" style={{ borderTop: '1px solid #f1f5f9' }}>
-                        {vendor.status === 'pending_review' && (
+                        {vendor.onboarding_status === 'pending_review' && (
                           <>
                             <button onClick={() => void handleStatusChange(vendor.id, 'approved')}
                               className="btn btn-sm d-flex align-items-center gap-4"
@@ -214,14 +214,14 @@ export default function VendorsPage(): React.JSX.Element {
                             </button>
                           </>
                         )}
-                        {vendor.status === 'approved' && (
+                        {vendor.onboarding_status === 'approved' && (
                           <button onClick={() => void handleStatusChange(vendor.id, 'suspended')}
                             className="btn btn-sm d-flex align-items-center gap-4"
                             style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa', borderRadius: 6, fontSize: 12 }}>
                             <i className="ph ph-pause-circle" /> Suspend
                           </button>
                         )}
-                        {vendor.status === 'suspended' && (
+                        {vendor.onboarding_status === 'suspended' && (
                           <button onClick={() => void handleStatusChange(vendor.id, 'approved')}
                             className="btn btn-sm d-flex align-items-center gap-4"
                             style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 6, fontSize: 12 }}>

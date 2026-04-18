@@ -667,7 +667,7 @@ export default function VendorProfilePage() {
         : '#d97706';
 
   const statusColor =
-    vendor.status === 'approved' ? '#15803d' : vendor.status === 'pending_review' ? '#d97706' : '#dc2626';
+    vendor.onboarding_status === 'approved' ? '#15803d' : vendor.onboarding_status === 'pending_review' ? '#d97706' : '#dc2626';
 
   return (
     <>
@@ -760,7 +760,7 @@ export default function VendorProfilePage() {
                   textTransform: 'uppercase',
                 }}
               >
-                {vendor.status}
+                {vendor.onboarding_status}
               </span>
               {vendor.compliance_status && (
                 <span
