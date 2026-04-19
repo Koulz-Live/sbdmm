@@ -26,7 +26,7 @@ import 'express-async-errors'; // Must be first import — enables async error h
 import express, { Request, Response, NextFunction } from 'express';
 import { requestIdMiddleware } from './middleware/requestId';
 import { secureHeaders, additionalSecurityHeaders } from './middleware/secureHeaders';
-import { corsMiddleware } from './middleware/corsConfig';
+import { corsHandler } from './middleware/corsConfig';
 import { standardRateLimit } from './middleware/rateLimiter';
 import { inputSanitizer } from './middleware/inputSanitizer';
 import { globalErrorHandler } from './middleware/errorHandler';
@@ -61,7 +61,7 @@ export function createApp() {
   app.use(additionalSecurityHeaders); // Permissions-Policy + X-Permitted-Cross-Domain-Policies
 
   // ─── 3. CORS ────────────────────────────────────────────────────────────────
-  app.use(corsMiddleware);
+  app.use(corsHandler);
 
   // ─── 4. Body Parsing ────────────────────────────────────────────────────────
   // SECURITY: Set strict request size limits to prevent DoS via large payloads

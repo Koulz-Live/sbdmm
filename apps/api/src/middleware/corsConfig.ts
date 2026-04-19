@@ -13,6 +13,7 @@
  */
 
 import cors, { CorsOptions } from 'cors';
+import type { NextFunction, Request, Response } from 'express';
 import { config } from '../lib/config';
 import { logger } from '../lib/logger';
 
@@ -69,3 +70,50 @@ const corsOptions: CorsOptions = {
 };
 
 export const corsMiddleware = cors(corsOptions);
+
+/**
+ * Same-origin bypass wrapper for Vercel deployments.
+ *
+ * On Vercel, the frontend and the Express API are served from the same domain
+ * (e.g. sbdmm.vercel.app). Browsers still include an `Origin` header on fetch()
+ * calls, so Express's cors() sees `Origin: https://sbdmm.vercel.app` and checks
+ * it against the allowlist. If that domain is not explicitly listed in
+ * CORS_ALLOWED_ORIGINS the request is rejected with "Origin not allowed."
+ *
+ * Rather than requiring every deployment domain to be manually added to the
+ * env var, we detect the case where Origin === the server's own host and allow
+ * it unconditionally — this is definitionally same-origin and safe.
+ *
+ * This wrapper is used in place of `corsMiddleware` in the Express app entry point.
+ */
+export function corsHandler(req: Request, res: Response, next: NextFunction): void {
+  const origin = req.headers.origin as string | undefined;
+  const host   = req.headers.host   as string | undefined;   // e.g. "sbdmm.vercel.app"
+
+  if (origin && host) {
+    const isSameOrigin =
+      origin === `https://${host}` || origin === `http://${host}`;
+
+    if (isSameOrigin) {
+      // Same-origin: set minimal CORS headers and continue. No allowlist check needed.
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+      res.setHeader(
+        'Access-Control-Allow-Headers',
+        'Content-Type,Authorization,X-Request-ID,X-Idempotency-Key,X-Tenant-ID',
+      );
+      res.setHeader('Access-Control-Expose-Headers', 'X-Request-ID,X-RateLimit-Limit,X-RateLimit-Remaining');
+      res.setHeader('Vary', 'Origin');
+      if (req.method === 'OPTIONS') {
+        res.status(204).end();
+        return;
+      }
+      next();
+      return;
+    }
+  }
+
+  // Cross-origin or no-origin request: enforce the allowlist via cors().
+  corsMiddleware(req, res, next);
+}
