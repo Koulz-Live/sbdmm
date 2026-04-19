@@ -23,6 +23,42 @@
 import { getAdminClient } from '../lib/supabaseAdmin';
 import { logger } from '../lib/logger';
 import { AuditEventType } from '@sbdmm/shared';
+import { createHmac } from 'crypto';
+
+// ─── IP Address Anonymization ─────────────────────────────────────────────────
+// GDPR / POPIA COMPLIANCE: Raw IP addresses are personal data under both regulations.
+// We hash IPs with a server-side secret before storing them so that:
+// 1. Logs remain useful for security forensics (same IP → same hash in a session)
+// 2. We cannot reverse the hash to recover the original IP without the secret
+// 3. If the secret rotates, old hashes become permanently unresolvable (privacy by design)
+//
+// HUMAN DECISION: Set AUDIT_IP_HASH_SECRET to a strong random value in your secret
+// manager. Do NOT use the Supabase JWT secret or any other shared secret.
+// Generate with: openssl rand -hex 32
+const IP_HASH_SECRET = process.env['AUDIT_IP_HASH_SECRET'] ?? '';
+
+/**
+ * hashIpAddress — One-way HMAC-SHA256 of an IP address.
+ *
+ * If no secret is configured (e.g., in unit tests or early dev), the IP is
+ * replaced with a static placeholder rather than stored in plaintext.
+ * This is intentionally conservative — it is better to lose forensic value
+ * than to store unlawful personal data.
+ */
+function hashIpAddress(ip: string | undefined): string | null {
+  if (!ip) return null;
+
+  if (!IP_HASH_SECRET) {
+    // SECURITY: Log a warning — this should never happen in production
+    logger.warn('[AUDIT] AUDIT_IP_HASH_SECRET not set — IP address omitted from audit log');
+    return '[ip-hash-secret-missing]';
+  }
+
+  return createHmac('sha256', IP_HASH_SECRET)
+    .update(ip)
+    .digest('hex')
+    .slice(0, 16); // 64-bit prefix — sufficient for correlation, minimal storage
+}
 
 export interface AuditLogEntry {
   event_type: AuditEventType;
@@ -85,7 +121,7 @@ export async function writeAuditLog(entry: AuditLogEntry): Promise<void> {
       target_id: entry.target_id ?? null,
       outcome: entry.outcome,
       details: sanitizedDetails ?? null,
-      ip_address: entry.ip_address ?? null,
+      ip_address: hashIpAddress(entry.ip_address) ?? null,
       user_agent: entry.user_agent ? entry.user_agent.slice(0, 500) : null,
       request_id: entry.request_id ?? null,
       created_at: new Date().toISOString(),

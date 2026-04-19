@@ -25,9 +25,10 @@
 import 'express-async-errors'; // Must be first import — enables async error handling
 import express, { Request, Response, NextFunction } from 'express';
 import { requestIdMiddleware } from './middleware/requestId';
-import { secureHeaders } from './middleware/secureHeaders';
+import { secureHeaders, additionalSecurityHeaders } from './middleware/secureHeaders';
 import { corsMiddleware } from './middleware/corsConfig';
 import { standardRateLimit } from './middleware/rateLimiter';
+import { inputSanitizer } from './middleware/inputSanitizer';
 import { globalErrorHandler } from './middleware/errorHandler';
 import { healthRouter } from './routes/health';
 import { authRouter } from './routes/auth';
@@ -57,6 +58,7 @@ export function createApp() {
 
   // ─── 2. Secure Headers ──────────────────────────────────────────────────────
   app.use(secureHeaders);
+  app.use(additionalSecurityHeaders); // Permissions-Policy + X-Permitted-Cross-Domain-Policies
 
   // ─── 3. CORS ────────────────────────────────────────────────────────────────
   app.use(corsMiddleware);
@@ -74,13 +76,19 @@ export function createApp() {
   // has its own memory. For stricter distributed limiting, wire Upstash Redis.
   app.use(standardRateLimit);
 
+  // ─── 5a. Input Sanitization ─────────────────────────────────────────────────
+  // SECURITY: Strip null bytes, remove prototype-pollution keys, truncate oversized
+  // strings. Runs after body parsing, before any route handler or Zod validation.
+  app.use(inputSanitizer);
+
   // ─── 6. Request Logging ─────────────────────────────────────────────────────
+  // SECURITY (GDPR/POPIA): IP is not logged in plaintext. The request_id provides
+  // sufficient correlation without storing personal data in application logs.
   app.use((req: Request, _res: Response, next: NextFunction) => {
     logger.info('[REQUEST] Incoming', {
       request_id: req.requestId,
       method: req.method,
       path: req.path,
-      ip: req.ip,
       user_agent: req.headers['user-agent']?.slice(0, 200),
     });
     next();

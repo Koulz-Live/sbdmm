@@ -17,17 +17,25 @@ import { config } from '../lib/config';
 import { logger } from '../lib/logger';
 
 const allowedOrigins = new Set(config.cors.allowedOrigins);
+const isProd = config.server.nodeEnv === 'production';
 
 // Log allowed origins at startup for auditability (not a security risk)
 logger.info('[CORS] Allowed origins', { origins: [...allowedOrigins] });
 
 const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (same-origin, curl, Postman in dev)
-    // HUMAN DECISION: In production, consider rejecting no-origin requests
-    // if your API is exclusively consumed by browser clients.
+    // SECURITY (production): Reject requests with no Origin header.
+    // No-origin requests come from non-browser clients (curl, server-to-server, etc.).
+    // Our API is exclusively consumed by browser clients; legitimate server-to-server
+    // callers should use service-role keys, not the public CORS-protected API.
+    // In development we allow no-origin for local tooling convenience.
     if (!origin) {
-      callback(null, true);
+      if (isProd) {
+        logger.warn('[CORS] Blocked no-origin request in production');
+        callback(new Error('CORS: Origin header required'), false);
+      } else {
+        callback(null, true);
+      }
       return;
     }
 

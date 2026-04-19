@@ -1,0 +1,29 @@
+# Security Policy — SBDMM Platform
+#
+# This file follows the security.txt standard (RFC 9116).
+# See https://securitytxt.org for specification details.
+#
+# If you have discovered a security vulnerability in this platform,
+# please report it responsibly using the contact details below.
+# We appreciate the security research community's efforts to keep
+# our platform and users safe.
+
+# HUMAN DECISION: Replace the placeholder values below before going to production.
+# Required fields (RFC 9116): Contact, Expires
+# Recommended fields: Preferred-Languages, Encryption, Policy
+
+Contact: mailto:security@sbdmm.example.com
+Expires: 2026-12-31T23:59:59Z
+
+Policy: https://sbdmm.example.com/security-policy
+
+Preferred-Languages: en
+
+# Acknowledgements: https://sbdmm.example.com/security/hall-of-fame
+
+# Scope: This policy covers the SBDMM web application and API.
+# Out of scope: Third-party services (Supabase, OpenAI) — report those directly to the vendors.
+
+# HUMAN DECISION: Generate a GPG key pair and publish the public key at the URL below.
+# This lets researchers encrypt vulnerability reports so only your security team can read them.
+# Encryption: https://sbdmm.example.com/.well-known/pgp-key.txt

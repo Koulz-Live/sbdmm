@@ -124,3 +124,88 @@ export const aiRateLimit = rateLimit({
     });
   },
 });
+
+// ─── Per-User Authenticated Rate Limit ────────────────────────────────────────
+// Keyed on authenticated user ID, not IP address.
+// Prevents a single compromised account from flooding the API even across multiple
+// IPs (e.g., distributed bots rotating IP addresses but using the same token).
+//
+// IMPORTANT: Only apply this AFTER requireAuth middleware so req.user is populated.
+// It complements — not replaces — the IP-based standardRateLimit.
+//
+// Default: 300 requests per 15 minutes per user (3× the IP limit to accommodate
+// users on shared IPs like corporate NAT).
+export const perUserRateLimit = rateLimit({
+  windowMs: config.rateLimit.windowMs,          // 15 minutes (same as standard)
+  max: config.rateLimit.maxRequests * 3,         // 300 req/15 min per user
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Key by authenticated user ID rather than IP
+  keyGenerator: (req: Request): string => {
+    const userId = (req as unknown as { user?: { id: string } }).user?.id;
+    // Fallback to IP if somehow called before auth (belt-and-suspenders)
+    return userId ?? req.ip ?? 'unknown';
+  },
+  message: {
+    success: false,
+    error: {
+      code: ERROR_CODES.RATE_LIMITED,
+      message: 'Too many requests from your account. Please slow down.',
+    },
+  },
+  handler: (req: Request, res: Response) => {
+    const userId = (req as unknown as { user?: { id: string } }).user?.id;
+    logger.warn('[RATE_LIMIT] Per-user limit reached', {
+      request_id: req.requestId,
+      user_id: userId,
+      path: req.path,
+    });
+    res.status(429).json({
+      success: false,
+      error: {
+        code: ERROR_CODES.RATE_LIMITED,
+        message: 'Too many requests from your account. Please slow down.',
+      },
+      meta: { request_id: req.requestId, timestamp: new Date().toISOString() },
+    });
+  },
+  skip: (req: Request) => req.path === '/health' || req.path === '/ready',
+});
+
+// ─── Sensitive Write Rate Limit ───────────────────────────────────────────────
+// Applied to state-changing endpoints that are high-value targets:
+// e.g., user creation, role changes, financial operations, compliance overrides.
+//
+// Stricter than standardRateLimit; keyed by IP.
+// Intended for use on individual sensitive routes, not the entire API.
+//
+// Default: 30 writes per 15 minutes per IP.
+export const sensitiveWriteRateLimit = rateLimit({
+  windowMs: config.rateLimit.windowMs,          // 15 minutes
+  max: parseInt(process.env['RATE_LIMIT_SENSITIVE_WRITE_MAX'] ?? '30', 10),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: {
+      code: ERROR_CODES.RATE_LIMITED,
+      message: 'Too many write operations. Please wait before trying again.',
+    },
+  },
+  handler: (req: Request, res: Response) => {
+    logger.warn('[RATE_LIMIT] Sensitive write blocked', {
+      request_id: req.requestId,
+      ip: req.ip,
+      path: req.path,
+      user_id: (req as unknown as { user?: { id: string } }).user?.id,
+    });
+    res.status(429).json({
+      success: false,
+      error: {
+        code: ERROR_CODES.RATE_LIMITED,
+        message: 'Too many write operations. Please wait before trying again.',
+      },
+      meta: { request_id: req.requestId, timestamp: new Date().toISOString() },
+    });
+  },
+});
