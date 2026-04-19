@@ -123,13 +123,29 @@ export default function MfaSetupPage(): React.JSX.Element {
     setErrorMsg(null);
     const { data, error } = await supabase.auth.mfa.enroll({
       factorType: 'totp',
-      issuer: 'SBDMM Admin',
-      friendlyName: `super_admin – ${profile?.full_name ?? 'Unknown'}`,
+      // issuer appears as the account name in Google Authenticator
+      issuer: 'SBDMM',
+      friendlyName: `SBDMM – ${profile?.full_name ?? 'Admin'}`,
     });
 
     if (error || !data) {
+      // "Origin not allowed." is a Supabase Auth error that means the production
+      // URL hasn't been added to the Supabase project's URL Configuration.
+      // See: Supabase Dashboard → Authentication → URL Configuration
+      const isOriginError =
+        error?.message?.toLowerCase().includes('origin not allowed') ||
+        error?.message?.toLowerCase().includes('origin') ||
+        error?.status === 422;
+
       setStep('error');
-      setErrorMsg(error?.message ?? 'Failed to start MFA enrollment. Please try again.');
+      setErrorMsg(
+        isOriginError
+          ? 'Configuration required: this domain is not authorised in Supabase Auth settings. ' +
+            'A project admin must add https://sbdmm.vercel.app to the Supabase Authentication → ' +
+            'URL Configuration → Site URL and Redirect URLs, then enable MFA under ' +
+            'Authentication → Sign In Methods → MFA.'
+          : (error?.message ?? 'Failed to start MFA enrollment. Please try again.'),
+      );
       return;
     }
 
