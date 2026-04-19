@@ -9,9 +9,10 @@
  * 5. The results endpoint returns only the latest evaluation per context
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth } from '../middleware/auth';
 import { requireRole } from '../middleware/authorization';
+import { sensitiveWriteRateLimit } from '../middleware/rateLimiter';
 import { validate, uuidSchema } from '../schemas/index';
 import { writeAuditLog } from '../services/auditLog';
 import { evaluateCompliance } from '../compliance/complianceEngine';
@@ -22,6 +23,17 @@ import { z } from 'zod';
 
 const router = Router();
 router.use(requireAuth);
+
+// SECURITY: Compliance evaluation and review actions are sensitive writes —
+// they affect regulatory outcomes. Apply the strict write rate limit on
+// all non-GET methods in addition to the per-user limit from requireAuth.
+router.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
+    sensitiveWriteRateLimit(req, res, next);
+  } else {
+    next();
+  }
+});
 
 const resultParamsSchema = z.object({ orderId: uuidSchema });
 const contextParamsSchema = z.object({ contextId: uuidSchema });

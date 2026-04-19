@@ -7,23 +7,32 @@
 # please report it responsibly using the contact details below.
 # We appreciate the security research community's efforts to keep
 # our platform and users safe.
+#
+# ─── PRODUCTION CHECKLIST ────────────────────────────────────────
+# Before going live, replace ALL values marked TODO: below.
+# Update "Expires" to 12 months from your deployment date.
+# Run: date -v+1y +"%Y-%m-%dT%H:%M:%SZ"  (macOS)
+#      date -d "+1 year" --utc +"%Y-%m-%dT%H:%M:%SZ"  (Linux)
+# ─────────────────────────────────────────────────────────────────
 
-# HUMAN DECISION: Replace the placeholder values below before going to production.
-# Required fields (RFC 9116): Contact, Expires
-# Recommended fields: Preferred-Languages, Encryption, Policy
+# TODO: Replace with your security team's email or a dedicated alias
+# Recommended: security@yourdomain.com or a HackerOne / Bugcrowd URL
+Contact: mailto:security@yourdomain.com
 
-Contact: mailto:security@sbdmm.example.com
-Expires: 2026-12-31T23:59:59Z
+# TODO: Set to 12 months from deployment date (regenerate annually)
+Expires: 2027-04-19T23:59:59Z
 
-Policy: https://sbdmm.example.com/security-policy
+# TODO: Replace with your public-facing security policy URL
+Policy: https://yourdomain.com/security-policy
 
 Preferred-Languages: en
 
-# Acknowledgements: https://sbdmm.example.com/security/hall-of-fame
+# TODO: Once you have a responsible disclosure page, uncomment:
+# Acknowledgements: https://yourdomain.com/security/hall-of-fame
 
 # Scope: This policy covers the SBDMM web application and API.
-# Out of scope: Third-party services (Supabase, OpenAI) — report those directly to the vendors.
+# Out of scope: Third-party services (Supabase, OpenAI) — report those directly to their vendors.
 
-# HUMAN DECISION: Generate a GPG key pair and publish the public key at the URL below.
-# This lets researchers encrypt vulnerability reports so only your security team can read them.
-# Encryption: https://sbdmm.example.com/.well-known/pgp-key.txt
+# TODO: Generate a GPG key pair and publish the public key, then uncomment:
+# Encryption: https://yourdomain.com/.well-known/pgp-key.txt
+# Use: gpg --full-generate-key  →  gpg --armor --export <KEY_ID>

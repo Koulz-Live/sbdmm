@@ -13,9 +13,10 @@
  * using an upstream proxy or load-balancer IP allowlist.
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth } from '../middleware/auth';
 import { requireMfa } from '../middleware/mfaEnforcement';
+import { sensitiveWriteRateLimit } from '../middleware/rateLimiter';
 import { validate, paginationSchema, uuidSchema } from '../schemas/index';
 import { writeAuditLog } from '../services/auditLog';
 import { getAdminClient } from '../lib/supabaseAdmin';
@@ -30,6 +31,18 @@ const router = Router();
 router.use(requireAuth);
 // Role check: implemented inline per route to provide granular logging
 // requireMfa is applied below on state-changing routes
+
+// SECURITY: All non-GET admin operations are subject to an additional strict
+// write rate limit (30 req/15 min per IP) on top of perUserRateLimit in requireAuth.
+// Admin writes are the highest-value target; the extra layer limits blast radius
+// from a stolen super_admin token before revocation.
+router.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
+    sensitiveWriteRateLimit(req, res, next);
+  } else {
+    next();
+  }
+});
 
 const tenantParamsSchema = z.object({ id: uuidSchema });
 const userParamsSchema = z.object({ userId: uuidSchema });

@@ -22,6 +22,7 @@ import { Request, Response, NextFunction } from 'express';
 import { getAdminClient } from '../lib/supabaseAdmin';
 import { logger, createChildLogger } from '../lib/logger';
 import { PlatformRole, PLATFORM_ROLES, ERROR_CODES } from '@sbdmm/shared';
+import { perUserRateLimit } from './rateLimiter';
 
 // Extend Express Request with our authenticated user context
 declare global {
@@ -131,7 +132,10 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       is_active: profile.is_active as boolean,
     };
 
-    next();
+    // Apply per-user rate limit now that identity is confirmed.
+    // Keyed on user.id — catches account abuse across rotating IPs.
+    // This is the single enforcement point for all 14 authenticated routers.
+    perUserRateLimit(req, res, next);
   } catch (err) {
     // SECURITY: Log internal error details server-side, never expose to client
     log.error('[AUTH] Unexpected error during authentication', {
