@@ -18,32 +18,17 @@ import { config } from '../lib/config';
 import { logger } from '../lib/logger';
 
 const allowedOrigins = new Set(config.cors.allowedOrigins);
-const isProd = config.server.nodeEnv === 'production';
 
 // Log allowed origins at startup for auditability (not a security risk)
 logger.info('[CORS] Allowed origins', { origins: [...allowedOrigins] });
 
 const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
-    // SECURITY (production): Reject requests with no Origin header.
-    // No-origin requests come from non-browser clients (curl, server-to-server, etc.).
-    // Our API is exclusively consumed by browser clients; legitimate server-to-server
-    // callers should use service-role keys, not the public CORS-protected API.
-    // In development we allow no-origin for local tooling convenience.
-    if (!origin) {
-      if (isProd) {
-        logger.warn('[CORS] Blocked no-origin request in production');
-        callback(new Error('CORS: Origin header required'), false);
-      } else {
-        callback(null, true);
-      }
-      return;
-    }
-
-    if (allowedOrigins.has(origin)) {
+    // corsHandler() short-circuits before reaching here for no-origin and same-origin
+    // requests. By the time we reach this callback, origin is always a cross-origin value.
+    if (!origin || allowedOrigins.has(origin)) {
       callback(null, true);
     } else {
-      // Log blocked origins for security monitoring — do not throw, just reject
       logger.warn('[CORS] Blocked request from disallowed origin', { origin });
       callback(new Error('CORS: Origin not allowed'), false);
     }
@@ -90,30 +75,38 @@ export function corsHandler(req: Request, res: Response, next: NextFunction): vo
   const origin = req.headers.origin as string | undefined;
   const host   = req.headers.host   as string | undefined;   // e.g. "sbdmm.vercel.app"
 
-  if (origin && host) {
-    const isSameOrigin =
-      origin === `https://${host}` || origin === `http://${host}`;
-
-    if (isSameOrigin) {
-      // Same-origin: set minimal CORS headers and continue. No allowlist check needed.
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-      res.setHeader(
-        'Access-Control-Allow-Headers',
-        'Content-Type,Authorization,X-Request-ID,X-Idempotency-Key,X-Tenant-ID',
-      );
-      res.setHeader('Access-Control-Expose-Headers', 'X-Request-ID,X-RateLimit-Limit,X-RateLimit-Remaining');
-      res.setHeader('Vary', 'Origin');
-      if (req.method === 'OPTIONS') {
-        res.status(204).end();
-        return;
-      }
-      next();
-      return;
-    }
+  // No Origin header = not a cross-origin request.
+  // CORS is only triggered when a browser sends a cross-origin fetch — same-origin
+  // GET/HEAD requests and server-to-server calls carry no Origin header.
+  // Passing these straight through is correct; JWT auth still protects every route.
+  // (Our earlier "block no-origin in production" was overly strict — it broke
+  //  same-origin browser GETs which legitimately omit the Origin header.)
+  if (!origin) {
+    next();
+    return;
   }
 
-  // Cross-origin or no-origin request: enforce the allowlist via cors().
+  // Same-origin request where the browser DID include an Origin header
+  // (e.g. same-origin POST, or full-URL fetch from the same domain).
+  if (host && (origin === `https://${host}` || origin === `http://${host}`)) {
+    // Same-origin: set minimal CORS headers and continue. No allowlist check needed.
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'Content-Type,Authorization,X-Request-ID,X-Idempotency-Key,X-Tenant-ID',
+    );
+    res.setHeader('Access-Control-Expose-Headers', 'X-Request-ID,X-RateLimit-Limit,X-RateLimit-Remaining');
+    res.setHeader('Vary', 'Origin');
+    if (req.method === 'OPTIONS') {
+      res.status(204).end();
+      return;
+    }
+    next();
+    return;
+  }
+
+  // Genuinely cross-origin request: enforce the allowlist via cors().
   corsMiddleware(req, res, next);
 }
