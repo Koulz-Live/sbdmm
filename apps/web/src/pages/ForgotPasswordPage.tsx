@@ -94,9 +94,9 @@ export default function ForgotPasswordPage(): React.JSX.Element {
                 >
                   <i className="ph ph-envelope-simple-open" style={{ fontSize: 26, color: '#299E60' }} />
                 </div>
-                <h2 className="fw-bold mb-8" style={{ fontSize: 20, color: '#0f172a' }}>Check your inbox</h2>
+                <h2 className="fw-bold mb-8" style={{ fontSize: 20, color: '#0f172a' }}>Watch your inbox</h2>
                 <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6, marginBottom: 24 }}>
-                  If <strong>{email}</strong> is registered, you'll receive a password reset link shortly.
+                  If <strong>{email}</strong> is registered, a restoration link is on its way.
                   Check your spam folder if it doesn't arrive within a few minutes.
                 </p>
                 <Link
@@ -111,9 +111,9 @@ export default function ForgotPasswordPage(): React.JSX.Element {
             ) : (
               /* ── Request form ── */
               <>
-                <h2 className="fw-bold mb-8" style={{ fontSize: 20, color: '#0f172a' }}>Reset your password</h2>
+                <h2 className="fw-bold mb-8" style={{ fontSize: 20, color: '#0f172a' }}>Restore your access</h2>
                 <p className="text-muted mb-24" style={{ fontSize: 14 }}>
-                  Enter your account email and we'll send you a reset link.
+                  Enter your account email and we'll send you a restoration link.
                 </p>
 
                 <form onSubmit={(e) => { void handleSubmit(e); }} noValidate>
@@ -164,7 +164,7 @@ export default function ForgotPasswordPage(): React.JSX.Element {
                     {isSubmitting ? (
                       <><span className="spinner-border spinner-border-sm" role="status" /> Sending…</>
                     ) : (
-                      <><i className="ph ph-paper-plane-tilt" /> Send reset link</>
+                      <><i className="ph ph-paper-plane-tilt" /> Send restoration link</>
                     )}
                   </button>
                 </form>

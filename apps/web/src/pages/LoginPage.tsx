@@ -134,7 +134,7 @@ export default function LoginPage(): React.JSX.Element {
         <div className="card border-0 shadow-lg" style={{ borderRadius: 16, overflow: 'hidden' }}>
           <div className="card-body p-40">
             <h2 className="fw-bold mb-8" style={{ fontSize: 20, color: '#0f172a' }}>Welcome back</h2>
-            <p className="text-muted mb-24" style={{ fontSize: 14 }}>Sign in to your account to continue</p>
+            <p className="text-muted mb-24" style={{ fontSize: 14 }}>Enter and continue your good work.</p>
 
             <form onSubmit={handleSubmit} noValidate>
               {error && (
@@ -304,7 +304,7 @@ export default function LoginPage(): React.JSX.Element {
 
             <p className="text-center mt-16 mb-0" style={{ fontSize: 12, color: '#94a3b8' }}>
               <i className="ph ph-lock-simple" style={{ fontSize: 13 }} />{' '}
-              Admin accounts require email &amp; password sign-in.
+              Stewardship accounts require email &amp; password sign-in.
             </p>
 
             <p className="text-center mt-24 mb-0" style={{ fontSize: 13, color: '#94a3b8' }}>

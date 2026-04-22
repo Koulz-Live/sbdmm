@@ -162,13 +162,13 @@ function getBannerConfig(role: PlatformRole | undefined): { subtitle: string; ct
   switch (role) {
     case 'vendor':
     case 'logistics_provider':
-      return { subtitle: 'Check open RFQs you can bid on and manage your catalogue.', ctaLabel: 'Browse Open RFQs', ctaTo: '/rfqs' };
+      return { subtitle: 'Seek out open RFQs worth bidding on and tend your catalogue faithfully.', ctaLabel: 'Browse Open RFQs', ctaTo: '/rfqs' };
     case 'tenant_admin':
-      return { subtitle: 'Review pending vendor approvals and manage your team.', ctaLabel: 'Open Admin Panel', ctaTo: '/admin' };
+      return { subtitle: 'Shepherd your team, review those seeking to join your network, and keep your house in order.', ctaLabel: 'Open Admin Panel', ctaTo: '/admin' };
     case 'super_admin':
-      return { subtitle: 'System-wide overview across all tenants and services.', ctaLabel: 'Open Admin Panel', ctaTo: '/admin' };
+      return { subtitle: 'A faithful overview of every tenant and service entrusted to your stewardship.', ctaLabel: 'Open Admin Panel', ctaTo: '/admin' };
     default: // buyer
-      return { subtitle: 'Post a new order, track shipments, and compare quotes.', ctaLabel: 'Post New Order', ctaTo: '/orders' };
+      return { subtitle: 'Post a new order, steward your shipments, and compare quotes with wisdom.', ctaLabel: 'Post New Order', ctaTo: '/orders' };
   }
 }
 
@@ -176,9 +176,9 @@ function getBannerConfig(role: PlatformRole | undefined): { subtitle: string; ct
 const ONBOARDING_KEY = 'sbdmm_onboarding_v1';
 
 const WIZARD_STEPS = [
-  { icon: 'ph ph-plus-circle', title: 'Post your first order', desc: 'Tell us your origin, destination, and cargo details.', to: '/orders', cta: 'Post Order' },
-  { icon: 'ph ph-chat-dots',   title: 'Get quotes from providers', desc: 'Providers bid on your request — compare price, speed, and ESG score.', to: '/quotes', cta: 'View Quotes' },
-  { icon: 'ph ph-package',     title: 'Confirm & track your shipment', desc: 'Accept a quote, and follow your shipment all the way to delivery.', to: '/orders', cta: 'My Orders' },
+  { icon: 'ph ph-plus-circle', title: 'Post your first order', desc: 'Tell us your origin, destination, and cargo details — every provision begins with a clear need.', to: '/orders', cta: 'Post Order' },
+  { icon: 'ph ph-chat-dots',   title: 'Receive quotes from providers', desc: 'Providers bring their best offer — weigh price, speed, and integrity of service with wisdom.', to: '/quotes', cta: 'View Quotes' },
+  { icon: 'ph ph-package',     title: 'Confirm & watch over your shipment', desc: 'Accept a quote and be a faithful steward of your shipment — all the way to delivery.', to: '/orders', cta: 'My Orders' },
 ];
 
 function OnboardingWizard(): React.JSX.Element | null {
@@ -201,7 +201,7 @@ function OnboardingWizard(): React.JSX.Element | null {
               Welcome to SBDMM 5PL!
             </h4>
             <p className="mb-0" style={{ fontSize: 13, color: '#64748b' }}>
-              Get started in 3 simple steps — it only takes a few minutes.
+              Three steps to begin. Every good journey starts with a single faithful step.
             </p>
           </div>
           <button
@@ -240,7 +240,7 @@ function OnboardingWizard(): React.JSX.Element | null {
         <div className="mt-16 text-center">
           <button type="button" onClick={dismiss}
             style={{ background: 'none', border: 'none', fontSize: 12, color: '#94a3b8', cursor: 'pointer', textDecoration: 'underline' }}>
-            I know what I'm doing — dismiss this
+            Understood — I'll walk this out on my own.
           </button>
         </div>
       </div>
@@ -270,11 +270,11 @@ function BuyerDashboard({ stats, orders, loading }: { stats: DashboardStats | nu
         </div>
       )}
       <QuickActions actions={[
-        { to: '/orders',    icon: 'ph ph-plus-circle',  label: 'Post Order',  desc: 'Create a new shipment request', bg: '#eff6ff',  color: '#2563eb' },
-        { to: '/orders',    icon: 'ph ph-package',      label: 'My Orders',   desc: 'Track your active shipments',   bg: '#f0fdf4',  color: '#15803d' },
-        { to: '/quotes',    icon: 'ph ph-chat-dots',    label: 'Quotes',      desc: 'Compare provider quotes',       bg: '#faf5ff',  color: '#7c3aed' },
-        { to: '/vendors',   icon: 'ph ph-buildings',    label: 'Vendors',     desc: 'Browse provider network',       bg: '#ecfeff',  color: '#0e7490' },
-        { to: '/documents', icon: 'ph ph-file-text',    label: 'Documents',   desc: 'Shipping docs & compliance',    bg: '#fffbeb',  color: '#d97706' },
+        { to: '/orders',    icon: 'ph ph-plus-circle',  label: 'Post Order',  desc: 'Bring a new need to the marketplace',         bg: '#eff6ff',  color: '#2563eb' },
+        { to: '/orders',    icon: 'ph ph-package',      label: 'My Orders',   desc: 'Keep faithful watch over your shipments',      bg: '#f0fdf4',  color: '#15803d' },
+        { to: '/quotes',    icon: 'ph ph-chat-dots',    label: 'Quotes',      desc: 'Weigh provider offers with wisdom',            bg: '#faf5ff',  color: '#7c3aed' },
+        { to: '/vendors',   icon: 'ph ph-buildings',    label: 'Vendors',     desc: 'Explore our network of trusted providers',     bg: '#ecfeff',  color: '#0e7490' },
+        { to: '/documents', icon: 'ph ph-file-text',    label: 'Documents',   desc: 'Faithful record-keeping & compliance',         bg: '#fffbeb',  color: '#d97706' },
       ]} />
       <RecentOrdersTable orders={orders} loading={loading} />
     </>
@@ -315,11 +315,11 @@ function AdminDashboard({ stats, orders, loading }: { stats: DashboardStats | nu
         </div>
       )}
       <QuickActions actions={[
-        { to: '/admin',      icon: 'ph ph-gear',          label: 'Admin Panel',    desc: 'Manage users & settings',       bg: '#1e293b',  color: '#fff'     },
-        { to: '/orders',     icon: 'ph ph-package',       label: 'All Orders',     desc: 'Review platform orders',        bg: '#eff6ff',  color: '#2563eb'  },
-        { to: '/vendors',    icon: 'ph ph-buildings',     label: 'Vendors',        desc: 'Approve & manage providers',    bg: '#f0fdf4',  color: '#15803d'  },
-        { to: '/compliance', icon: 'ph ph-shield-check',  label: 'Compliance',     desc: 'Review flagged vendors',        bg: '#fef2f2',  color: '#b91c1c'  },
-        { to: '/documents',  icon: 'ph ph-file-text',     label: 'Documents',      desc: 'Docs & audit trail',            bg: '#fffbeb',  color: '#d97706'  },
+        { to: '/admin',      icon: 'ph ph-gear',          label: 'Admin Panel',    desc: 'Oversee your platform with wisdom',              bg: '#1e293b',  color: '#fff'     },
+        { to: '/orders',     icon: 'ph ph-package',       label: 'All Orders',     desc: 'Faithful stewardship of every order',            bg: '#eff6ff',  color: '#2563eb'  },
+        { to: '/vendors',    icon: 'ph ph-buildings',     label: 'Vendors',        desc: 'Discern and nurture your provider network',       bg: '#f0fdf4',  color: '#15803d'  },
+        { to: '/compliance', icon: 'ph ph-shield-check',  label: 'Compliance',     desc: 'Tend to matters needing your discernment',       bg: '#fef2f2',  color: '#b91c1c'  },
+        { to: '/documents',  icon: 'ph ph-file-text',     label: 'Documents',      desc: 'Records and a faithful audit trail',             bg: '#fffbeb',  color: '#d97706'  },
       ]} />
       <RecentOrdersTable orders={orders} loading={loading} />
     </>
