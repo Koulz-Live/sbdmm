@@ -231,7 +231,7 @@ export default function VendorsPage(): React.JSX.Element {
                     {/* View Profile — always visible */}
                     <Link
                       to={`/vendors/${vendor.id}`}
-                      className="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-6 w-100 mt-10"
+                      className="btn btn-sm btn-outline-dark d-flex align-items-center justify-content-center gap-6 w-100 mt-10"
                       style={{ borderRadius: 8, fontSize: 12, fontWeight: 600, padding: '7px 0', textDecoration: 'none' }}
                     >
                       <i className="ph ph-storefront" style={{ color: '#299E60' }} /> View Profile &amp; Catalogue
@@ -391,7 +391,7 @@ function VendorAiPanel({ vendor }: { vendor: Vendor }): React.JSX.Element {
         <button type="button"
           onClick={panel === 'assess' ? () => setPanel('none') : handleAssess}
           disabled={assessLoading}
-          className={`btn btn-sm d-flex align-items-center gap-4 ${panel === 'assess' ? 'btn-success' : 'btn-outline-secondary'}`}>
+          className={`btn btn-sm d-flex align-items-center gap-4 ${panel === 'assess' ? 'btn-success' : 'btn-outline-dark'}`}>
           {assessLoading && panel === 'assess'
             ? <><span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /></>
             : <><i className="ph ph-sparkle" /> AI Assess</>}
@@ -399,7 +399,7 @@ function VendorAiPanel({ vendor }: { vendor: Vendor }): React.JSX.Element {
         <button type="button"
           onClick={panel === 'esg' ? () => setPanel('none') : handleEsg}
           disabled={esgLoading}
-          className={`btn btn-sm d-flex align-items-center gap-4 ${panel === 'esg' ? 'btn-success' : 'btn-outline-secondary'}`}>
+          className={`btn btn-sm d-flex align-items-center gap-4 ${panel === 'esg' ? 'btn-success' : 'btn-outline-dark'}`}>
           {esgLoading && panel === 'esg'
             ? <><span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /></>
             : <><i className="ph ph-leaf" /> ESG Check</>}
