@@ -888,7 +888,7 @@ export default function LandingPage() {
                 { icon: 'ph-users-three', title: 'Verified Carpenter Network', desc: 'Every artisan is vetted for quality and reliability. Read reviews, view past work, and award with confidence.' },
                 { icon: 'ph-lock-simple',  title: 'Your Data Stays Yours', desc: 'Design sessions, photos, and preferences are isolated by tenant at the database level. We never share your data.' },
                 { icon: 'ph-package', title: 'End-to-End Order Tracking', desc: 'From workshop to doorstep — track your build in real time, with automated notifications at every milestone.' },
-                { icon: 'ph-hands-praying', title: 'Business with Purpose', desc: 'We operate on the belief that honest commerce, fair pay for craftspeople, and excellent service are worth doing right — and worth dedicating to something greater than profit.' },
+                { icon: 'ph-hands-praying', title: 'Business with Purpose', desc: 'We believe that honest commerce, fair pay for craftspeople, and excellent service are a calling — work done with integrity, in service of others, and to a purpose greater than profit.' },
               ].map((f) => (
                 <div key={f.title} style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
                   <div
@@ -1250,7 +1250,7 @@ export default function LandingPage() {
               © {new Date().getFullYear()} SBDMM. All rights reserved.
             </span>
             <span style={{ fontSize: 12, color: '#334155', fontStyle: 'italic' }}>
-              "Whatever you do, work at it with all your heart, as working for the Lord." — Col 3:23
+              Whatever you do, do it with all your heart — as working for a purpose greater than yourself.
             </span>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
               {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((l) => (
