@@ -940,7 +940,7 @@ function UserActivityDrawer({ userId, onClose }: { userId: string; onClose: () =
           <div className="d-flex gap-0 mt-16" style={{ borderBottom: '2px solid #f1f5f9' }}>
             {(['events', 'nav', 'ai'] as const).map(t => (
               <button key={t} onClick={() => setDrawerTab(t)}
-                style={{ background: 'none', border: 'none', borderBottom: drawerTab === t ? '2px solid #299E60' : '2px solid transparent', marginBottom: -2, padding: '7px 16px', color: drawerTab === t ? '#299E60' : '#64748b', fontWeight: drawerTab === t ? 700 : 500, fontSize: 13, cursor: 'pointer' }}>
+                style={{ background: 'none', border: 'none', borderBottom: drawerTab === t ? '2px solid #299E60' : '2px solid transparent', marginBottom: -2, padding: '7px 16px', color: drawerTab === t ? '#299E60' : 'var(--text-secondary)', fontWeight: drawerTab === t ? 700 : 500, fontSize: 13, cursor: 'pointer' }}>
                 {t === 'events' ? '📋 Audit Events' : t === 'nav' ? '🗺️ Page Navigation' : '🤖 AI Usage'}
               </button>
             ))}
@@ -1085,7 +1085,7 @@ function AuditTab(): React.JSX.Element {
         {SUB_TABS.map(t => (
           <button key={t.key} onClick={() => setSubTab(t.key)}
             className="btn d-flex align-items-center gap-6"
-            style={{ background: 'none', border: 'none', borderBottom: subTab === t.key ? '2px solid #299E60' : '2px solid transparent', marginBottom: -2, borderRadius: 0, padding: '9px 16px', color: subTab === t.key ? '#299E60' : '#64748b', fontWeight: subTab === t.key ? 700 : 500, fontSize: 13 }}>
+            style={{ background: 'none', border: 'none', borderBottom: subTab === t.key ? '2px solid #299E60' : '2px solid transparent', marginBottom: -2, borderRadius: 0, padding: '9px 16px', color: subTab === t.key ? '#299E60' : 'var(--text-secondary)', fontWeight: subTab === t.key ? 700 : 500, fontSize: 13 }}>
             <i className={`ph ${t.icon}`} style={{ fontSize: 15 }} />{t.label}
           </button>
         ))}
@@ -1905,7 +1905,7 @@ export default function AdminPage(): React.JSX.Element {
               marginBottom: -2,
               borderRadius: 0,
               padding: '10px 20px',
-              color: tab === t.key ? '#299E60' : '#64748b',
+              color: tab === t.key ? '#299E60' : 'var(--text-secondary)',
               fontWeight: tab === t.key ? 700 : 500,
               fontSize: 14,
             }}>
