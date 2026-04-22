@@ -14,6 +14,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/apiClient';
 import { useAuth } from '../contexts/AuthContext';
+import { useAiProxy } from '../hooks/useAiProxy';
 import type { Vendor, BusinessCategory, PaginationMeta } from '@sbdmm/shared';
 
 const PAGE_SIZE = 20;
@@ -239,6 +240,9 @@ export default function VendorsPage(): React.JSX.Element {
                     >
                       <i className="ph ph-storefront" style={{ color: '#299E60' }} /> View Profile &amp; Catalogue
                     </Link>
+
+                    {/* AI vendor assessment (admins only) */}
+                    {isAdmin && <VendorAiPanel vendor={vendor} />}
                   </div>
                 </div>
               </div>
@@ -356,6 +360,101 @@ export default function VendorsPage(): React.JSX.Element {
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
+
+// AI vendor assessment panel (admin only) — vendor_summary + esg_analysis
+function VendorAiPanel({ vendor }: { vendor: Vendor }): React.JSX.Element {
+  const { loading: assessLoading, result: assessResult, error: assessError, run: assessRun, reset: assessReset } = useAiProxy();
+  const { loading: esgLoading, result: esgResult, error: esgError, run: esgRun, reset: esgReset } = useAiProxy();
+  const [panel, setPanel] = useState<'none' | 'assess' | 'esg'>('none');
+
+  const handleAssess = (): void => {
+    setPanel('assess');
+    assessReset();
+    void assessRun('vendor_summary', {
+      company_name: vendor.company_name,
+      business_category: vendor.business_category,
+      country_of_registration: vendor.country_of_registration,
+      onboarding_status: vendor.onboarding_status,
+      compliance_status: vendor.compliance_status,
+    });
+  };
+
+  const handleEsg = (): void => {
+    setPanel('esg');
+    esgReset();
+    void esgRun('esg_analysis', {
+      company_name: vendor.company_name,
+      business_category: vendor.business_category,
+      country_of_registration: vendor.country_of_registration,
+    });
+  };
+
+  return (
+    <div className="mt-10 pt-10" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+      <div className="d-flex gap-6 flex-wrap mb-8">
+        <button type="button"
+          onClick={panel === 'assess' ? () => setPanel('none') : handleAssess}
+          disabled={assessLoading}
+          className="btn btn-sm d-flex align-items-center gap-4"
+          style={{ background: panel === 'assess' ? '#f0fdf4' : '#f8fafc', color: panel === 'assess' ? '#15803d' : '#64748b', border: `1px solid ${panel === 'assess' ? '#bbf7d0' : '#e2e8f0'}`, borderRadius: 6, fontSize: 11, fontWeight: 600 }}>
+          {assessLoading && panel === 'assess'
+            ? <><span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /></>
+            : <><i className="ph ph-sparkle" /> AI Assess</>}
+        </button>
+        <button type="button"
+          onClick={panel === 'esg' ? () => setPanel('none') : handleEsg}
+          disabled={esgLoading}
+          className="btn btn-sm d-flex align-items-center gap-4"
+          style={{ background: panel === 'esg' ? '#f0fdf4' : '#f8fafc', color: panel === 'esg' ? '#15803d' : '#64748b', border: `1px solid ${panel === 'esg' ? '#bbf7d0' : '#e2e8f0'}`, borderRadius: 6, fontSize: 11, fontWeight: 600 }}>
+          {esgLoading && panel === 'esg'
+            ? <><span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /></>
+            : <><i className="ph ph-leaf" /> ESG Check</>}
+        </button>
+      </div>
+
+      {/* AI Assess result */}
+      {panel === 'assess' && (assessError || assessResult) && (
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', fontSize: 12 }}>
+          {assessError
+            ? <span style={{ color: '#b91c1c' }}><i className="ph ph-warning-circle me-1" />{assessError}</span>
+            : assessResult && (
+              <>
+                {assessResult['summary'] != null && <p style={{ color: '#374151', marginBottom: 6, lineHeight: 1.5 }}>{String(assessResult['summary'])}</p>}
+                {Array.isArray(assessResult['risk_flags']) && (assessResult['risk_flags'] as string[]).length > 0 && (
+                  <div className="d-flex flex-wrap gap-4">
+                    {(assessResult['risk_flags'] as string[]).map((f, i) => (
+                      <span key={i} style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa', borderRadius: 12, padding: '1px 7px', fontSize: 10, fontWeight: 600 }}>
+                        <i className="ph ph-warning me-1" />{f}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+        </div>
+      )}
+
+      {/* ESG result */}
+      {panel === 'esg' && (esgError || esgResult) && (
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', fontSize: 12 }}>
+          {esgError
+            ? <span style={{ color: '#b91c1c' }}><i className="ph ph-warning-circle me-1" />{esgError}</span>
+            : esgResult && (
+              <>
+                {esgResult['overall_score'] != null && (
+                  <div className="d-flex align-items-center gap-8 mb-6">
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>ESG Score</span>
+                    <span style={{ fontWeight: 800, fontSize: 16, color: '#299E60' }}>{String(esgResult['overall_score'])}</span>
+                  </div>
+                )}
+                {esgResult['summary'] != null && <p style={{ color: '#374151', margin: 0, lineHeight: 1.5 }}>{String(esgResult['summary'])}</p>}
+              </>
+            )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const VENDOR_STATUS_META: Record<string, { bg: string; text: string }> = {
   pending_review: { bg: 'var(--badge-amber-bg)', text: 'var(--badge-amber-fg)' },

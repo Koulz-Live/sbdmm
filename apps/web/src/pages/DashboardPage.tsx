@@ -8,6 +8,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/apiClient';
+import { useAiProxy } from '../hooks/useAiProxy';
 import type { Order, DashboardStats, PlatformRole } from '@sbdmm/shared';
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
@@ -65,6 +66,90 @@ function StatusBadge({ status }: { status: string }): React.JSX.Element {
     >
       {s.label}
     </span>
+  );
+}
+
+// ─── AI Analytics Narrative card ─────────────────────────────────────────────
+function AiInsightsCard({ stats }: { stats: DashboardStats | null }): React.JSX.Element {
+  const { loading, result, error, run, reset } = useAiProxy();
+  const insights  = result?.insights as string[] | undefined;
+  const priority  = result?.priority_action as string | undefined;
+
+  const handleRun = async (): Promise<void> => {
+    if (!stats) return;
+    await run('analytics_narrative', {
+      total_orders:       stats.total_orders,
+      pending_orders:     stats.pending_orders,
+      open_quotes:        stats.open_quotes,
+      documents_pending:  stats.documents_pending,
+      compliance_alerts:  stats.compliance_alerts ?? 0,
+      active_vendors:     stats.active_vendors ?? 0,
+    });
+  };
+
+  return (
+    <div className="card border-0 shadow-sm mb-24" style={{ borderRadius: 12, border: '1px solid #e2e8f0' }}>
+      <div className="card-body p-20">
+        <div className="d-flex align-items-center justify-content-between mb-12">
+          <div className="d-flex align-items-center gap-8">
+            <div className="d-flex align-items-center justify-content-center rounded-circle"
+              style={{ width: 36, height: 36, background: '#f0fdf4' }}>
+              <i className="ph ph-sparkle" style={{ fontSize: 18, color: '#299E60' }} />
+            </div>
+            <span className="fw-semibold" style={{ fontSize: 15, color: '#0f172a' }}>AI Insights</span>
+            <span className="badge" style={{ background: '#eff6ff', color: '#2563eb', fontSize: 10, fontWeight: 600, borderRadius: 20, padding: '2px 8px' }}>Beta</span>
+          </div>
+          <div className="d-flex gap-8">
+            {result && (
+              <button type="button" onClick={reset}
+                className="btn btn-sm"
+                style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12 }}>
+                <i className="ph ph-x" />
+              </button>
+            )}
+            <button type="button"
+              onClick={() => { void handleRun(); }}
+              disabled={loading || !stats}
+              className="btn btn-sm d-flex align-items-center gap-6"
+              style={{ background: loading ? '#f1f5f9' : '#299E60', color: loading ? '#64748b' : '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600 }}>
+              {loading
+                ? <><span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /> Analysing…</>
+                : <><i className="ph ph-magic-wand" /> {result ? 'Re-analyse' : 'Analyse dashboard'}</>}
+            </button>
+          </div>
+        </div>
+
+        {error && (
+          <div style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', fontSize: 13 }}>
+            <i className="ph ph-warning-circle me-1" />{error}
+          </div>
+        )}
+
+        {!result && !loading && !error && (
+          <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>
+            Click "Analyse dashboard" to get AI-generated plain-English insights from your current KPIs.
+          </p>
+        )}
+
+        {insights && (
+          <div className="d-flex flex-column gap-10">
+            {priority && (
+              <div className="d-flex align-items-start gap-8"
+                style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '10px 14px' }}>
+                <i className="ph ph-arrow-circle-right flex-shrink-0" style={{ fontSize: 16, color: '#c2410c', marginTop: 1 }} />
+                <span style={{ fontSize: 13, color: '#7c2d12', fontWeight: 600 }}>{priority}</span>
+              </div>
+            )}
+            {insights.map((insight, i) => (
+              <div key={i} className="d-flex align-items-start gap-8">
+                <i className="ph ph-dot-outline flex-shrink-0" style={{ fontSize: 16, color: '#299E60', marginTop: 1 }} />
+                <span style={{ fontSize: 13, color: '#374151' }}>{insight}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -269,6 +354,7 @@ function BuyerDashboard({ stats, orders, loading }: { stats: DashboardStats | nu
           </div>
         </div>
       )}
+      {!loading && <AiInsightsCard stats={stats} />}
       <QuickActions actions={[
         { to: '/orders',    icon: 'ph ph-plus-circle',  label: 'Post Order',  desc: 'Bring a new need to the marketplace',         bg: '#eff6ff',  color: '#2563eb' },
         { to: '/orders',    icon: 'ph ph-package',      label: 'My Orders',   desc: 'Maintain active oversight of your shipments',  bg: '#f0fdf4',  color: '#15803d' },
@@ -314,6 +400,7 @@ function AdminDashboard({ stats, orders, loading }: { stats: DashboardStats | nu
           </div>
         </div>
       )}
+      {!loading && <AiInsightsCard stats={stats} />}
       <QuickActions actions={[
         { to: '/admin',      icon: 'ph ph-gear',          label: 'Admin Panel',    desc: 'Oversee your platform with sound judgment',      bg: '#1e293b',  color: '#fff'     },
         { to: '/orders',     icon: 'ph ph-package',       label: 'All Orders',     desc: 'End-to-end accountability for every order',      bg: '#eff6ff',  color: '#2563eb'  },

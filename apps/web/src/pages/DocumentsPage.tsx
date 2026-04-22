@@ -12,6 +12,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { api, apiClient } from '../lib/apiClient';
+import { useAiProxy } from '../hooks/useAiProxy';
 import type { TradeDocument, DocumentType, PaginationMeta } from '@sbdmm/shared';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -111,6 +112,28 @@ export default function DocumentsPage(): React.JSX.Element {
 
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // AI Document Summary — tracks which doc is being summarised and stores results
+  const { loading: aiLoading, result: aiResult, error: aiError, run: aiRun, reset: aiReset } = useAiProxy();
+  const [summaryDocId, setSummaryDocId] = useState<string | null>(null);
+  const [summaryResults, setSummaryResults] = useState<Record<string, Record<string, unknown>>>({});
+
+  const handleSummarise = async (doc: DocumentRow): Promise<void> => {
+    setSummaryDocId(doc.id);
+    aiReset();
+    await aiRun('document_summary', {
+      document_type: doc.document_type,
+      original_filename: doc.original_filename,
+      order_id: doc.order_id ?? null,
+    });
+  };
+
+  // Capture result into per-doc map whenever it arrives
+  React.useEffect(() => {
+    if (aiResult && summaryDocId) {
+      setSummaryResults(prev => ({ ...prev, [summaryDocId]: aiResult }));
+    }
+  }, [aiResult, summaryDocId]);
 
   const fetchDocs = useCallback(async (p: number) => {
     setLoading(true);
@@ -394,8 +417,13 @@ export default function DocumentsPage(): React.JSX.Element {
                   </tr>
                 </thead>
                 <tbody>
-                  {docs.map(doc => (
-                    <tr key={doc.id}>
+                  {docs.map(doc => {
+                    const summary = summaryResults[doc.id];
+                    const isSummarising = aiLoading && summaryDocId === doc.id;
+                    const summaryError = aiError && summaryDocId === doc.id ? aiError : null;
+                    return (
+                    <React.Fragment key={doc.id}>
+                    <tr>
                       <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
                         <div className="d-flex align-items-center gap-8">
                           <div className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0" style={{ width: 32, height: 32, background: '#f1f5f9' }}>
@@ -422,6 +450,15 @@ export default function DocumentsPage(): React.JSX.Element {
                             style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: 6, fontSize: 12, fontWeight: 500, padding: '4px 10px' }}>
                             <i className="ph ph-download-simple" /> Download
                           </button>
+                          <button
+                            onClick={() => { if (summary) { setSummaryDocId(null); setSummaryResults(r => { const n = { ...r }; delete n[doc.id]; return n; }); } else { void handleSummarise(doc); } }}
+                            disabled={isSummarising}
+                            className="btn btn-sm d-flex align-items-center gap-4"
+                            style={{ background: summary ? '#f0fdf4' : '#f8fafc', color: summary ? '#15803d' : '#64748b', border: `1px solid ${summary ? '#bbf7d0' : '#e2e8f0'}`, borderRadius: 6, fontSize: 12, fontWeight: 500, padding: '4px 10px' }}>
+                            {isSummarising
+                              ? <><span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /></>
+                              : summary ? <><i className="ph ph-x" /> Hide AI Summary</> : <><i className="ph ph-sparkle" /> AI Summary</>}
+                          </button>
                           {isAdmin && (
                             <button onClick={() => setConfirmDeleteId(doc.id)}
                               className="btn btn-sm d-flex align-items-center gap-4"
@@ -432,7 +469,42 @@ export default function DocumentsPage(): React.JSX.Element {
                         </div>
                       </td>
                     </tr>
-                  ))}
+
+                    {/* AI Summary inline row */}
+                    {(summaryError || summary) && summaryDocId === doc.id && (
+                      <tr>
+                        <td colSpan={6} style={{ padding: '0 16px 12px', background: '#f8fafc' }}>
+                          {summaryError ? (
+                            <div style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', fontSize: 13 }}>
+                              <i className="ph ph-warning-circle me-1" />{summaryError}
+                            </div>
+                          ) : summary ? (
+                            <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: '14px 16px' }}>
+                              <div className="d-flex align-items-center gap-6 mb-10" style={{ fontSize: 12, fontWeight: 700, color: '#299E60', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                <i className="ph ph-sparkle" /> AI Document Summary
+                                <span style={{ background: '#eff6ff', color: '#2563eb', fontSize: 10, fontWeight: 600, borderRadius: 20, padding: '2px 8px' }}>Beta</span>
+                              </div>
+                              <div className="row g-8" style={{ fontSize: 13 }}>
+                                {Object.entries(summary).filter(([k]) => k !== 'confidence').map(([key, val]) => (
+                                  <div key={key} className="col-md-6 col-lg-4">
+                                    <span style={{ fontWeight: 600, color: '#374151', textTransform: 'capitalize' }}>{key.replace(/_/g, ' ')}: </span>
+                                    <span style={{ color: '#64748b' }}>{Array.isArray(val) ? (val as string[]).join(', ') : String(val)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              {summary['confidence'] != null && (
+                                <div className="mt-8" style={{ fontSize: 11, color: '#94a3b8' }}>
+                                  AI confidence: {String(summary['confidence'] as string | number)} · Results are indicative only.
+                                </div>
+                              )}
+                            </div>
+                          ) : null}
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

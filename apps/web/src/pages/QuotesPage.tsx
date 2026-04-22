@@ -16,6 +16,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/apiClient';
+import { useAiProxy } from '../hooks/useAiProxy';
 import type { Quote, QuoteStatus, PaginationMeta, Order } from '@sbdmm/shared';
 
 interface QuoteRow extends Quote {
@@ -264,8 +265,31 @@ export default function QuotesPage(): React.JSX.Element {
   const isProvider = user?.role === 'vendor' || user?.role === 'logistics_provider';
   const isAdmin = user?.role === 'tenant_admin' || user?.role === 'super_admin';
   const canBuyerAction = user?.role === 'buyer' || isAdmin;
+  const canRankQuotes = user?.role === 'buyer' || isAdmin;
 
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all');
+  const { loading: aiLoading, result: aiResult, error: aiError, run: aiRun, reset: aiReset } = useAiProxy();
+  // showAiRank intentionally unused — panel visibility is controlled by aiResult/aiLoading
+
+  const rankedQuotes  = aiResult?.ranked_quotes as Array<{ quote_id: string; rank: number; score_out_of_10: number; rationale: string }> | undefined;
+  const aiAnomalies   = aiResult?.anomalies as string[] | undefined;
+  const aiRecommendation = aiResult?.recommendation as string | undefined;
+
+  const handleRankQuotes = async (): Promise<void> => {
+    const pendingQuotes = quotes.filter(q => q.status === 'pending');
+    if (pendingQuotes.length === 0) return;
+    await aiRun('quote_ranking', {
+      quotes: pendingQuotes.map(q => ({
+        quote_id: q.id,
+        price_amount: q.price_amount,
+        price_currency: q.price_currency,
+        transit_days_estimated: q.transit_days_estimated,
+        provider_name: q.provider_name ?? 'Unknown provider',
+        notes: q.notes ?? null,
+        valid_until: q.valid_until,
+      })),
+    });
+  };
 
   const displayedQuotes = activeTab === 'all' ? quotes : quotes.filter(q => q.status === activeTab);
 
@@ -401,6 +425,99 @@ export default function QuotesPage(): React.JSX.Element {
               onSuccess={() => { setShowForm(false); void fetchQuotes(1); setPage(1); }}
               onCancel={() => setShowForm(false)}
             />
+          </div>
+        </div>
+      )}
+
+      {/* AI Quote Ranking panel — buyers / admins only */}
+      {canRankQuotes && quotes.filter(q => q.status === 'pending').length > 0 && (
+        <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: 12, border: '1px solid #e2e8f0' }}>
+          <div className="card-body p-20">
+            <div className="d-flex align-items-center justify-content-between mb-8">
+              <div className="d-flex align-items-center gap-8">
+                <i className="ph ph-sparkle" style={{ fontSize: 18, color: '#299E60' }} />
+                <span className="fw-semibold" style={{ fontSize: 15, color: '#0f172a' }}>AI Quote Ranking</span>
+                <span className="badge" style={{ background: '#eff6ff', color: '#2563eb', fontSize: 10, fontWeight: 600, borderRadius: 20, padding: '2px 8px' }}>Beta</span>
+              </div>
+              <div className="d-flex gap-8">
+                {aiResult && (
+                  <button type="button" onClick={() => { aiReset(); }}
+                    className="btn btn-sm"
+                    style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12 }}>
+                    <i className="ph ph-x" />
+                  </button>
+                )}
+                <button type="button"
+                  onClick={() => { void handleRankQuotes(); }}
+                  disabled={aiLoading}
+                  className="btn btn-sm d-flex align-items-center gap-6"
+                  style={{ background: aiLoading ? '#f1f5f9' : '#299E60', color: aiLoading ? '#64748b' : '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600 }}>
+                  {aiLoading
+                    ? <><span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /> Ranking…</>
+                    : <><i className="ph ph-list-numbers" /> {aiResult ? 'Re-rank' : `Rank ${quotes.filter(q => q.status === 'pending').length} pending quotes`}</>}
+                </button>
+              </div>
+            </div>
+
+            {aiError && (
+              <div style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', fontSize: 13 }}>
+                <i className="ph ph-warning-circle me-1" />{aiError}
+              </div>
+            )}
+
+            {!aiResult && !aiLoading && !aiError && (
+              <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>
+                Click "Rank quotes" to let AI score and rank your pending quotes by price, speed, and terms.
+              </p>
+            )}
+
+            {rankedQuotes && (
+              <div className="d-flex flex-column gap-8">
+                {aiRecommendation && (
+                  <div className="d-flex align-items-start gap-8"
+                    style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '10px 14px' }}>
+                    <i className="ph ph-check-circle flex-shrink-0" style={{ fontSize: 16, color: '#15803d', marginTop: 1 }} />
+                    <span style={{ fontSize: 13, color: '#14532d', fontWeight: 600 }}>{aiRecommendation}</span>
+                  </div>
+                )}
+                {aiAnomalies && aiAnomalies.length > 0 && (
+                  <div className="d-flex align-items-start gap-8"
+                    style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '10px 14px' }}>
+                    <i className="ph ph-warning flex-shrink-0" style={{ fontSize: 16, color: '#c2410c', marginTop: 1 }} />
+                    <div>
+                      <div className="fw-semibold mb-1" style={{ fontSize: 13, color: '#7c2d12' }}>Anomalies detected</div>
+                      {aiAnomalies.map((a, i) => <div key={i} style={{ fontSize: 12, color: '#92400e' }}>• {a}</div>)}
+                    </div>
+                  </div>
+                )}
+                <div className="d-flex flex-column gap-6">
+                  {rankedQuotes.map(r => {
+                    const q = quotes.find(x => x.id === r.quote_id);
+                    return (
+                      <div key={r.quote_id} className="d-flex align-items-start gap-12"
+                        style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 14px' }}>
+                        <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 fw-bold"
+                          style={{ width: 28, height: 28, background: r.rank === 1 ? '#299E60' : '#e2e8f0', color: r.rank === 1 ? '#fff' : '#64748b', fontSize: 13 }}>
+                          {r.rank}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div className="d-flex align-items-center gap-8 flex-wrap mb-4">
+                            <span className="fw-semibold" style={{ fontSize: 13, color: '#0f172a' }}>
+                              {q ? formatCurrency(q.price_amount, q.price_currency) : r.quote_id.slice(0, 8) + '…'}
+                            </span>
+                            {q && <span style={{ fontSize: 12, color: '#64748b' }}>{q.transit_days_estimated}d transit</span>}
+                            <span className="ms-auto" style={{ fontSize: 12, fontWeight: 700, color: r.score_out_of_10 >= 7 ? '#15803d' : r.score_out_of_10 >= 5 ? '#b45309' : '#b91c1c' }}>
+                              Score: {r.score_out_of_10}/10
+                            </span>
+                          </div>
+                          <div style={{ fontSize: 12, color: '#64748b' }}>{r.rationale}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -13,6 +13,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '../lib/apiClient';
 import { useAuth } from '../contexts/AuthContext';
+import { useAiProxy } from '../hooks/useAiProxy';
 import type { ComplianceResult, ComplianceCheckDetail } from '@sbdmm/shared';
 
 interface ComplianceListItem {
@@ -168,6 +169,10 @@ export default function CompliancePage(): React.JSX.Element {
   const [reviewNotes, setReviewNotes] = useState('');
   const [isReviewing, setIsReviewing] = useState(false);
 
+  // AI — Compliance Copilot
+  const { loading: copilotLoading, result: copilotResult, error: copilotError, run: copilotRun, reset: copilotReset } = useAiProxy();
+  const [copilotQuestion, setCopilotQuestion] = useState('');
+
   const fetchResults = useCallback(async (): Promise<void> => {
     setIsLoading(true);
     setError(null);
@@ -290,6 +295,74 @@ export default function CompliancePage(): React.JSX.Element {
 
       {/* ESG breakdown */}
       <EsgBreakdownChart results={results} />
+
+      {/* Compliance Copilot Q&A */}
+      <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: 12 }}>
+        <div className="card-body p-4">
+          <div className="d-flex align-items-center gap-8 mb-12">
+            <i className="ph ph-sparkle" style={{ fontSize: 18, color: '#299E60' }} />
+            <span className="fw-semibold" style={{ fontSize: 15, color: '#0f172a' }}>Compliance Copilot</span>
+            <span className="badge" style={{ background: '#eff6ff', color: '#2563eb', fontSize: 10, fontWeight: 600, borderRadius: 20, padding: '2px 8px' }}>Beta</span>
+            <span style={{ fontSize: 13, color: '#94a3b8' }}>Ask any trade compliance question</span>
+          </div>
+
+          <form onSubmit={(e) => { e.preventDefault(); copilotReset(); void copilotRun('compliance_query', { question: copilotQuestion, context_type: selected?.context_type ?? null, context_id: selected?.context_id ?? null }); }}
+            className="d-flex gap-8 align-items-end">
+            <div style={{ flex: 1 }}>
+              <input type="text" className="form-control"
+                value={copilotQuestion}
+                onChange={e => setCopilotQuestion(e.target.value)}
+                placeholder="e.g. What documents are required for dangerous goods shipments to the EU?"
+                required
+                style={{ borderRadius: 8, fontSize: 14, borderColor: '#cbd5e1' }} />
+            </div>
+            {copilotResult && (
+              <button type="button" onClick={() => { copilotReset(); setCopilotQuestion(''); }}
+                className="btn btn-sm"
+                style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 8, padding: '9px 12px' }}>
+                <i className="ph ph-x" />
+              </button>
+            )}
+            <button type="submit" disabled={copilotLoading || !copilotQuestion.trim()}
+              className="btn d-flex align-items-center gap-6"
+              style={{ background: copilotLoading ? '#f1f5f9' : '#299E60', color: copilotLoading ? '#64748b' : '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap' }}>
+              {copilotLoading
+                ? <><span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /> Thinking…</>
+                : <><i className="ph ph-paper-plane-tilt" /> Ask</>}
+            </button>
+          </form>
+
+          {copilotError && (
+            <div className="mt-12" style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', fontSize: 13 }}>
+              <i className="ph ph-warning-circle me-1" />{copilotError}
+            </div>
+          )}
+
+          {copilotResult && (
+            <div className="mt-12" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '14px 16px' }}>
+              {copilotResult['answer'] != null && (
+                <p style={{ fontSize: 14, color: '#0f172a', lineHeight: 1.7, margin: 0 }}>{String(copilotResult['answer'])}</p>
+              )}
+              {Array.isArray(copilotResult['rule_references']) && (copilotResult['rule_references'] as string[]).length > 0 && (
+                <div className="mt-10">
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 }}>Referenced Rules</div>
+                  <div className="d-flex flex-wrap gap-6">
+                    {(copilotResult['rule_references'] as string[]).map((r, i) => (
+                      <span key={i} style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: 12, padding: '2px 9px', fontSize: 12, fontWeight: 500 }}>{r}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {copilotResult['requires_human_review'] === true && (
+                <div className="mt-10 d-flex align-items-center gap-6" style={{ fontSize: 12, color: '#c2410c', fontWeight: 600 }}>
+                  <i className="ph ph-warning" />This answer involves complexity that warrants human expert review.
+                </div>
+              )}
+              <div className="mt-10" style={{ fontSize: 11, color: '#94a3b8' }}>AI responses are informational only and do not constitute legal advice.</div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Two-column layout: list + detail */}
       <div className="row g-4">

@@ -12,6 +12,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../lib/apiClient';
 import { useAuth } from '../contexts/AuthContext';
+import { useAiProxy } from '../hooks/useAiProxy';
 import type { Order, OrderStatus, Quote, TradeDocument } from '@sbdmm/shared';
 
 // ─── Status meta ──────────────────────────────────────────────────────────────
@@ -278,6 +279,11 @@ export default function OrderDetailPage(): React.JSX.Element {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // AI — Route Optimization
+  const { loading: routeLoading, result: routeResult, error: routeError, run: routeRun, reset: routeReset } = useAiProxy();
+  // AI — Shipment Narrative
+  const { loading: narrativeLoading, result: narrativeResult, error: narrativeError, run: narrativeRun, reset: narrativeReset } = useAiProxy();
+
   const canUpdateStatus =
     profile?.role === 'tenant_admin' ||
     profile?.role === 'super_admin' ||
@@ -438,6 +444,79 @@ export default function OrderDetailPage(): React.JSX.Element {
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Route Optimization AI panel */}
+          <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: 12 }}>
+            <div className="card-body p-4">
+              <div className="d-flex align-items-center justify-content-between mb-8">
+                <div className="d-flex align-items-center gap-8">
+                  <i className="ph ph-sparkle" style={{ fontSize: 16, color: '#299E60' }} />
+                  <span className="fw-semibold" style={{ fontSize: 14, color: '#0f172a' }}>Route Optimisation</span>
+                  <span className="badge" style={{ background: '#eff6ff', color: '#2563eb', fontSize: 10, fontWeight: 600, borderRadius: 20, padding: '2px 8px' }}>Beta</span>
+                </div>
+                <div className="d-flex gap-8">
+                  {routeResult && (
+                    <button type="button" onClick={routeReset} className="btn btn-sm"
+                      style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12 }}>
+                      <i className="ph ph-x" />
+                    </button>
+                  )}
+                  <button type="button" disabled={routeLoading}
+                    onClick={() => void routeRun('route_optimization', {
+                      origin: order.origin_location,
+                      destination: order.destination_location,
+                      cargo_type: order.cargo_type,
+                      weight_kg: order.estimated_weight_kg,
+                      volume_cbm: order.estimated_volume_cbm,
+                      special_requirements: order.special_requirements ?? null,
+                    })}
+                    className="btn btn-sm d-flex align-items-center gap-6"
+                    style={{ background: routeLoading ? '#f1f5f9' : '#299E60', color: routeLoading ? '#64748b' : '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600 }}>
+                    {routeLoading
+                      ? <><span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /> Analysing…</>
+                      : <><i className="ph ph-path" /> {routeResult ? 'Re-analyse' : 'Suggest Routes'}</>}
+                  </button>
+                </div>
+              </div>
+
+              {routeError && (
+                <div style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', fontSize: 13 }}>
+                  <i className="ph ph-warning-circle me-1" />{routeError}
+                </div>
+              )}
+              {!routeResult && !routeLoading && !routeError && (
+                <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>AI will suggest 2–3 optimised routes with transit times, cost estimates, and compliance flags.</p>
+              )}
+              {routeResult && (() => {
+                const routes = routeResult.routes as Array<{ route_name: string; transit_days: number; cost_estimate: string; compliance_flags: string[]; notes: string }> | undefined;
+                return routes ? (
+                  <div className="d-flex flex-column gap-8 mt-8">
+                    {routes.map((r, i) => (
+                      <div key={i} style={{ background: i === 0 ? '#f0fdf4' : '#f8fafc', border: `1px solid ${i === 0 ? '#bbf7d0' : '#e2e8f0'}`, borderRadius: 8, padding: '10px 14px' }}>
+                        <div className="d-flex align-items-center justify-content-between flex-wrap gap-6 mb-4">
+                          <span className="fw-semibold" style={{ fontSize: 13, color: '#0f172a' }}>{r.route_name}</span>
+                          <div className="d-flex gap-8">
+                            <span style={{ fontSize: 12, color: '#64748b' }}><i className="ph ph-clock me-1" />{r.transit_days}d</span>
+                            <span style={{ fontSize: 12, color: '#15803d', fontWeight: 600 }}>{r.cost_estimate}</span>
+                          </div>
+                        </div>
+                        {r.notes && <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>{r.notes}</div>}
+                        {r.compliance_flags?.length > 0 && (
+                          <div className="d-flex flex-wrap gap-4 mt-4">
+                            {r.compliance_flags.map((f, fi) => (
+                              <span key={fi} style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa', borderRadius: 12, padding: '1px 8px', fontSize: 11 }}>
+                                <i className="ph ph-warning me-1" />{f}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
             </div>
           </div>
 
@@ -605,6 +684,63 @@ export default function OrderDetailPage(): React.JSX.Element {
               </div>
             </div>
           )}
+
+          {/* Shipment Narrative AI panel */}
+          <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: 12 }}>
+            <div className="card-body p-4">
+              <div className="d-flex align-items-center justify-content-between mb-8">
+                <div className="d-flex align-items-center gap-8">
+                  <i className="ph ph-sparkle" style={{ fontSize: 16, color: '#299E60' }} />
+                  <span className="fw-semibold" style={{ fontSize: 14, color: '#0f172a' }}>Shipment Story</span>
+                  <span className="badge" style={{ background: '#eff6ff', color: '#2563eb', fontSize: 10, fontWeight: 600, borderRadius: 20, padding: '2px 8px' }}>Beta</span>
+                </div>
+                <div className="d-flex gap-8">
+                  {narrativeResult && (
+                    <button type="button" onClick={narrativeReset} className="btn btn-sm"
+                      style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12 }}>
+                      <i className="ph ph-x" />
+                    </button>
+                  )}
+                  <button type="button" disabled={narrativeLoading}
+                    onClick={() => void narrativeRun('shipment_narrative', {
+                      reference_number: order.reference_number,
+                      status: order.status,
+                      origin: order.origin_location,
+                      destination: order.destination_location,
+                      cargo_type: order.cargo_type,
+                      created_at: order.created_at,
+                      updated_at: order.updated_at,
+                      requested_delivery_date: order.requested_delivery_date ?? null,
+                    })}
+                    className="btn btn-sm d-flex align-items-center gap-6"
+                    style={{ background: narrativeLoading ? '#f1f5f9' : '#299E60', color: narrativeLoading ? '#64748b' : '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600 }}>
+                    {narrativeLoading
+                      ? <><span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /> Generating…</>
+                      : <><i className="ph ph-article" /> {narrativeResult ? 'Regenerate' : 'Explain shipment'}</>}
+                  </button>
+                </div>
+              </div>
+
+              {narrativeError && (
+                <div style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', fontSize: 13 }}>
+                  <i className="ph ph-warning-circle me-1" />{narrativeError}
+                </div>
+              )}
+              {!narrativeResult && !narrativeLoading && !narrativeError && (
+                <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>Get a plain-English summary of what's happening with this shipment and what comes next.</p>
+              )}
+              {narrativeResult && (
+                <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.6 }}>
+                  {narrativeResult['narrative'] != null && <p className="mb-8">{String(narrativeResult['narrative'])}</p>}
+                  {narrativeResult['next_step'] != null && (
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#14532d', fontWeight: 600 }}>
+                      <i className="ph ph-arrow-right me-1" />Next: {String(narrativeResult['next_step'])}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Order metadata */}
           <div className="card border-0 shadow-sm" style={{ borderRadius: 12 }}>
