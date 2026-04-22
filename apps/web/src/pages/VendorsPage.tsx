@@ -204,28 +204,24 @@ export default function VendorsPage(): React.JSX.Element {
                         {vendor.onboarding_status === 'pending_review' && (
                           <>
                             <button onClick={() => void handleStatusChange(vendor.id, 'approved')}
-                              className="btn btn-sm d-flex align-items-center gap-4"
-                              style={{ background: 'var(--badge-green-bg)', color: 'var(--badge-green-fg)', border: '1px solid var(--badge-green-fg)', borderRadius: 6, fontSize: 12 }}>
+                              className="btn btn-sm btn-success d-flex align-items-center gap-4">
                               <i className="ph ph-check" /> Approve
                             </button>
                             <button onClick={() => void handleStatusChange(vendor.id, 'rejected')}
-                              className="btn btn-sm d-flex align-items-center gap-4"
-                              style={{ background: 'var(--badge-red-bg)', color: 'var(--badge-red-fg)', border: '1px solid var(--badge-red-fg)', borderRadius: 6, fontSize: 12 }}>
+                              className="btn btn-sm btn-danger d-flex align-items-center gap-4">
                               <i className="ph ph-x" /> Reject
                             </button>
                           </>
                         )}
                         {vendor.onboarding_status === 'approved' && (
                           <button onClick={() => void handleStatusChange(vendor.id, 'suspended')}
-                            className="btn btn-sm d-flex align-items-center gap-4"
-                            style={{ background: 'var(--badge-orange-bg)', color: 'var(--badge-orange-fg)', border: '1px solid var(--badge-orange-fg)', borderRadius: 6, fontSize: 12 }}>
+                            className="btn btn-sm btn-warning d-flex align-items-center gap-4">
                             <i className="ph ph-pause-circle" /> Suspend
                           </button>
                         )}
                         {vendor.onboarding_status === 'suspended' && (
                           <button onClick={() => void handleStatusChange(vendor.id, 'approved')}
-                            className="btn btn-sm d-flex align-items-center gap-4"
-                            style={{ background: 'var(--badge-green-bg)', color: 'var(--badge-green-fg)', border: '1px solid var(--badge-green-fg)', borderRadius: 6, fontSize: 12 }}>
+                            className="btn btn-sm btn-success d-flex align-items-center gap-4">
                             <i className="ph ph-play-circle" /> Reinstate
                           </button>
                         )}
@@ -235,8 +231,8 @@ export default function VendorsPage(): React.JSX.Element {
                     {/* View Profile — always visible */}
                     <Link
                       to={`/vendors/${vendor.id}`}
-                      className="btn btn-sm d-flex align-items-center justify-content-center gap-6 w-100 mt-10"
-                      style={{ background: 'var(--bg-surface-2)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, fontWeight: 600, padding: '7px 0', textDecoration: 'none' }}
+                      className="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-6 w-100 mt-10"
+                      style={{ borderRadius: 8, fontSize: 12, fontWeight: 600, padding: '7px 0', textDecoration: 'none' }}
                     >
                       <i className="ph ph-storefront" style={{ color: '#299E60' }} /> View Profile &amp; Catalogue
                     </Link>
@@ -395,8 +391,7 @@ function VendorAiPanel({ vendor }: { vendor: Vendor }): React.JSX.Element {
         <button type="button"
           onClick={panel === 'assess' ? () => setPanel('none') : handleAssess}
           disabled={assessLoading}
-          className="btn btn-sm d-flex align-items-center gap-4"
-          style={{ background: panel === 'assess' ? '#f0fdf4' : '#f8fafc', color: panel === 'assess' ? '#15803d' : '#64748b', border: `1px solid ${panel === 'assess' ? '#bbf7d0' : '#e2e8f0'}`, borderRadius: 6, fontSize: 11, fontWeight: 600 }}>
+          className={`btn btn-sm d-flex align-items-center gap-4 ${panel === 'assess' ? 'btn-success' : 'btn-outline-secondary'}`}>
           {assessLoading && panel === 'assess'
             ? <><span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /></>
             : <><i className="ph ph-sparkle" /> AI Assess</>}
@@ -404,8 +399,7 @@ function VendorAiPanel({ vendor }: { vendor: Vendor }): React.JSX.Element {
         <button type="button"
           onClick={panel === 'esg' ? () => setPanel('none') : handleEsg}
           disabled={esgLoading}
-          className="btn btn-sm d-flex align-items-center gap-4"
-          style={{ background: panel === 'esg' ? '#f0fdf4' : '#f8fafc', color: panel === 'esg' ? '#15803d' : '#64748b', border: `1px solid ${panel === 'esg' ? '#bbf7d0' : '#e2e8f0'}`, borderRadius: 6, fontSize: 11, fontWeight: 600 }}>
+          className={`btn btn-sm d-flex align-items-center gap-4 ${panel === 'esg' ? 'btn-success' : 'btn-outline-secondary'}`}>
           {esgLoading && panel === 'esg'
             ? <><span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /></>
             : <><i className="ph ph-leaf" /> ESG Check</>}
