@@ -304,7 +304,7 @@ export default function LoginPage(): React.JSX.Element {
 
             <p className="text-center mt-16 mb-0" style={{ fontSize: 12, color: '#94a3b8' }}>
               <i className="ph ph-lock-simple" style={{ fontSize: 13 }} />{' '}
-              Stewardship accounts require email &amp; password sign-in.
+              Administrator accounts require email &amp; password sign-in.
             </p>
 
             <p className="text-center mt-24 mb-0" style={{ fontSize: 13, color: '#94a3b8' }}>

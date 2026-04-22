@@ -166,7 +166,7 @@ function getBannerConfig(role: PlatformRole | undefined): { subtitle: string; ct
     case 'tenant_admin':
       return { subtitle: 'Shepherd your team, review those seeking to join your network, and keep your house in order.', ctaLabel: 'Open Admin Panel', ctaTo: '/admin' };
     case 'super_admin':
-      return { subtitle: 'A comprehensive overview of every tenant and service entrusted to your stewardship.', ctaLabel: 'Open Admin Panel', ctaTo: '/admin' };
+      return { subtitle: 'A comprehensive overview of every tenant and service entrusted to your care.', ctaLabel: 'Open Admin Panel', ctaTo: '/admin' };
     default: // buyer
       return { subtitle: 'Post a new order, steward your shipments, and compare quotes with due diligence.', ctaLabel: 'Post New Order', ctaTo: '/orders' };
   }
@@ -316,7 +316,7 @@ function AdminDashboard({ stats, orders, loading }: { stats: DashboardStats | nu
       )}
       <QuickActions actions={[
         { to: '/admin',      icon: 'ph ph-gear',          label: 'Admin Panel',    desc: 'Oversee your platform with sound judgment',      bg: '#1e293b',  color: '#fff'     },
-        { to: '/orders',     icon: 'ph ph-package',       label: 'All Orders',     desc: 'Diligent stewardship of every order',            bg: '#eff6ff',  color: '#2563eb'  },
+        { to: '/orders',     icon: 'ph ph-package',       label: 'All Orders',     desc: 'End-to-end accountability for every order',      bg: '#eff6ff',  color: '#2563eb'  },
         { to: '/vendors',    icon: 'ph ph-buildings',     label: 'Vendors',        desc: 'Assess and nurture your provider network',        bg: '#f0fdf4',  color: '#15803d'  },
         { to: '/compliance', icon: 'ph ph-shield-check',  label: 'Compliance',     desc: 'Review matters requiring sound judgment',         bg: '#fef2f2',  color: '#b91c1c'  },
         { to: '/documents',  icon: 'ph ph-file-text',     label: 'Documents',      desc: 'Records and a complete audit trail',              bg: '#fffbeb',  color: '#d97706'  },
