@@ -321,4 +321,67 @@ router.get(
   },
 );
 
+// ─── GET /api/v1/feed/:id ─────────────────────────────────────────────────────
+// Returns full details for a single catalogue item (active, from approved vendor).
+// Used by the product detail page.
+
+router.get(
+  '/:id',
+  async (req: Request, res: Response): Promise<void> => {
+    const log = createChildLogger({ request_id: req.requestId });
+    const supabase = getAdminClient();
+    const tenantId = req.user!.tenant_id;
+    const { id } = req.params;
+
+    try {
+      const { data, error } = await supabase
+        .from('vendor_catalogue')
+        .select(
+          `
+          id,
+          vendor_id,
+          title,
+          description,
+          service_mode,
+          origin_region,
+          destination_region,
+          transit_days_min,
+          transit_days_max,
+          base_price_amount,
+          base_price_currency,
+          price_unit,
+          tags,
+          save_count,
+          media_urls,
+          created_at,
+          updated_at,
+          vendors!inner (
+            id,
+            company_name,
+            country_of_registration,
+            business_category,
+            onboarding_status,
+            website_url
+          )
+          `,
+        )
+        .eq('id', id)
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active')
+        .eq('vendors.onboarding_status', 'approved')
+        .single();
+
+      if (error || !data) {
+        res.status(404).json({ success: false, message: 'Item not found.' });
+        return;
+      }
+
+      res.status(200).json({ success: true, data });
+    } catch (err) {
+      log.error('[FEED/:id] Unexpected error', { err });
+      throw new AppError('Failed to load item details.', 500);
+    }
+  },
+);
+
 export { router as feedRouter };

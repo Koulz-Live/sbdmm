@@ -367,9 +367,10 @@ interface FeedCardProps {
   isSaved: boolean;
   onAddToCart: (item: FeedItem) => void;
   cartAdded: boolean;
+  onClickItem: (itemId: string) => void;
 }
 
-function FeedCard({ item, onClickVendor, onOpenSave, isSaved, onAddToCart, cartAdded }: FeedCardProps): React.JSX.Element {
+function FeedCard({ item, onClickVendor: _onClickVendor, onOpenSave, isSaved, onAddToCart, cartAdded, onClickItem }: FeedCardProps): React.JSX.Element {
   const [hovered, setHovered] = useState(false);
   const [bookmarkHovered, setBookmarkHovered] = useState(false);
   const [cartHovered, setCartHovered] = useState(false);
@@ -407,7 +408,7 @@ function FeedCard({ item, onClickVendor, onOpenSave, isSaved, onAddToCart, cartA
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => onClickVendor(item.vendor_id)}
+      onClick={() => onClickItem(item.id)}
     >
       {/* Visual area — product image or gradient fallback */}
       <div style={{ height: imgHeight, position: 'relative', overflow: 'hidden' }}>
@@ -992,6 +993,7 @@ export default function FurnitureFeedPage(): React.JSX.Element {
                 key={item.id}
                 item={item}
                 onClickVendor={handleClickVendor}
+                onClickItem={itemId => navigate(`/home/item/${itemId}`)}
                 isSaved={savedItemIds.has(item.id)}
                 cartAdded={cartItems.some(ci => ci.catalogue_item_id === item.id)}
                 onAddToCart={feedItem => {

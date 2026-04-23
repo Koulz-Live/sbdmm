@@ -61,6 +61,7 @@ const SavesPage             = lazy(() => import('./pages/SavesPage'));
 const SharedCollectionPage  = lazy(() => import('./pages/SharedCollectionPage'));
 const MessagesPage          = lazy(() => import('./pages/MessagesPage'));
 const CartPage              = lazy(() => import('./pages/CartPage'));
+const ProductDetailPage     = lazy(() => import('./pages/ProductDetailPage'));
 
 function PageLoader(): React.JSX.Element {
   return (
@@ -169,6 +170,7 @@ export default function App(): React.JSX.Element {
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
             <Route path="/home" element={<FurnitureFeedPage />} />
+            <Route path="/home/item/:id" element={<ProductDetailPage />} />
           </Route>
         </Route>
 
