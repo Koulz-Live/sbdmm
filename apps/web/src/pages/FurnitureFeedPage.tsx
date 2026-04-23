@@ -22,7 +22,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/apiClient';
 import { useCart } from '../contexts/CartContext';
 
@@ -624,6 +624,7 @@ function FeedCard({ item, onClickVendor: _onClickVendor, onOpenSave, isSaved, on
 
 export default function FurnitureFeedPage(): React.JSX.Element {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { addItem: addToCart, items: cartItems } = useCart();
 
   const [items, setItems]       = useState<FeedItem[]>([]);
@@ -632,10 +633,11 @@ export default function FurnitureFeedPage(): React.JSX.Element {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError]       = useState<string | null>(null);
 
-  const [search, setSearch]     = useState('');
-  const [activeTag, setActiveTag] = useState('');  // furniture category or trending tag filter
-  const [sort, setSort]         = useState<SortOption>('newest');
-  const [page, setPage]         = useState(1);
+  // Initialise filter state from URL params so deep-links (e.g. ?tag=sofa) work
+  const [search, setSearch]       = useState(() => searchParams.get('q') ?? '');
+  const [activeTag, setActiveTag] = useState(() => searchParams.get('tag') ?? '');
+  const [sort, setSort]           = useState<SortOption>(() => (searchParams.get('sort') as SortOption) ?? 'newest');
+  const [page, setPage]           = useState(1);
 
   // ── Signals (social filter data) ─────────────────────────────────────────
   const [signals, setSignals]         = useState<FeedSignals | null>(null);
@@ -668,6 +670,15 @@ export default function FurnitureFeedPage(): React.JSX.Element {
 
   // Reset page when filters change
   useEffect(() => { setPage(1); }, [sort, activeTag]);
+
+  // Sync active filters back into the URL (enables shareable links + browser back/forward)
+  useEffect(() => {
+    const p: Record<string, string> = {};
+    if (debouncedSearch) p['q'] = debouncedSearch;
+    if (activeTag) p['tag'] = activeTag;
+    if (sort !== 'newest') p['sort'] = sort;
+    setSearchParams(p, { replace: true });
+  }, [debouncedSearch, activeTag, sort, setSearchParams]);
 
   const fetchFeed = useCallback(async (p: number, append: boolean) => {
     if (append) setLoadingMore(true);
