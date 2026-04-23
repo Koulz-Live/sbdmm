@@ -12,6 +12,7 @@ import { api } from '../lib/apiClient';
 import { getTenantOverride, setTenantOverride } from '../lib/apiClient';
 import type { PlatformRole } from '@sbdmm/shared';
 import { PLATFORM_ROLES } from '@sbdmm/shared';
+import { useCart } from '../contexts/CartContext';
 
 interface TenantOption { id: string; name: string }
 
@@ -202,8 +203,10 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   // ── Feed: all authenticated users
   { to: '/home',               label: 'Home',         icon: 'ph ph-house-simple' },
-  // ── Saved items: all authenticated users
-  { to: '/saves',              label: 'Saved',        icon: 'ph ph-bookmark-simple' },
+  // ── Saved items / Wishlist: all authenticated users
+  { to: '/saves',              label: 'Wishlist',     icon: 'ph ph-bookmark-simple' },
+  // ── Shopping Cart: all authenticated users
+  { to: '/cart',               label: 'Cart',         icon: 'ph ph-shopping-cart-simple' },
   // ── Buyer / Admin: main dashboard
   { to: '/dashboard',          label: 'Dashboard',    icon: 'ph ph-chart-line-up', roles: ['buyer', 'tenant_admin', 'super_admin'] },
   // ── Provider: their own dashboard
@@ -236,6 +239,7 @@ export function NavBar(): React.JSX.Element {
   const navigate = useNavigate();
   const [signingOut, setSigningOut] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const { count: cartCount } = useCart();
 
   const role = profile?.role as PlatformRole | undefined;
 
@@ -349,10 +353,39 @@ export function NavBar(): React.JSX.Element {
               transition: 'background 0.15s, color 0.15s',
               justifyContent: collapsed ? 'center' : 'flex-start',
               whiteSpace: 'nowrap',
+              position: 'relative',
             })}
           >
-            <i className={item.icon} style={{ fontSize: 18, flexShrink: 0 }} />
-            {!collapsed && item.label}
+            {({ isActive }) => (
+              <>
+                <span style={{ position: 'relative', display: 'flex', flexShrink: 0 }}>
+                  <i className={item.icon} style={{ fontSize: 18 }} />
+                  {/* Cart badge */}
+                  {item.to === '/cart' && cartCount > 0 && (
+                    <span style={{
+                      position: 'absolute',
+                      top: -6,
+                      right: -8,
+                      minWidth: 16,
+                      height: 16,
+                      background: isActive ? '#fff' : '#299E60',
+                      color: isActive ? '#299E60' : '#fff',
+                      borderRadius: '50%',
+                      fontSize: 9,
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 3px',
+                      lineHeight: 1,
+                    }}>
+                      {cartCount > 99 ? '99+' : cartCount}
+                    </span>
+                  )}
+                </span>
+                {!collapsed && item.label}
+              </>
+            )}
           </NavLink>
         ))}
       </div>

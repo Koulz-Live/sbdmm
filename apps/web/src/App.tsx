@@ -60,6 +60,7 @@ const FurnitureFeedPage     = lazy(() => import('./pages/FurnitureFeedPage'));
 const SavesPage             = lazy(() => import('./pages/SavesPage'));
 const SharedCollectionPage  = lazy(() => import('./pages/SharedCollectionPage'));
 const MessagesPage          = lazy(() => import('./pages/MessagesPage'));
+const CartPage              = lazy(() => import('./pages/CartPage'));
 
 function PageLoader(): React.JSX.Element {
   return (
@@ -182,6 +183,13 @@ export default function App(): React.JSX.Element {
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
             <Route path="/messages" element={<MessagesPage />} />
+          </Route>
+        </Route>
+
+        {/* Protected — Shopping Cart & Checkout: all authenticated users */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppLayout />}>
+            <Route path="/cart" element={<CartPage />} />
           </Route>
         </Route>
 

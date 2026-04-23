@@ -24,6 +24,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/apiClient';
+import { useCart } from '../contexts/CartContext';
 
 // ─── Saved-items types (for bookmark overlay) ─────────────────────────────────
 
@@ -364,11 +365,14 @@ interface FeedCardProps {
   onClickVendor: (vendorId: string) => void;
   onOpenSave: (item: FeedItem) => void;
   isSaved: boolean;
+  onAddToCart: (item: FeedItem) => void;
+  cartAdded: boolean;
 }
 
-function FeedCard({ item, onClickVendor, onOpenSave, isSaved }: FeedCardProps): React.JSX.Element {
+function FeedCard({ item, onClickVendor, onOpenSave, isSaved, onAddToCart, cartAdded }: FeedCardProps): React.JSX.Element {
   const [hovered, setHovered] = useState(false);
   const [bookmarkHovered, setBookmarkHovered] = useState(false);
+  const [cartHovered, setCartHovered] = useState(false);
   const gradient = cardGradient(item.id);
   const icon = cardIcon(item.id);
 
@@ -461,6 +465,37 @@ function FeedCard({ item, onClickVendor, onOpenSave, isSaved }: FeedCardProps): 
             {item.base_price_currency} {item.base_price_amount.toLocaleString()}
           </div>
         )}
+
+        {/* Add to Cart button — bottom left of visual */}
+        <button
+          onClick={e => { e.stopPropagation(); onAddToCart(item); }}
+          onMouseEnter={() => setCartHovered(true)}
+          onMouseLeave={() => setCartHovered(false)}
+          title={cartAdded ? 'Added to cart' : 'Add to cart'}
+          style={{
+            position: 'absolute',
+            bottom: 8,
+            left: 8,
+            background: cartAdded ? '#299E60' : cartHovered ? '#1a7a48' : 'rgba(255,255,255,0.88)',
+            backdropFilter: 'blur(4px)',
+            border: 'none',
+            borderRadius: '50%',
+            width: 32,
+            height: 32,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            opacity: hovered || cartAdded ? 1 : 0,
+            transition: 'opacity 0.2s, background 0.15s',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          }}
+        >
+          <i
+            className={cartAdded ? 'ph-fill ph-shopping-cart-simple' : 'ph ph-shopping-cart-simple'}
+            style={{ fontSize: 16, color: cartAdded || cartHovered ? (cartAdded ? '#fff' : '#fff') : '#374151' }}
+          />
+        </button>
 
         {/* Bookmark button — bottom right of visual (always visible on hover) */}
         <button
@@ -588,6 +623,7 @@ function FeedCard({ item, onClickVendor, onOpenSave, isSaved }: FeedCardProps): 
 
 export default function FurnitureFeedPage(): React.JSX.Element {
   const navigate = useNavigate();
+  const { addItem: addToCart, items: cartItems } = useCart();
 
   const [items, setItems]       = useState<FeedItem[]>([]);
   const [meta, setMeta]         = useState<FeedMeta | null>(null);
@@ -957,11 +993,25 @@ export default function FurnitureFeedPage(): React.JSX.Element {
                 item={item}
                 onClickVendor={handleClickVendor}
                 isSaved={savedItemIds.has(item.id)}
+                cartAdded={cartItems.some(ci => ci.catalogue_item_id === item.id)}
+                onAddToCart={feedItem => {
+                  void addToCart({
+                    catalogue_item_id: feedItem.id,
+                    vendor_id: feedItem.vendor_id,
+                    vendor_name: feedItem.vendors.company_name,
+                    title: feedItem.title,
+                    base_price_amount: feedItem.base_price_amount,
+                    base_price_currency: feedItem.base_price_currency,
+                    price_unit: feedItem.price_unit,
+                    service_mode: feedItem.service_mode,
+                    origin_region: feedItem.origin_region,
+                    destination_region: feedItem.destination_region,
+                  });
+                }}
                 onOpenSave={target => {
                   setSaveTarget(target);
-                  // Mark as saved optimistically when modal is opened after save
                   setSavedItemIds(prev => {
-                    if (!prev.has(target.id)) return prev; // unchanged
+                    if (!prev.has(target.id)) return prev;
                     return new Set(prev);
                   });
                 }}

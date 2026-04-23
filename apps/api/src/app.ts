@@ -48,6 +48,7 @@ import { feedRouter } from './routes/feed';
 import { savesRouter } from './routes/saves';
 import { messagesRouter } from './routes/messages';
 import { ratingsRouter } from './routes/ratings';
+import { cartRouter } from './routes/cart';
 import { logger } from './lib/logger';
 
 export function createApp() {
@@ -117,6 +118,7 @@ export function createApp() {
   app.use('/api/v1/saves', savesRouter);
   app.use('/api/v1/orders/:orderId/messages', messagesRouter);
   app.use('/api/v1/ratings', ratingsRouter);
+  app.use('/api/v1/cart', cartRouter);
 
   // ─── 8. 404 Handler ─────────────────────────────────────────────────────────
   app.use((_req: Request, res: Response) => {

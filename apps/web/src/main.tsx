@@ -12,6 +12,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { CartProvider } from './contexts/CartContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 // MONITORING: Must be the first side-effectful import so Sentry instruments fetch/XHR
 import './lib/monitoring';
@@ -35,7 +36,9 @@ ReactDOM.createRoot(rootElement).render(
       <BrowserRouter>
         <ThemeProvider>
           <AuthProvider>
-            <App />
+            <CartProvider>
+              <App />
+            </CartProvider>
           </AuthProvider>
         </ThemeProvider>
       </BrowserRouter>

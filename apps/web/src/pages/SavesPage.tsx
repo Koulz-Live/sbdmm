@@ -20,6 +20,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/apiClient';
+import { useCart } from '../contexts/CartContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -320,10 +321,14 @@ function SavedItemCard({
   item,
   onUnsave,
   onClickVendor,
+  onAddToCart,
+  cartAdded,
 }: {
   item: SavedItem;
   onUnsave: () => void;
   onClickVendor: () => void;
+  onAddToCart: () => void;
+  cartAdded: boolean;
 }): React.JSX.Element {
   const [hovered, setHovered] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -400,6 +405,31 @@ function SavedItemCard({
             ))}
           </div>
         )}
+        {item.catalogue_item_id && (
+          <button
+            onClick={onAddToCart}
+            style={{
+              marginTop: 10,
+              width: '100%',
+              background: cartAdded ? '#f0fdf4' : '#299E60',
+              color: cartAdded ? '#299E60' : '#fff',
+              border: cartAdded ? '1px solid #299E60' : 'none',
+              borderRadius: 8,
+              padding: '6px 0',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 5,
+              transition: 'background 0.15s',
+            }}
+          >
+            <i className={cartAdded ? 'ph-fill ph-shopping-cart-simple' : 'ph ph-shopping-cart-simple'} style={{ fontSize: 14 }} />
+            {cartAdded ? 'In Cart' : 'Add to Cart'}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -409,6 +439,7 @@ function SavedItemCard({
 
 export default function SavesPage(): React.JSX.Element {
   const navigate = useNavigate();
+  const { addItem: addToCart, items: cartItems } = useCart();
   const [searchParams, setSearchParams] = useSearchParams();
   const openCollectionId = searchParams.get('collection');
 
@@ -713,6 +744,22 @@ export default function SavesPage(): React.JSX.Element {
                   item={item}
                   onUnsave={() => { void handleUnsave(item); }}
                   onClickVendor={() => { if (item.vendor_id) navigate(`/vendors/${item.vendor_id}`); }}
+                  cartAdded={cartItems.some(ci => ci.catalogue_item_id === item.catalogue_item_id)}
+                  onAddToCart={() => {
+                    if (!item.catalogue_item_id) return;
+                    void addToCart({
+                      catalogue_item_id: item.catalogue_item_id,
+                      vendor_id: item.vendor_id ?? '',
+                      vendor_name: item.vendor_name,
+                      title: item.title,
+                      base_price_amount: item.base_price_amount,
+                      base_price_currency: item.base_price_currency,
+                      price_unit: item.price_unit,
+                      service_mode: item.service_mode,
+                      origin_region: item.origin_region,
+                      destination_region: item.destination_region,
+                    });
+                  }}
                 />
               ))}
             </div>

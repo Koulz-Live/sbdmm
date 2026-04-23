@@ -24,6 +24,7 @@ import { useTheme } from '../contexts/ThemeContext';
 const PAGE_TITLES: Record<string, string> = {
   '/home':               'Home',
   '/saves':              'Saved Items',
+  '/cart':               'My Cart',
   '/dashboard':          'Dashboard',
   '/provider/dashboard': 'My Dashboard',
   '/orders':             'Orders',
