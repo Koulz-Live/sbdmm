@@ -108,9 +108,18 @@ export function CartProvider({ children }: { children: ReactNode }): React.JSX.E
 
   const addItem = useCallback(async (payload: AddToCartPayload): Promise<boolean> => {
     const res = await api.post<CartItem>('/api/v1/cart', payload);
-    if (res.success) {
-      // Refresh to get updated state (handles both insert and qty-increment)
-      await refresh();
+    if (res.success && res.data) {
+      // Optimistic: update local state immediately with the returned row
+      setItems(prev => {
+        const exists = prev.find(i => i.catalogue_item_id === payload.catalogue_item_id);
+        if (exists) {
+          // qty-increment case — update in place
+          return prev.map(i => i.catalogue_item_id === payload.catalogue_item_id ? res.data! : i);
+        }
+        return [...prev, res.data!];
+      });
+      // Then confirm with a server refresh (handles edge cases)
+      void refresh();
       return true;
     }
     return false;

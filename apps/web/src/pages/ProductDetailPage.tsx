@@ -92,16 +92,29 @@ export default function ProductDetailPage(): React.JSX.Element {
   const [item, setItem]       = useState<CatalogueItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
-  const [addingCart, setAddingCart]   = useState(false);
-  const [cartSuccess, setCartSuccess] = useState(false);
-  const [activeImage, setActiveImage] = useState(0);
+  const [addingCart, setAddingCart]     = useState(false);
+  const [cartSuccess, setCartSuccess]   = useState(false);
+  const [cartError, setCartError]       = useState<string | null>(null);
+  const [activeImage, setActiveImage]   = useState(0);
 
   const inCart = item ? cartItems.some(ci => ci.catalogue_item_id === item.id) : false;
 
+  // ── Reset ALL per-item state when the route param changes ─────────────────
+  // ProductDetailPage is a single React component instance; React Router re-renders
+  // it with new params rather than re-mounting. Without this reset, cartSuccess,
+  // activeImage etc. from item A bleed into item B.
   useEffect(() => {
-    if (!id) return;
+    setItem(null);
     setLoading(true);
     setError(null);
+    setCartSuccess(false);
+    setCartError(null);
+    setAddingCart(false);
+    setActiveImage(0);
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
     api.get<CatalogueItem>(`/api/v1/feed/${id}`).then(res => {
       if (res.success && res.data) {
         setItem(res.data);
@@ -117,6 +130,7 @@ export default function ProductDetailPage(): React.JSX.Element {
 
   const handleAddToCart = async () => {
     if (!item || addingCart) return;
+    setCartError(null);
     setAddingCart(true);
     const ok = await addItem({
       catalogue_item_id: item.id,
@@ -131,7 +145,11 @@ export default function ProductDetailPage(): React.JSX.Element {
       destination_region: item.destination_region,
     });
     setAddingCart(false);
-    if (ok) setCartSuccess(true);
+    if (ok) {
+      setCartSuccess(true);
+    } else {
+      setCartError('Could not add to cart — please try again.');
+    }
   };
 
   // ── Loading skeleton ───────────────────────────────────────────────────────
@@ -440,6 +458,20 @@ export default function ProductDetailPage(): React.JSX.Element {
                 <i className="ph ph-arrow-right" style={{ fontSize: 14 }} />
                 Go to Cart
               </button>
+            )}
+
+            {/* Cart error */}
+            {cartError && (
+              <div style={{
+                marginTop: 8,
+                background: '#fef2f2', border: '1px solid #fecaca',
+                borderRadius: 8, padding: '9px 12px',
+                fontSize: 12, color: '#dc2626',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+                <i className="ph ph-warning-circle" style={{ fontSize: 14, flexShrink: 0 }} />
+                {cartError}
+              </div>
             )}
 
             {/* Divider */}
