@@ -89,15 +89,43 @@ export async function evaluateCompliance(
     }
 
     if (!rules || rules.length === 0) {
-      log.warn('[COMPLIANCE] No compliance rules found — passing by default', {
+      log.warn('[COMPLIANCE] No compliance rules configured — escalating to manual review', {
         tenant_id: input.tenant_id,
       });
-      return {
-        overall_status: 'passed',
+      // SECURITY: An unconfigured compliance posture is NOT a passing posture.
+      // Return manual_review so that a human reviewer is alerted, and persist
+      // the result so auditors can observe the gap.
+      // Tenant admins must seed baseline rules before compliance checks can
+      // pass automatically (see Phase 3 of the architecture roadmap).
+      const unconfiguredResult: ComplianceCheckResult = {
+        overall_status: 'manual_review',
         checks: [],
         blocked: false,
-        requires_manual_review: false,
+        requires_manual_review: true,
       };
+
+      await getAdminClient().from('compliance_results').insert({
+        tenant_id: input.tenant_id,
+        context_type: input.context_type,
+        context_id: input.context_id,
+        overall_status: 'manual_review',
+        check_results: [],
+        evaluated_at: new Date().toISOString(),
+        review_notes: 'No compliance rules configured for this tenant. Manual review required.',
+      });
+
+      await writeAuditLog({
+        event_type: 'compliance.rules_not_configured',
+        actor_id: input.actor_id,
+        tenant_id: input.tenant_id,
+        target_type: input.context_type,
+        target_id: input.context_id,
+        outcome: 'blocked',
+        details: { reason: 'no_active_rules', context_type: input.context_type },
+        request_id: input.request_id,
+      });
+
+      return unconfiguredResult;
     }
 
     // Evaluate each rule

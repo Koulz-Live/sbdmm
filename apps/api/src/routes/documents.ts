@@ -54,7 +54,6 @@ const upload = multer({
   },
 });
 
-// SECURITY: Strict MIME type allowlist — no executable, script, or archive types
 const ALLOWED_MIME_TYPES = new Set([
   'application/pdf',
   'image/jpeg',
@@ -68,6 +67,28 @@ const ALLOWED_EXTENSIONS: Record<string, string> = {
   'image/png': 'png',
   'image/tiff': 'tif',
 };
+
+// ─── Magic-Byte Validation ────────────────────────────────────────────────────
+// SECURITY: MIME type reported by Multer comes from the Content-Type header,
+// which is client-controlled and trivially spoofed. Magic-byte inspection
+// reads the actual file content to confirm the declared type matches the
+// binary signature of the uploaded data.
+// Reference signatures per https://en.wikipedia.org/wiki/List_of_file_signatures
+const MAGIC_BYTES: Record<string, ReadonlyArray<ReadonlyArray<number>>> = {
+  'application/pdf': [[0x25, 0x50, 0x44, 0x46]],                           // %PDF
+  'image/jpeg':      [[0xFF, 0xD8, 0xFF]],                                  // JFIF/EXIF
+  'image/png':       [[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]],  // PNG
+  'image/tiff':      [
+    [0x49, 0x49, 0x2A, 0x00],  // Little-endian TIFF (II*)
+    [0x4D, 0x4D, 0x00, 0x2A],  // Big-endian TIFF (MM*)
+  ],
+};
+
+function validateMagicBytes(buffer: Buffer, mimeType: string): boolean {
+  const signatures = MAGIC_BYTES[mimeType];
+  if (!signatures) return false;
+  return signatures.some((sig) => sig.every((byte, i) => buffer[i] === byte));
+}
 
 const documentParamsSchema = z.object({ id: uuidSchema });
 
@@ -210,6 +231,25 @@ router.post(
     const { document_type, order_id, vendor_id } = bodyResult.data;
     // narrowed: we already returned early if !multerReq.file
     const uploadedFile = multerReq.file!;
+
+    // SECURITY: Magic-byte inspection — validates that the actual binary content
+    // matches the declared MIME type. A client could set Content-Type to
+    // 'image/jpeg' while uploading an executable; magic bytes catch this.
+    if (!validateMagicBytes(uploadedFile.buffer, uploadedFile.mimetype)) {
+      log.warn('[DOCUMENTS] Magic-byte mismatch — declared MIME does not match file content', {
+        declared_mime: uploadedFile.mimetype,
+        file_size: uploadedFile.size,
+      });
+      res.status(415).json({
+        success: false,
+        error: {
+          code: ERROR_CODES.VALIDATION_ERROR,
+          message: 'File content does not match the declared file type.',
+        },
+        meta: { request_id: req.requestId, timestamp: new Date().toISOString() },
+      });
+      return;
+    }
 
     // SECURITY: Storage path encodes tenant_id for physical isolation
     const ext = ALLOWED_EXTENSIONS[uploadedFile.mimetype] ?? 'bin';

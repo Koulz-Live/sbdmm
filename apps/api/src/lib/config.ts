@@ -79,6 +79,15 @@ export const config = {
     level: optional('LOG_LEVEL', 'info'),
   },
 
+  apiKeys: {
+    // SECURITY: Server-side pepper for HMAC-SHA256 API key hashing.
+    // This pepper is mixed into every key hash so that a database breach alone
+    // cannot brute-force stored hashes without also obtaining this secret.
+    // Generate with: openssl rand -hex 32
+    // Store in your secrets manager — never in source control.
+    pepper: required('API_KEY_PEPPER'),
+  },
+
   webhooks: {
     logisticsProviderSecret: optional('WEBHOOK_SECRET_LOGISTICS_PROVIDER', ''),
   },

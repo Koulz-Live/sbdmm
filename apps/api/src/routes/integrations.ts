@@ -14,13 +14,14 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { createHash, randomBytes } from 'crypto';
+import { createHmac, randomBytes } from 'crypto';
 import { requireAuth } from '../middleware/auth';
 import { requireRole } from '../middleware/authorization';
 import { validate, createIntegrationSchema, paginationSchema, uuidSchema } from '../schemas/index';
 import { writeAuditLog } from '../services/auditLog';
 import { getAdminClient } from '../lib/supabaseAdmin';
 import { createChildLogger } from '../lib/logger';
+import { config } from '../lib/config';
 import { AppError, NotFoundError } from '../middleware/errorHandler';
 import { ERROR_CODES } from '@sbdmm/shared';
 import { z } from 'zod';
@@ -41,8 +42,10 @@ function generateApiKey(env: string): string {
 }
 
 function hashApiKey(rawKey: string): string {
-  // SHA-256 hash — fast for key lookup, not used for passwords
-  return createHash('sha256').update(rawKey).digest('hex');
+  // HMAC-SHA256 with a server-side pepper — prevents rainbow-table attacks
+  // against the stored hashes if the database is compromised without the pepper.
+  // The pepper is loaded from the API_KEY_PEPPER environment variable (required).
+  return createHmac('sha256', config.apiKeys.pepper).update(rawKey).digest('hex');
 }
 
 // ─── GET /api/v1/integrations ──────────────────────────────────────────────────

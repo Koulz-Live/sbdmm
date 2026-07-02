@@ -108,7 +108,9 @@ export type AuditEventType =
   | 'webhook.processed'
   | 'admin.role_assigned'
   | 'admin.user_suspended'
-  | 'admin.super_action';
+  | 'admin.super_action'
+  | 'admin.tenant_override'
+  | 'compliance.rules_not_configured';
 
 // ─── Logistics Order ─────────────────────────────────────────────────────────
 export type OrderStatus =

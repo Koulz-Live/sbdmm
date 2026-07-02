@@ -23,6 +23,7 @@ import { getAdminClient } from '../lib/supabaseAdmin';
 import { logger, createChildLogger } from '../lib/logger';
 import { PlatformRole, PLATFORM_ROLES, ERROR_CODES } from '@sbdmm/shared';
 import { perUserRateLimit } from './rateLimiter';
+import { processTenantOverride } from './tenantOverride';
 
 // Extend Express Request with our authenticated user context
 declare global {
@@ -131,6 +132,15 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       role: profile.role as PlatformRole,
       is_active: profile.is_active as boolean,
     };
+
+    // Apply tenant override if the X-Tenant-Override header is present.
+    // Only super_admin may use this; every use is audit-logged.
+    // processTenantOverride mutates req.user.tenant_id on success.
+    const overrideResult = await processTenantOverride(req, res);
+    if (overrideResult === false) return; // Response already sent by override handler
+    if (typeof overrideResult === 'string') {
+      req.user = { ...req.user, tenant_id: overrideResult };
+    }
 
     // Apply per-user rate limit now that identity is confirmed.
     // Keyed on user.id — catches account abuse across rotating IPs.

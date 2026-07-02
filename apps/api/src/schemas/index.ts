@@ -145,6 +145,9 @@ export const createQuoteSchema = z
   .strict();
 
 // ─── AI Proxy Request Schema ──────────────────────────────────────────────────
+// IMPORTANT: This enum must stay in sync with AI_TASK_CONFIGS in aiProxy.route.ts.
+// Adding a task to AI_TASK_CONFIGS without adding it here will cause the Zod
+// validation middleware to reject the request before the route handler runs.
 export const aiProxyRequestSchema = z
   .object({
     task: z.enum([
@@ -153,6 +156,11 @@ export const aiProxyRequestSchema = z
       'document_summary',
       'compliance_query',
       'esg_analysis',
+      'quote_ranking',
+      'shipment_narrative',
+      'vendor_summary',
+      'analytics_narrative',
+      'message_draft',
     ]),
     // SECURITY: We do NOT accept arbitrary messages to send to OpenAI.
     // The backend controls the system prompt. The client only provides structured input.
