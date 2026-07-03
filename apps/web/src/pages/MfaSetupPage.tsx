@@ -83,7 +83,7 @@ function OtpInput({ value, onChange, disabled }: { value: string; onChange: (v: 
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function MfaSetupPage(): React.JSX.Element {
-  const { profile, refreshProfile } = useAuth();
+  const { profile, refreshProfile, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [step, setStep]             = useState<SetupStep>('loading');
@@ -104,22 +104,9 @@ export default function MfaSetupPage(): React.JSX.Element {
   const [unenrolling, setUnenrolling] = useState(false);
   const [confirmUnenroll, setConfirmUnenroll] = useState(false);
 
-  // Check current MFA status on mount
-  const checkStatus = useCallback(async (): Promise<void> => {
-    setStep('checking');
-    const result = await api.get<{ enrolled: boolean; required: boolean; factors: MfaFactor[] }>('/api/v1/auth/mfa-status');
-    if (!result.success) { setStep('error'); setErrorMsg(result.error?.message ?? 'Failed to check MFA status.'); return; }
-
-    const { enrolled, factors: f } = result.data!;
-    setFactors(f ?? []);
-    if (enrolled) { setStep('already_enrolled'); }
-    else { void startEnroll(); }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => { void checkStatus(); }, [checkStatus]);
-
-  // Start the TOTP enroll flow via the Supabase browser client
-  const startEnroll = async (): Promise<void> => {
+  // Start the TOTP enroll flow via the Supabase browser client.
+  // Memoized so it can be safely listed in checkStatus's dependency array.
+  const startEnroll = useCallback(async (): Promise<void> => {
     setErrorMsg(null);
     const { data, error } = await supabase.auth.mfa.enroll({
       factorType: 'totp',
@@ -153,7 +140,36 @@ export default function MfaSetupPage(): React.JSX.Element {
     setQrUri(data.totp.qr_code);
     setSecret(data.totp.secret);
     setStep('qr');
-  };
+  }, [profile]);
+
+  // Check current MFA status — runs once authentication is confirmed.
+  const checkStatus = useCallback(async (): Promise<void> => {
+    try {
+      setStep('checking');
+      const result = await api.get<{ enrolled: boolean; required: boolean; factors: MfaFactor[] }>('/api/v1/auth/mfa-status');
+      if (!result.success) { setStep('error'); setErrorMsg(result.error?.message ?? 'Failed to check MFA status.'); return; }
+
+      const { enrolled, factors: f } = result.data ?? {};
+      setFactors(f ?? []);
+      if (enrolled) { setStep('already_enrolled'); }
+      else { await startEnroll(); }
+    } catch (err) {
+      // Catch any unhandled rejection from startEnroll or unexpected throws
+      // so the spinner never gets permanently stuck on 'checking'.
+      setStep('error');
+      setErrorMsg(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.');
+    }
+  }, [startEnroll]);
+
+  // Guard the effect: wait for auth hydration before calling the API.
+  // Without this guard the effect fires before the Supabase session is
+  // loaded from storage, the 401 response triggers signOut, and the
+  // subsequent SIGNED_IN event can leave the component stuck on 'checking'.
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated) { navigate('/login', { replace: true }); return; }
+    void checkStatus();
+  }, [authLoading, isAuthenticated, checkStatus, navigate]);
 
   // After scanning QR, user clicks "Next" → move to verify
   const handleProceedToVerify = (): void => { setOtp(''); setStep('verify'); };
