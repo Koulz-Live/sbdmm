@@ -20,7 +20,7 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { api } from '../lib/apiClient';
+import { supabase } from '../lib/supabaseClient';
 import type { PlatformRole } from '@sbdmm/shared';
 
 interface ProtectedRouteProps {
@@ -41,19 +41,19 @@ export function ProtectedRoute({
   // MFA check state
   const [mfaStatus, setMfaStatus] = useState<'idle' | 'checking' | 'enrolled' | 'missing'>('idle');
 
-  // Run the MFA enrollment check whenever the user is a super_admin and requireMfa is set
+  // Run the MFA enrollment check whenever the user is a super_admin and requireMfa is set.
+  // Uses the Supabase client directly — no backend API required.
   useEffect(() => {
     if (!requireMfa) return;
     if (!profile || profile.role !== 'super_admin') return;
     if (mfaStatus !== 'idle') return;
 
     setMfaStatus('checking');
-    void api.get<{ enrolled: boolean }>('/api/v1/auth/mfa-status').then(res => {
-      if (res.success && res.data?.enrolled) {
-        setMfaStatus('enrolled');
-      } else {
-        setMfaStatus('missing');
-      }
+    void supabase.auth.mfa.listFactors().then(({ data }) => {
+      const enrolled = (data?.all ?? []).some(
+        f => (f.factor_type === 'totp' || f.factor_type === 'phone') && f.status === 'verified',
+      );
+      setMfaStatus(enrolled ? 'enrolled' : 'missing');
     });
   }, [requireMfa, profile, mfaStatus]);
 
