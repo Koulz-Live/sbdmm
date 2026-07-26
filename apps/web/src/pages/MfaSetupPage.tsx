@@ -386,9 +386,13 @@ export default function MfaSetupPage(): React.JSX.Element {
     }
 
     await refreshProfile();
-    // Re-fetch factors list for the success screen
-    const result = await api.get<{ enrolled: boolean; factors: MfaFactor[] }>('/api/v1/auth/mfa-status');
-    if (result.success && result.data) setFactors(result.data.factors);
+    // Re-fetch factors directly from Supabase — no backend required
+    const { data: factorsData } = await supabase.auth.mfa.listFactors();
+    const refreshed: MfaFactor[] = (factorsData?.all ?? []).map(f => ({
+      id: f.id, factor_type: f.factor_type, status: f.status,
+      friendly_name: f.friendly_name, created_at: f.created_at,
+    }));
+    setFactors(refreshed);
     setVerifying(false);
     setStep('success');
   };
@@ -396,19 +400,36 @@ export default function MfaSetupPage(): React.JSX.Element {
   // ─── Remove a factor ─────────────────────────────────────────────────────
   const handleRemoveFactor = async (id: string): Promise<void> => {
     setRemovingId(id); setErrorMsg(null);
-    const result = await api.delete(`/api/v1/auth/mfa/unenroll/${encodeURIComponent(id)}`);
-    if (result.success) {
-      await refreshProfile();
-      const updated = await api.get<{ enrolled: boolean; factors: MfaFactor[] }>('/api/v1/auth/mfa-status');
-      const newFactors = updated.data?.factors ?? [];
-      setFactors(newFactors);
-      setConfirmRemoveId(null);
-      if (!newFactors.some(f => f.status === 'verified')) {
-        // All factors removed — go back to method select
-        setStep('method_select');
+
+    // Prefer client-side unenroll (works when session is AAL2).
+    // Falls back to the admin backend API if unavailable.
+    const { error: unenrollErr } = await supabase.auth.mfa.unenroll({ factorId: id });
+    if (unenrollErr) {
+      if (isAal2RequiredError(unenrollErr.message)) {
+        // Session is only AAL1 — challenge first, then the user can retry
+        setRemovingId(null);
+        await initiateAal2Challenge(factors);
+        return;
       }
-    } else {
-      setErrorMsg(result.error?.message ?? 'Failed to remove MFA factor.');
+      // Last resort: admin backend unenroll
+      const fallback = await api.delete(`/api/v1/auth/mfa/unenroll/${encodeURIComponent(id)}`);
+      if (!fallback.success) {
+        setErrorMsg(fallback.error?.message ?? 'Failed to remove MFA factor.');
+        setRemovingId(null);
+        return;
+      }
+    }
+
+    await refreshProfile();
+    const { data: factorsData } = await supabase.auth.mfa.listFactors();
+    const newFactors: MfaFactor[] = (factorsData?.all ?? []).map(f => ({
+      id: f.id, factor_type: f.factor_type, status: f.status,
+      friendly_name: f.friendly_name, created_at: f.created_at,
+    }));
+    setFactors(newFactors);
+    setConfirmRemoveId(null);
+    if (!newFactors.some(f => f.status === 'verified')) {
+      setStep('method_select');
     }
     setRemovingId(null);
   };
@@ -418,36 +439,34 @@ export default function MfaSetupPage(): React.JSX.Element {
     try {
       setStep('checking');
 
-      // Check current AAL level directly from Supabase client session
-      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      // Both calls go directly to Supabase — no backend API required.
+      const [aalResult, factorsResult] = await Promise.all([
+        supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+        supabase.auth.mfa.listFactors(),
+      ]);
 
-      const result = await api.get<{ enrolled: boolean; required: boolean; factors: MfaFactor[] }>('/api/v1/auth/mfa-status');
-      if (!result.success) {
-        const msg = result.error?.message ?? 'Failed to check MFA status.';
+      if (factorsResult.error) {
         setStep('error');
-        setErrorMsg(
-          msg.toLowerCase().includes('unexpected')
-            ? 'Cannot reach the SBDMM API. Make sure the backend is running and environment variables are configured.'
-            : msg,
-        );
-        return;
-      }
-      const { enrolled, factors: f } = result.data ?? {};
-      setFactors(f ?? []);
-
-      // If the session is only AAL1 but there are verified factors, the user
-      // must complete a MFA challenge before they can enroll additional factors.
-      // Route them through the AAL2 challenge screen first.
-      if (
-        aalData?.nextLevel === 'aal2' &&
-        aalData?.currentLevel === 'aal1' &&
-        (f ?? []).some(fac => fac.status === 'verified')
-      ) {
-        await initiateAal2Challenge(f ?? []);
+        setErrorMsg(factorsResult.error.message ?? 'Failed to retrieve MFA factors.');
         return;
       }
 
-      if (enrolled) { setStep('already_enrolled'); }
+      const allFactors: MfaFactor[] = (factorsResult.data?.all ?? []).map(f => ({
+        id: f.id, factor_type: f.factor_type, status: f.status,
+        friendly_name: f.friendly_name, created_at: f.created_at,
+      }));
+      setFactors(allFactors);
+
+      const aalData = aalResult.data;
+      const hasVerified = allFactors.some(f => f.status === 'verified');
+
+      // If session is AAL1 but verified factors exist, challenge first
+      if (aalData?.nextLevel === 'aal2' && aalData?.currentLevel === 'aal1' && hasVerified) {
+        await initiateAal2Challenge(allFactors);
+        return;
+      }
+
+      if (hasVerified) { setStep('already_enrolled'); }
       else { setStep('method_select'); }
     } catch (err) {
       setStep('error');
