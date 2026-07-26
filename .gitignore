@@ -68,3 +68,4 @@ playwright-report/
 playwright-results.xml
 test-results/
 .vercel
+.env*

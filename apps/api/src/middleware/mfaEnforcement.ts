@@ -73,23 +73,28 @@ export async function requireMfa(req: Request, res: Response, next: NextFunction
       return;
     }
 
-    // Check for at least one verified TOTP factor
+    // AAL2: accept any verified TOTP or Phone (SMS) factor
     const hasVerifiedFactor = data?.factors?.some(
-      (factor) => factor.factor_type === 'totp' && factor.status === 'verified',
+      (factor) =>
+        (factor.factor_type === 'totp' || factor.factor_type === 'phone') &&
+        factor.status === 'verified',
     );
 
     if (!hasVerifiedFactor) {
-      logger.warn('[MFA] Access denied — no verified MFA factor', {
+      logger.warn('[MFA] Access denied — no verified AAL2 factor (totp or phone)', {
         request_id: req.requestId,
         user_id: user.id,
         role: user.role,
+        factor_count: data?.factors?.length ?? 0,
       });
       res.status(403).json({
         success: false,
         error: {
           code: 'MFA_REQUIRED',
-          message: 'Multi-factor authentication is required for your role. Please enroll MFA to continue.',
-          mfa_enroll_url: '/settings/security/mfa',
+          message:
+            'Multi-factor authentication (AAL2) is required for your role. ' +
+            'Please enrol an Authenticator App or Phone/SMS factor to continue.',
+          mfa_enroll_url: '/mfa-setup',
         },
         meta: { request_id: req.requestId, timestamp: new Date().toISOString() },
       });

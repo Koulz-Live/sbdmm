@@ -57,6 +57,7 @@ const DesignMyTablePage     = lazy(() => import('./pages/DesignMyTablePage'));
 const AuthCallbackPage      = lazy(() => import('./pages/AuthCallbackPage'));
 const MfaSetupPage          = lazy(() => import('./pages/MfaSetupPage'));
 const FurnitureFeedPage     = lazy(() => import('./pages/FurnitureFeedPage'));
+const GroupLandingPage      = lazy(() => import('./pages/GroupLandingPage'));
 const SavesPage             = lazy(() => import('./pages/SavesPage'));
 const SharedCollectionPage  = lazy(() => import('./pages/SharedCollectionPage'));
 const MessagesPage          = lazy(() => import('./pages/MessagesPage'));
@@ -77,6 +78,7 @@ export default function App(): React.JSX.Element {
       <Routes>
         {/* Public routes — no auth required, no layout shell */}
         <Route path="/"                  element={<LandingPage />} />
+        <Route path="/group"             element={<GroupLandingPage />} />
         <Route path="/login"             element={<LoginPage />} />
         <Route path="/auth/callback"     element={<AuthCallbackPage />} />
         <Route path="/forgot-password"   element={<ForgotPasswordPage />} />

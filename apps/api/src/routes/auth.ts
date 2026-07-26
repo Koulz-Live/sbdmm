@@ -196,10 +196,16 @@ router.get(
       id: f.id,
       factor_type: f.factor_type,
       status: f.status,
+      friendly_name: (f as { friendly_name?: string }).friendly_name ?? undefined,
       created_at: f.created_at,
     }));
 
-    const enrolled = factors.some((f) => f.factor_type === 'totp' && f.status === 'verified');
+    // AAL2: enrolled when any TOTP or Phone factor is verified
+    const enrolled = factors.some(
+      (f) =>
+        (f.factor_type === 'totp' || f.factor_type === 'phone') &&
+        f.status === 'verified',
+    );
     const { PRIVILEGED_ROLES } = await import('@sbdmm/shared');
     const required = PRIVILEGED_ROLES.includes(actor.role);
 
