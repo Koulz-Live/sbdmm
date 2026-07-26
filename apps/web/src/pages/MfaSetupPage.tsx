@@ -254,13 +254,31 @@ export default function MfaSetupPage(): React.JSX.Element {
   const handleAal2Verify = async (): Promise<void> => {
     if (aal2Otp.length !== 6) return;
     setAal2Verifying(true); setAal2ErrorMsg(null);
+
+    // Create a FRESH challenge immediately before verifying.
+    // The challenge stored in state from initiateAal2Challenge may be stale
+    // (TOTP challenges are single-use and expire quickly). This mirrors the
+    // approach used in handleVerify for regular TOTP verification.
+    const { data: freshChallenge, error: challengeErr } = await supabase.auth.mfa.challenge({
+      factorId: aal2FactorId,
+    });
+    if (challengeErr || !freshChallenge) {
+      setAal2ErrorMsg(challengeErr?.message ?? 'Failed to create MFA challenge. Please try again.');
+      setAal2Verifying(false);
+      return;
+    }
+
     const { error } = await supabase.auth.mfa.verify({
       factorId: aal2FactorId,
-      challengeId: aal2ChallengeId,
+      challengeId: freshChallenge.id,
       code: aal2Otp,
     });
     if (error) {
-      setAal2ErrorMsg('Invalid code. Check your authenticator app and try again.');
+      setAal2ErrorMsg(
+        error.message?.toLowerCase().includes('invalid')
+          ? 'Invalid code — make sure you are entering the current 6-digit code from your authenticator app (codes rotate every 30 s).'
+          : (error.message ?? 'Verification failed. Please try again.'),
+      );
       setAal2Otp('');
       setAal2Verifying(false);
       setTimeout(() => (document.getElementById('aal2-0') as HTMLInputElement | null)?.focus(), 50);
