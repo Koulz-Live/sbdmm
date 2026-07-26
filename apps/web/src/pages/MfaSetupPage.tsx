@@ -32,6 +32,7 @@ type MfaMethod = 'totp' | 'phone';
 type SetupStep =
   | 'loading'
   | 'checking'
+  | 'aal2_challenge'  // verify existing factor before enrolling another
   | 'method_select'   // choose TOTP or Phone
   | 'totp_qr'         // scan QR code
   | 'totp_verify'     // enter 6-digit TOTP code
@@ -180,6 +181,14 @@ export default function MfaSetupPage(): React.JSX.Element {
   const [removingId, setRemovingId]   = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
+  // AAL2 challenge state (verify existing factor before adding a new one)
+  const [aal2FactorId, setAal2FactorId]       = useState('');
+  const [aal2ChallengeId, setAal2ChallengeId] = useState('');
+  const [aal2Otp, setAal2Otp]                 = useState('');
+  const [aal2Verifying, setAal2Verifying]     = useState(false);
+  const [aal2ErrorMsg, setAal2ErrorMsg]       = useState<string | null>(null);
+  const [pendingEnrollMethod, setPendingEnrollMethod] = useState<MfaMethod | null>(null);
+
   // ─── Resend countdown ───────────────────────────────────────────────────
   const startResendCooldown = (): void => {
     setResendCooldown(60);
@@ -195,6 +204,11 @@ export default function MfaSetupPage(): React.JSX.Element {
   useEffect(() => () => { if (resendTimer.current) clearInterval(resendTimer.current); }, []);
 
   // ─── Helpers to detect error type ──────────────────────────────────────
+  const isAal2RequiredError = (msg: string): boolean =>
+    msg.toLowerCase().includes('aal2') ||
+    msg.toLowerCase().includes('assurance level') ||
+    msg.toLowerCase().includes('mfa challenge required');
+
   const friendlyEnrollError = (msg: string, status?: number): string => {
     const lower = msg.toLowerCase();
     if (lower.includes('origin not allowed') || lower.includes('origin') || status === 422) {
@@ -212,8 +226,62 @@ export default function MfaSetupPage(): React.JSX.Element {
     return msg;
   };
 
+  // ─── Initiate AAL2 challenge against an existing verified factor ─────────
+  // Called when Supabase rejects enrollment because the session is only AAL1.
+  const initiateAal2Challenge = async (fs: MfaFactor[], pending?: MfaMethod): Promise<void> => {
+    const verifiedFactor = fs.find(f => f.status === 'verified');
+    if (!verifiedFactor) {
+      // No verified factor to challenge — let them enroll fresh
+      if (pending) setMethod(pending);
+      setStep('method_select');
+      return;
+    }
+    const { data: cd, error: ce } = await supabase.auth.mfa.challenge({ factorId: verifiedFactor.id });
+    if (ce || !cd) {
+      // If challenge creation fails, fall back to the dashboard
+      setStep('already_enrolled');
+      return;
+    }
+    setAal2FactorId(verifiedFactor.id);
+    setAal2ChallengeId(cd.id);
+    setAal2Otp('');
+    setAal2ErrorMsg(null);
+    if (pending !== undefined) setPendingEnrollMethod(pending);
+    setStep('aal2_challenge');
+  };
+
+  // ─── Verify AAL2 challenge → elevate session → retry pending action ──────
+  const handleAal2Verify = async (): Promise<void> => {
+    if (aal2Otp.length !== 6) return;
+    setAal2Verifying(true); setAal2ErrorMsg(null);
+    const { error } = await supabase.auth.mfa.verify({
+      factorId: aal2FactorId,
+      challengeId: aal2ChallengeId,
+      code: aal2Otp,
+    });
+    if (error) {
+      setAal2ErrorMsg('Invalid code. Check your authenticator app and try again.');
+      setAal2Otp('');
+      setAal2Verifying(false);
+      setTimeout(() => (document.getElementById('aal2-0') as HTMLInputElement | null)?.focus(), 50);
+      return;
+    }
+    setAal2Verifying(false);
+    await refreshProfile();
+    // Session is now AAL2 — proceed with whatever was pending
+    const pending = pendingEnrollMethod;
+    setPendingEnrollMethod(null);
+    if (pending === 'totp') {
+      void startTotpEnroll();
+    } else if (pending === 'phone') {
+      setStep('phone_entry');
+    } else {
+      setStep('already_enrolled');
+    }
+  };
+
   // ─── TOTP enroll ────────────────────────────────────────────────────────
-  const startTotpEnroll = useCallback(async (): Promise<void> => {
+  const startTotpEnroll = async (): Promise<void> => {
     setErrorMsg(null);
     const { data, error } = await supabase.auth.mfa.enroll({
       factorType: 'totp',
@@ -221,6 +289,11 @@ export default function MfaSetupPage(): React.JSX.Element {
       friendlyName: `SBDMM – ${profile?.full_name ?? 'Admin'}`,
     });
     if (error || !data) {
+      // Supabase requires AAL2 when the user already has a verified factor
+      if (isAal2RequiredError(error?.message ?? '')) {
+        await initiateAal2Challenge(factors, 'totp');
+        return;
+      }
       setStep('error');
       setErrorMsg(friendlyEnrollError(error?.message ?? 'Failed to start TOTP enrollment.', error?.status));
       return;
@@ -229,7 +302,7 @@ export default function MfaSetupPage(): React.JSX.Element {
     setQrUri(data.totp.qr_code);
     setSecret(data.totp.secret);
     setStep('totp_qr');
-  }, [profile]);
+  };
 
   // ─── Phone enroll + send SMS ─────────────────────────────────────────────
   const startPhoneEnroll = async (): Promise<void> => {
@@ -248,6 +321,11 @@ export default function MfaSetupPage(): React.JSX.Element {
 
     if (enrollError || !enrollData) {
       setPhoneEnrolling(false);
+      // Supabase requires AAL2 when the user already has a verified factor
+      if (isAal2RequiredError(enrollError?.message ?? '')) {
+        await initiateAal2Challenge(factors, 'phone');
+        return;
+      }
       setPhoneError(friendlyEnrollError(enrollError?.message ?? 'Failed to register phone number.', enrollError?.status));
       return;
     }
@@ -339,6 +417,10 @@ export default function MfaSetupPage(): React.JSX.Element {
   const checkStatus = useCallback(async (): Promise<void> => {
     try {
       setStep('checking');
+
+      // Check current AAL level directly from Supabase client session
+      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
       const result = await api.get<{ enrolled: boolean; required: boolean; factors: MfaFactor[] }>('/api/v1/auth/mfa-status');
       if (!result.success) {
         const msg = result.error?.message ?? 'Failed to check MFA status.';
@@ -352,12 +434,26 @@ export default function MfaSetupPage(): React.JSX.Element {
       }
       const { enrolled, factors: f } = result.data ?? {};
       setFactors(f ?? []);
+
+      // If the session is only AAL1 but there are verified factors, the user
+      // must complete a MFA challenge before they can enroll additional factors.
+      // Route them through the AAL2 challenge screen first.
+      if (
+        aalData?.nextLevel === 'aal2' &&
+        aalData?.currentLevel === 'aal1' &&
+        (f ?? []).some(fac => fac.status === 'verified')
+      ) {
+        await initiateAal2Challenge(f ?? []);
+        return;
+      }
+
       if (enrolled) { setStep('already_enrolled'); }
       else { setStep('method_select'); }
     } catch (err) {
       setStep('error');
       setErrorMsg(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -423,6 +519,51 @@ export default function MfaSetupPage(): React.JSX.Element {
             </button>
           </div>
         </div>
+      </Card>
+    );
+  }
+
+  // ─── AAL2 Challenge (verify existing factor before enrolling another) ────
+  if (step === 'aal2_challenge') {
+    const aal2Complete = aal2Otp.length === 6;
+    const existingFactor = factors.find(f => f.id === aal2FactorId);
+    const isPhone = existingFactor?.factor_type === 'phone';
+    return (
+      <Card>
+        <div className="text-center mb-24">
+          <div style={{ width: 60, height: 60, borderRadius: '50%', background: '#fffbeb', border: '1px solid #fde68a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+            <i className="ph ph-lock-key" style={{ fontSize: 28, color: '#d97706' }} />
+          </div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', marginBottom: 6 }}>Confirm your identity first</div>
+          <div style={{ fontSize: 14, color: '#64748b', maxWidth: 360, margin: '0 auto' }}>
+            To add a new MFA factor, Supabase requires you to verify your existing{' '}
+            <strong>{isPhone ? 'phone/SMS' : 'authenticator app'}</strong> code first.
+          </div>
+        </div>
+
+        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#92400e', marginBottom: 24 }}>
+          <i className="ph ph-info me-2" />
+          Open your <strong>{isPhone ? 'SMS messages' : 'authenticator app'}</strong> and enter the current 6-digit code.
+        </div>
+
+        <div className="mb-24">
+          <OtpInput value={aal2Otp} onChange={setAal2Otp} disabled={aal2Verifying} idPrefix="aal2" />
+        </div>
+
+        {aal2ErrorMsg && (
+          <div style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', fontSize: 13, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <i className="ph ph-warning-circle" style={{ fontSize: 16 }} />{aal2ErrorMsg}
+          </div>
+        )}
+
+        <button onClick={() => void handleAal2Verify()} disabled={!aal2Complete || aal2Verifying}
+          style={{ width: '100%', background: aal2Complete ? '#299E60' : '#e2e8f0', color: aal2Complete ? '#fff' : '#94a3b8', border: 'none', borderRadius: 12, padding: '13px 0', fontWeight: 700, fontSize: 15, cursor: aal2Complete ? 'pointer' : 'not-allowed', transition: 'all 0.15s' }}>
+          {aal2Verifying ? <><span className="spinner-border spinner-border-sm me-2" />Verifying…</> : 'Confirm & Continue'}
+        </button>
+        <button onClick={() => setStep('already_enrolled')}
+          style={{ width: '100%', background: 'none', border: 'none', color: '#94a3b8', fontSize: 13, cursor: 'pointer', marginTop: 10 }}>
+          ← Back to MFA dashboard
+        </button>
       </Card>
     );
   }
