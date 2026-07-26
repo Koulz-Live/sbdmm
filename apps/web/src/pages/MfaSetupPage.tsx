@@ -857,11 +857,6 @@ export default function MfaSetupPage(): React.JSX.Element {
   return <></>;
 }
 
-    setErrorMsg(null);
-    const { data, error } = await supabase.auth.mfa.enroll({
-      factorType: 'totp',
-      // issuer appears as the account name in Google Authenticator
-      issuer: 'SBDMM',
       friendlyName: `SBDMM – ${profile?.full_name ?? 'Admin'}`,
     });
 
