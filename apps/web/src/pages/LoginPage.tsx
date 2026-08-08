@@ -47,7 +47,7 @@ export default function LoginPage(): React.JSX.Element {
       // If user was redirected here from a specific page, honour that;
       // otherwise send them to their role-appropriate home.
       const destination = from ?? getRoleHome(profile.role);
-      navigate(destination, { replace: true });
+      void navigate(destination, { replace: true });
     }
   }, [isAuthenticated, profile, navigate, from]);
 

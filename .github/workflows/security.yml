@@ -42,7 +42,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '20.x'
+  NODE_VERSION: '24.x'
   # Tell Turborepo to not use remote cache in CI (avoid cache poisoning)
   TURBO_TEAM: ''
   TURBO_TOKEN: ''

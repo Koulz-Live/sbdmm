@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run src --passWithNoTests"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
@@ -22,7 +22,7 @@
     "bootstrap": "^5.3.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.23.1",
+    "react-router-dom": "^7.18.0",
     "react-slick": "^0.31.0",
     "sass": "^1.99.0",
     "slick-carousel": "^1.8.1",
@@ -32,9 +32,9 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@types/react-slick": "^0.23.13",
-    "@vitejs/plugin-react": "^4.3.0",
+    "@vitejs/plugin-react": "^6.0.0",
     "typescript": "^5.4.5",
-    "vite": "^5.2.11",
-    "vitest": "^1.6.0"
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10"
   }
 }

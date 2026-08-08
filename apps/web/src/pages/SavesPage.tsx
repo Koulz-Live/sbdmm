@@ -743,7 +743,7 @@ export default function SavesPage(): React.JSX.Element {
                   key={item.id}
                   item={item}
                   onUnsave={() => { void handleUnsave(item); }}
-                  onClickVendor={() => { if (item.vendor_id) navigate(`/vendors/${item.vendor_id}`); }}
+                  onClickVendor={() => { if (item.vendor_id) void navigate(`/vendors/${item.vendor_id}`); }}
                   cartAdded={cartItems.some(ci => ci.catalogue_item_id === item.catalogue_item_id)}
                   onAddToCart={() => {
                     if (!item.catalogue_item_id) return;

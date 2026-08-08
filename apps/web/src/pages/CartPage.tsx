@@ -243,7 +243,6 @@ export default function CartPage(): React.JSX.Element {
   // Always fetch fresh cart data when the page mounts
   useEffect(() => {
     void refresh();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

@@ -718,7 +718,7 @@ export default function FurnitureFeedPage(): React.JSX.Element {
   };
 
   const handleClickVendor = (vendorId: string): void => {
-    navigate(`/vendors/${vendorId}`);
+    void navigate(`/vendors/${vendorId}`);
   };
 
   const hasMore = meta ? meta.pagination.has_next : false;

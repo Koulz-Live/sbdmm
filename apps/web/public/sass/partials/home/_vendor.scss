@@ -1,16 +1,16 @@
 /* ===================================== Vendor Css Start ================================== */
 .vendor-card {
   background-color: var(--main-100);
-  -webkit-mask-image: url("~/public/assets/images/shape/box-shape2.png");
-  mask-image: url("~/public/assets/images/shape/box-shape2.png");
+  -webkit-mask-image: url("/images/shape/box-shape2.png");
+  mask-image: url("/images/shape/box-shape2.png");
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   background: #f4f6e6;
   mask-position: top;
   mask-size: 100% 100%;
   &.style-two {
-    -webkit-mask-image: url("~/public/assets/images/shape/box-shape3.png");
-    mask-image: url("~/public/assets/images/shape/box-shape3.png");
+    -webkit-mask-image: url("/images/shape/box-shape3.png");
+    mask-image: url("/images/shape/box-shape3.png");
   }
   &__logo {
     max-width: 66px;

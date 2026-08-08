@@ -42,7 +42,7 @@ SBDMM is a **5PL (Fifth-Party Logistics)** platform that orchestrates carriers, 
 └───────────────────────┬─────────────────────────────────────┘
                         │ HTTPS + Bearer JWT
 ┌───────────────────────▼─────────────────────────────────────┐
-│              Express API (Node.js 20+)                       │
+│              Express API (Node.js 24+)                       │
 │  requestId → secureHeaders → CORS → rateLimit → auth        │
 │  → authorization → validate(Zod) → handler → auditLog       │
 │  OpenAI is called ONLY through /api/v1/ai/proxy              │
@@ -120,7 +120,7 @@ sbdmm/
 
 ### Prerequisites
 
-- Node.js ≥ 20.0.0
+- Node.js 24.x
 - npm ≥ 10.0.0
 - A [Supabase](https://supabase.com) project (free tier works for development)
 - An [OpenAI](https://platform.openai.com) API key

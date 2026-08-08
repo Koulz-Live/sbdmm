@@ -88,7 +88,6 @@ router.get(
   '/:id',
   validate(integrationParamsSchema, 'params'),
   async (req: Request, res: Response): Promise<void> => {
-    const log = createChildLogger({ request_id: req.requestId });
     const supabase = getAdminClient();
 
     const { data, error } = await supabase
@@ -262,7 +261,6 @@ router.delete(
   '/:id',
   validate(integrationParamsSchema, 'params'),
   async (req: Request, res: Response): Promise<void> => {
-    const log = createChildLogger({ request_id: req.requestId });
     const supabase = getAdminClient();
     const actor = req.user!;
 
@@ -306,7 +304,6 @@ router.post(
   '/:id/test',
   validate(integrationParamsSchema, 'params'),
   async (req: Request, res: Response): Promise<void> => {
-    const log = createChildLogger({ request_id: req.requestId });
     const supabase = getAdminClient();
     const actor = req.user!;
 

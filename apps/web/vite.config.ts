@@ -45,8 +45,8 @@ export default defineConfig(({ mode }) => {
 
     resolve: {
       alias: {
-        '@sbdmm/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
-        '@': path.resolve(__dirname, './src'),
+        '@sbdmm/shared': path.resolve(import.meta.dirname, '../../packages/shared/src/index.ts'),
+        '@': path.resolve(import.meta.dirname, './src'),
       },
     },
 
@@ -70,10 +70,12 @@ export default defineConfig(({ mode }) => {
           assetFileNames: isProd ? 'assets/[hash][extname]' : 'assets/[name]-[hash][extname]',
 
           // Vendor splitting for better caching and smaller main bundle
-          manualChunks: {
-            react: ['react', 'react-dom'],
-            router: ['react-router-dom'],
-            supabase: ['@supabase/supabase-js'],
+          manualChunks(id) {
+            const normalizedId = id.replaceAll('\\', '/');
+            if (normalizedId.includes('/react-router')) return 'router';
+            if (normalizedId.includes('/node_modules/react/') || normalizedId.includes('/node_modules/react-dom/')) return 'react';
+            if (normalizedId.includes('/node_modules/@supabase/')) return 'supabase';
+            return undefined;
           },
         },
       },

@@ -326,7 +326,7 @@ export default function LandingPage() {
   // Authenticated users skip the landing page — redirect to their role home
   useEffect(() => {
     if (!isLoading && isAuthenticated && profile?.role) {
-      navigate(getRoleHome(profile.role), { replace: true });
+      void navigate(getRoleHome(profile.role), { replace: true });
     }
   }, [isAuthenticated, isLoading, profile, navigate]);
 

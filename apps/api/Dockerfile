@@ -12,7 +12,7 @@
 # 7. Health check wired to /health endpoint
 #
 # BUILD ARGs:
-#   NODE_VERSION   — Node.js major version (e.g. 20)
+#   NODE_VERSION   — Node.js major version (e.g. 24)
 #   BUILD_SHA      — Git commit SHA for tracing / observability
 #
 # USAGE:
@@ -20,7 +20,7 @@
 #   docker run -p 3001:3001 --env-file apps/api/.env sbdmm-api
 # ============================================================
 
-ARG NODE_VERSION=20
+ARG NODE_VERSION=24
 
 # ─── Stage 1: Dependencies ───────────────────────────────────────────────────
 FROM node:${NODE_VERSION}-alpine AS deps

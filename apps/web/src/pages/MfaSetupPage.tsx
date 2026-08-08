@@ -50,6 +50,24 @@ interface MfaFactor {
   created_at: string;
 }
 
+function toMfaFactors(
+  factors: Array<{
+    id: string;
+    factor_type: string;
+    status: string;
+    friendly_name?: string;
+    created_at: string;
+  }>,
+): MfaFactor[] {
+  return factors.map(factor => ({
+    id: factor.id,
+    factor_type: factor.factor_type,
+    status: factor.status,
+    created_at: factor.created_at,
+    ...(factor.friendly_name === undefined ? {} : { friendly_name: factor.friendly_name }),
+  }));
+}
+
 // ─── AAL2 badge ──────────────────────────────────────────────────────────────
 function Aal2Badge({ active }: { active: boolean }): React.JSX.Element {
   return (
@@ -183,7 +201,6 @@ export default function MfaSetupPage(): React.JSX.Element {
 
   // AAL2 challenge state (verify existing factor before adding a new one)
   const [aal2FactorId, setAal2FactorId]       = useState('');
-  const [aal2ChallengeId, setAal2ChallengeId] = useState('');
   const [aal2Otp, setAal2Otp]                 = useState('');
   const [aal2Verifying, setAal2Verifying]     = useState(false);
   const [aal2ErrorMsg, setAal2ErrorMsg]       = useState<string | null>(null);
@@ -243,7 +260,6 @@ export default function MfaSetupPage(): React.JSX.Element {
       return;
     }
     setAal2FactorId(verifiedFactor.id);
-    setAal2ChallengeId(cd.id);
     setAal2Otp('');
     setAal2ErrorMsg(null);
     if (pending !== undefined) setPendingEnrollMethod(pending);
@@ -406,10 +422,7 @@ export default function MfaSetupPage(): React.JSX.Element {
     await refreshProfile();
     // Re-fetch factors directly from Supabase — no backend required
     const { data: factorsData } = await supabase.auth.mfa.listFactors();
-    const refreshed: MfaFactor[] = (factorsData?.all ?? []).map(f => ({
-      id: f.id, factor_type: f.factor_type, status: f.status,
-      friendly_name: f.friendly_name, created_at: f.created_at,
-    }));
+    const refreshed = toMfaFactors(factorsData?.all ?? []);
     setFactors(refreshed);
     setVerifying(false);
     setStep('success');
@@ -440,10 +453,7 @@ export default function MfaSetupPage(): React.JSX.Element {
 
     await refreshProfile();
     const { data: factorsData } = await supabase.auth.mfa.listFactors();
-    const newFactors: MfaFactor[] = (factorsData?.all ?? []).map(f => ({
-      id: f.id, factor_type: f.factor_type, status: f.status,
-      friendly_name: f.friendly_name, created_at: f.created_at,
-    }));
+    const newFactors = toMfaFactors(factorsData?.all ?? []);
     setFactors(newFactors);
     setConfirmRemoveId(null);
     if (!newFactors.some(f => f.status === 'verified')) {
@@ -469,10 +479,7 @@ export default function MfaSetupPage(): React.JSX.Element {
         return;
       }
 
-      const allFactors: MfaFactor[] = (factorsResult.data?.all ?? []).map(f => ({
-        id: f.id, factor_type: f.factor_type, status: f.status,
-        friendly_name: f.friendly_name, created_at: f.created_at,
-      }));
+      const allFactors = toMfaFactors(factorsResult.data?.all ?? []);
       setFactors(allFactors);
 
       const aalData = aalResult.data;
@@ -490,12 +497,11 @@ export default function MfaSetupPage(): React.JSX.Element {
       setStep('error');
       setErrorMsg(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (authLoading) return;
-    if (!isAuthenticated) { navigate('/login', { replace: true }); return; }
+    if (!isAuthenticated) { void navigate('/login', { replace: true }); return; }
     void checkStatus();
   }, [authLoading, isAuthenticated, checkStatus, navigate]);
 

@@ -258,7 +258,7 @@ export function NavBar(): React.JSX.Element {
   async function handleSignOut(): Promise<void> {
     setSigningOut(true);
     await signOut();
-    navigate('/login', { replace: true });
+    void navigate('/login', { replace: true });
   }
 
   return (

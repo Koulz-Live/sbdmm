@@ -32,12 +32,11 @@
 import { Router, Request, Response } from 'express';
 import OpenAI from 'openai';
 import { requireAuth } from '../middleware/auth';
-import { requireRole } from '../middleware/authorization';
 import { aiRateLimit } from '../middleware/rateLimiter';
 import { validate } from '../schemas/index';
 import { aiProxyRequestSchema } from '../schemas/index';
 import { writeAuditLog } from '../services/auditLog';
-import { logger, createChildLogger } from '../lib/logger';
+import { createChildLogger } from '../lib/logger';
 import { config } from '../lib/config';
 import { ERROR_CODES } from '@sbdmm/shared';
 

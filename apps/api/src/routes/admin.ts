@@ -22,7 +22,7 @@ import { writeAuditLog } from '../services/auditLog';
 import { getAdminClient } from '../lib/supabaseAdmin';
 import { createChildLogger } from '../lib/logger';
 import { AppError, NotFoundError } from '../middleware/errorHandler';
-import { ERROR_CODES, PLATFORM_ROLES } from '@sbdmm/shared';
+import { ERROR_CODES } from '@sbdmm/shared';
 import { z } from 'zod';
 
 const router = Router();
@@ -125,7 +125,6 @@ router.get(
   requireSuperAdmin,
   validate(tenantParamsSchema, 'params'),
   async (req: Request, res: Response): Promise<void> => {
-    const log = createChildLogger({ request_id: req.requestId });
     const supabase = getAdminClient();
 
     const { data, error } = await supabase

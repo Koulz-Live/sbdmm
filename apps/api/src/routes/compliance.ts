@@ -141,8 +141,6 @@ router.get(
 
     // Buyers can only see their own orders' compliance results
     if (actor.role === 'buyer' && order.created_by !== actor.id) {
-      const supabaseAdmin = getAdminClient();
-      const _ = supabaseAdmin; // satisfy linter
       res.status(403).json({
         success: false,
         error: { code: 'FORBIDDEN', message: 'Access denied.' },
@@ -183,7 +181,6 @@ router.get(
   requireRole(['tenant_admin', 'super_admin']),
   validate(contextParamsSchema, 'params'),
   async (req: Request, res: Response): Promise<void> => {
-    const log = createChildLogger({ request_id: req.requestId });
     const supabase = getAdminClient();
     const actor = req.user!;
 

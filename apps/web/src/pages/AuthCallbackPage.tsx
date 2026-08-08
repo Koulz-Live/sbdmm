@@ -53,14 +53,14 @@ export default function AuthCallbackPage(): React.JSX.Element {
     if (!isAuthenticated) {
       // OAuth failed or user cancelled
       redirected.current = true;
-      navigate('/login', { replace: true });
+      void navigate('/login', { replace: true });
       return;
     }
 
     if (profile?.role) {
       // Profile already loaded — navigate immediately
       redirected.current = true;
-      navigate(getRoleHome(profile.role), { replace: true });
+      void navigate(getRoleHome(profile.role), { replace: true });
       return;
     }
 
@@ -85,7 +85,7 @@ export default function AuthCallbackPage(): React.JSX.Element {
         clearInterval(interval);
         if (!redirected.current) {
           redirected.current = true;
-          navigate('/onboarding', { replace: true });
+          void navigate('/onboarding', { replace: true });
         }
       }
     }, POLL_MS);

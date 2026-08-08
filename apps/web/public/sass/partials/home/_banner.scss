@@ -18,8 +18,8 @@
   padding-block-end: clampCal(32, 220, 768, 1599);
   padding-inline-start: clampCal(16, 142, 992, 1599);
   padding-inline-end: clampCal(16, 76, 992, 1599);
-  -webkit-mask-image: url("~/public/assets/images/bg/banner-bg2.png");
-  mask-image: url("~/public/assets/images/bg/banner-bg2.png");
+  -webkit-mask-image: url("/images/bg/banner-bg2.png");
+  mask-image: url("/images/bg/banner-bg2.png");
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   background: #d3ebc0;
