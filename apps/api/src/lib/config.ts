@@ -62,7 +62,7 @@ export const config = {
 
   // SECURITY: OpenAI key is server-only. Never referenced in web app.
   openai: {
-    apiKey: required('OPENAI_API_KEY'),
+    apiKey: optional('OPENAI_API_KEY', ''),
     orgId: optional('OPENAI_ORG_ID', ''),
     maxTokensPerRequest: optionalInt('AI_MAX_TOKENS_PER_REQUEST', 2048),
     maxRequestsPerUserPerHour: optionalInt('AI_MAX_REQUESTS_PER_USER_PER_HOUR', 50),
@@ -85,7 +85,7 @@ export const config = {
     // cannot brute-force stored hashes without also obtaining this secret.
     // Generate with: openssl rand -hex 32
     // Store in your secrets manager — never in source control.
-    pepper: required('API_KEY_PEPPER'),
+    pepper: optional('API_KEY_PEPPER', ''),
   },
 
   webhooks: {

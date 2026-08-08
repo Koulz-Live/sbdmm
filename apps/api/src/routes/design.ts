@@ -45,6 +45,9 @@ router.use(requireAuth);
 // ─── OpenAI client (lazy singleton) ──────────────────────────────────────────
 let _openai: OpenAI | null = null;
 function getOpenAI(): OpenAI {
+  if (!config.openai.apiKey) {
+    throw new AppError('AI design service is not configured.', 503, ERROR_CODES.INTERNAL_ERROR);
+  }
   if (!_openai) {
     _openai = new OpenAI({
       apiKey: config.openai.apiKey,

@@ -45,6 +45,9 @@ function hashApiKey(rawKey: string): string {
   // HMAC-SHA256 with a server-side pepper — prevents rainbow-table attacks
   // against the stored hashes if the database is compromised without the pepper.
   // The pepper is loaded from the API_KEY_PEPPER environment variable (required).
+  if (!config.apiKeys.pepper) {
+    throw new AppError('API key management is not configured.', 503, ERROR_CODES.INTERNAL_ERROR);
+  }
   return createHmac('sha256', config.apiKeys.pepper).update(rawKey).digest('hex');
 }
 

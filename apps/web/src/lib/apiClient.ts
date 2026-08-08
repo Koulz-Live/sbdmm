@@ -120,12 +120,14 @@ export async function apiClient<T = unknown>(
     try {
       json = (await response.json()) as ApiResponse<T>;
     } catch {
-      // Non-JSON response (e.g., 502 from proxy)
+      // Non-JSON response from a proxy or serverless gateway.
       return {
         success: false,
         error: {
           code: 'INTERNAL_ERROR',
-          message: 'Unexpected response from server. Please try again.',
+          message: response.ok
+            ? 'The server returned an invalid response. Please try again.'
+            : `The server is unavailable (HTTP ${response.status}). Please try again. Reference: ${requestId}`,
         },
         meta: { request_id: requestId, timestamp: new Date().toISOString() },
       };

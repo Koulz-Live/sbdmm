@@ -45,6 +45,9 @@ const router = Router();
 // Lazily initialise OpenAI client — validates key at runtime
 let _openaiClient: OpenAI | null = null;
 function getOpenAIClient(): OpenAI {
+  if (!config.openai.apiKey) {
+    throw new Error('[CONFIG] Missing required environment variable: OPENAI_API_KEY');
+  }
   if (!_openaiClient) {
     _openaiClient = new OpenAI({
       apiKey: config.openai.apiKey,
