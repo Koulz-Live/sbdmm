@@ -438,6 +438,69 @@ export interface DesignSession {
   updated_at: string;
 }
 
+// ─── Production, BOM and Artisan Finance ────────────────────────────────────
+export type ProductionJobStatus =
+  | 'matching' | 'matching_failed' | 'artisan_reserved' | 'design_review'
+  | 'bom_review' | 'job_confirmation_pending' | 'confirmed' | 'materials_sourcing'
+  | 'production_ready' | 'in_production' | 'quality_review'
+  | 'ready_for_delivery' | 'delivered' | 'completed' | 'cancelled';
+
+export type JobOfferStatus = 'scheduled' | 'offered' | 'viewed' | 'accepted' | 'declined' | 'expired' | 'withdrawn' | 'superseded';
+
+export interface JobOffer {
+  id: string; job_id: string; artisan_id: string; ranking_position: number;
+  ranking_score: number; ranking_factors: Record<string, number>; status: JobOfferStatus;
+  offered_at: string | null; expires_at: string | null; viewed_at: string | null;
+  accepted_at: string | null; production_jobs?: Pick<ProductionJob, 'id' | 'status' | 'approved_design' | 'currency' | 'estimated_completion_date'>;
+}
+
+export interface BomItem {
+  id?: string; assembly_name: string; sequence: number; category: string;
+  description: string; specification: string; dimensions: string | null;
+  quantity: number; unit: string; waste_percentage: number;
+  suggested_material: string | null; acceptable_substitutes: string[];
+  estimated_unit_cost: number | null; estimated_total_cost: number | null;
+  confidence: number | null; assumptions: string[];
+  procurement_class: 'artisan_stock' | 'buyer_supplied' | 'vendor_eligible';
+}
+
+export interface BomVersion {
+  id: string; job_id: string; version: number; status: 'ai_draft' | 'draft' | 'confirmed' | 'superseded';
+  source: 'openai' | 'artisan'; model_used: string | null; confidence: number | null;
+  assumptions: string[]; unresolved_questions: string[];
+  estimated_labour_hours: number | null; estimated_machine_hours: number | null;
+  estimated_production_days: number | null; subtotal_materials: number; currency: string;
+  created_at: string; bom_items?: BomItem[];
+}
+
+export interface ProductionJob {
+  id: string; tenant_id: string; order_id: string; design_session_id: string | null;
+  buyer_id: string; artisan_id: string | null; status: ProductionJobStatus;
+  approved_design: Record<string, unknown>; currency: string; final_job_price: number | null;
+  estimated_completion_date: string | null; confirmed_at: string | null; created_at: string;
+  delivery_latitude?: number | null; delivery_longitude?: number | null;
+  bom_versions?: BomVersion[];
+  sourcing_decisions?: SourcingDecision[];
+  payment_authorizations?: PaymentAuthorization[];
+}
+
+export interface PaymentAuthorization {
+  id:string;job_id:string;status:'blocked'|'authorized'|'scheduled'|'paid'|'refunded'|'disputed';
+  amount:number;currency:string;requirements:Record<string,boolean>;authorized_at:string|null;
+}
+
+export interface SourcingDecision {
+  id: string; job_id: string; bom_version_id: string;
+  method: 'artisan_self_procure' | 'vendor_procurement'; material_budget: number;
+  funding_method: 'artisan_funded' | 'buyer_advance' | 'platform_advance' | 'included_in_job_price' | null;
+  status: 'confirmed' | 'quotation_pending' | 'approved' | 'cancelled'; decided_at: string;
+}
+
+export interface ArtisanFinancialSummary {
+  assets: number; liabilities: number; equity: number; revenue: number;
+  expenses: number; profit: number; label: string;
+}
+
 // ─── Vendor Catalogue ─────────────────────────────────────────────────────────
 // A catalogue item represents a specific service or lane a provider offers.
 // This is the public-facing "product" in the logistics marketplace context.

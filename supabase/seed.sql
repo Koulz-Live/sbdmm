@@ -93,6 +93,23 @@ INSERT INTO public.user_profiles (id, tenant_id, full_name, role, admin_role) VA
   ('20000000-0000-0000-0000-000000000008', '10000000-0000-0000-0000-000000000001', 'Tarek Artisan',      'artisan', NULL)
 ON CONFLICT (id) DO NOTHING;
 
+-- ─── Artisan matching profiles ──────────────────────────────────────────────
+INSERT INTO public.artisan_profiles (
+  user_id, tenant_id, service_radius_km, latitude, longitude, specialties,
+  materials, rating, rating_count, reliability_score, capacity_available,
+  verification_status
+) VALUES
+  ('20000000-0000-0000-0000-000000000006', '10000000-0000-0000-0000-000000000001', 80, -26.2041, 28.0473,
+   ARRAY['dining_table','coffee_table','custom_furniture'], ARRAY['oak','pine','walnut'], 4.82, 37, 94, true, 'verified'),
+  ('20000000-0000-0000-0000-000000000008', '10000000-0000-0000-0000-000000000001', 60, -25.7479, 28.2293,
+   ARRAY['side_table','console_table','custom_furniture'], ARRAY['pine','dark_wood','mixed_wood_steel'], 4.61, 21, 89, true, 'verified')
+ON CONFLICT (user_id) DO UPDATE SET
+  specialties=EXCLUDED.specialties, materials=EXCLUDED.materials,
+  rating=EXCLUDED.rating, rating_count=EXCLUDED.rating_count,
+  reliability_score=EXCLUDED.reliability_score,
+  capacity_available=EXCLUDED.capacity_available,
+  verification_status=EXCLUDED.verification_status;
+
 -- ─── 4. Vendors ───────────────────────────────────────────────────────────────
 
 INSERT INTO public.vendors (

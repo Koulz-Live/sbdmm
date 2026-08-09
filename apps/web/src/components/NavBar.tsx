@@ -208,17 +208,18 @@ const NAV_ITEMS: NavItem[] = [
   // ── Buyer / Admin: main dashboard
   { to: '/dashboard',          label: 'Dashboard',    icon: 'ph ph-chart-line-up', roles: ['buyer', 'admin'] },
   // ── Provider: their own dashboard
-  { to: '/provider/dashboard', label: 'Dashboard',    icon: 'ph ph-chart-line-up', roles: ['vendor', 'artisan'] },
+  { to: '/provider/dashboard', label: 'Dashboard',    icon: 'ph ph-chart-line-up', roles: ['vendor'] },
+  { to: '/artisan',            label: 'Workshop',     icon: 'ph ph-hammer',        roles: ['artisan'] },
   // ── Buyer & admins: orders
   { to: '/orders',             label: 'Orders',       icon: 'ph ph-package',       roles: ['buyer', 'admin'] },
   // ── Providers: open RFQs they can bid on
-  { to: '/rfqs',               label: 'Open RFQs',    icon: 'ph ph-list-magnifying-glass', roles: ['vendor', 'artisan'] },
+  { to: '/supply-requests',    label: 'Supply Requests', icon: 'ph ph-list-magnifying-glass', roles: ['vendor'] },
   // ── Buyer & admins: quotes
   { to: '/quotes',             label: 'Quotes',       icon: 'ph ph-chat-dots',     roles: ['buyer', 'admin'] },
   // ── Providers: their own quote history
-  { to: '/quotes',             label: 'My Quotes',    icon: 'ph ph-chat-dots',     roles: ['vendor', 'artisan'] },
+  { to: '/quotes',             label: 'My Quotes',    icon: 'ph ph-chat-dots',     roles: ['vendor'] },
   // ── Providers: their catalogue
-  { to: '/my-catalogue',       label: 'My Catalogue', icon: 'ph ph-storefront',    roles: ['vendor', 'artisan'] },
+  { to: '/my-catalogue',       label: 'My Catalogue', icon: 'ph ph-storefront',    roles: ['vendor'] },
   // ── Everyone: documents
   { to: '/documents',          label: 'Documents',    icon: 'ph ph-file-text' },
   // ── Buyer & admins: vendor directory

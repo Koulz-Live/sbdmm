@@ -235,6 +235,30 @@ Admin specializations are `tier1_support`, `tier2_support`, `tier3_security`,
 user group; it is the only Admin specialization with the wildcard permission and
 cross-tenant access. Admin accounts require MFA.
 
+### Production jobs and AI bills of materials
+
+Converting an approved Buyer design now creates a `production_job`, calls the
+OpenAI Responses API for a strict structured draft BOM, and creates ranked
+Artisan offers. Configure the server-only environment variables:
+
+```env
+OPENAI_API_KEY=...
+AI_BOM_MODEL=gpt-5.6-sol
+AI_ALLOWED_MODELS=gpt-5.6-sol,gpt-5.6-terra
+```
+
+The AI BOM is always stored as `ai_draft`. An assigned Artisan must save a new
+version, confirm the final BOM/job, and choose self-procurement or Vendor
+procurement before a payment authorization can move beyond `blocked`.
+
+Run `public.advance_expired_job_offers()` once per minute using Supabase Cron.
+The function expires the current 15-minute offer and atomically offers the job
+to the next ranked eligible Artisan. Browser countdowns are display-only.
+
+Artisan job financial events post balanced entries into a dedicated subledger.
+Financial views are explicitly labelled draft management reports; accounting
+policies and IFRS reporting remain subject to accountant review.
+
 ### Multi-Tenancy Isolation
 
 Every API query filters by `tenant_id` from the authenticated user's profile (server-injected). The Supabase RLS policies enforce this at the database level as a second layer. A tenant can never see another tenant's data even if:

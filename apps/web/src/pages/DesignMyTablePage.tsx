@@ -159,6 +159,7 @@ export default function DesignMyTablePage(): React.JSX.Element {
   const [activeConceptIdx, setActiveConceptIdx] = useState<number>(0);
   const [refinementText, setRefinementText] = useState<string>('');
   const [deliveryAddr,   setDeliveryAddr]   = useState<string>('');
+  const [deliveryCoords, setDeliveryCoords] = useState<{latitude:number;longitude:number}|null>(null);
   const [requiredBy,     setRequiredBy]     = useState<string>('');
   const [convertedOrderId, setConvertedOrderId] = useState<string | null>(null);
   const [error,          setError]          = useState<string | null>(null);
@@ -303,6 +304,8 @@ export default function DesignMyTablePage(): React.JSX.Element {
         concept_index:    activeConceptIdx,
         delivery_address: deliveryAddr.trim(),
         required_by_date: requiredBy || undefined,
+        delivery_latitude: deliveryCoords?.latitude,
+        delivery_longitude: deliveryCoords?.longitude,
       });
       if (res.success && res.data) {
         setConvertedOrderId(res.data.order.id);
@@ -315,7 +318,7 @@ export default function DesignMyTablePage(): React.JSX.Element {
     } finally {
       setIsWorking(false);
     }
-  }, [sessionId, activeConceptIdx, deliveryAddr, requiredBy]);
+  }, [sessionId, activeConceptIdx, deliveryAddr, requiredBy, deliveryCoords]);
 
   // ── Render helpers ────────────────────────────────────────────────────────
 
@@ -822,6 +825,9 @@ export default function DesignMyTablePage(): React.JSX.Element {
               maxLength={500}
               onChange={(e) => setRefinementText(e.target.value)}
             />
+            <button type="button" className="btn btn-sm btn-outline-secondary mt-2" onClick={()=>navigator.geolocation.getCurrentPosition(position=>setDeliveryCoords({latitude:position.coords.latitude,longitude:position.coords.longitude}),()=>setError('Location could not be captured. Matching will use the delivery address only.'))}>
+              <i className="ph ph-crosshair me-1" />{deliveryCoords?'Delivery location captured':'Use current delivery location'}
+            </button>
             <div className="text-end text-muted" style={{ fontSize: '0.75rem' }}>{refinementText.length}/500</div>
           </div>
 
@@ -957,8 +963,7 @@ export default function DesignMyTablePage(): React.JSX.Element {
 
           <div className="alert alert-light border mb-4 py-2" style={{ fontSize: '0.85rem' }}>
             <i className="ph ph-info me-1" style={{ color: BRAND }} />
-            Once submitted, verified carpenters will review the AI brief and submit competitive quotes.
-            You are not committed to any purchase until you accept a quote.
+            Once submitted, the platform generates a draft BOM and offers the job to the highest-ranked eligible Artisan in your area for 15 minutes. The Artisan must validate the BOM and confirm the final job before payment can be authorized.
           </div>
 
           <div className="d-flex gap-2">

@@ -1,36 +1,72 @@
 -- Four-group RBAC: buyer, artisan, vendor, admin.
 -- Supabase Auth owns identity; this schema owns authorization attributes.
 
-CREATE TYPE admin_role AS ENUM (
-  'tier1_support', 'tier2_support', 'tier3_security',
-  'logistics_manager', 'executive', 'super_admin'
-);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace
+    WHERE n.nspname='public' AND t.typname='admin_role'
+  ) THEN
+    CREATE TYPE public.admin_role AS ENUM (
+      'tier1_support', 'tier2_support', 'tier3_security',
+      'logistics_manager', 'executive', 'super_admin'
+    );
+  END IF;
+END $$;
 
-ALTER TABLE public.user_profiles ADD COLUMN admin_role admin_role;
-ALTER TABLE public.user_profiles ADD COLUMN permissions text[] NOT NULL DEFAULT '{}';
+-- Safe when an earlier run created only part of the enum.
+ALTER TYPE public.admin_role ADD VALUE IF NOT EXISTS 'tier1_support';
+ALTER TYPE public.admin_role ADD VALUE IF NOT EXISTS 'tier2_support';
+ALTER TYPE public.admin_role ADD VALUE IF NOT EXISTS 'tier3_security';
+ALTER TYPE public.admin_role ADD VALUE IF NOT EXISTS 'logistics_manager';
+ALTER TYPE public.admin_role ADD VALUE IF NOT EXISTS 'executive';
+ALTER TYPE public.admin_role ADD VALUE IF NOT EXISTS 'super_admin';
+
+ALTER TABLE public.user_profiles ADD COLUMN IF NOT EXISTS admin_role public.admin_role;
+ALTER TABLE public.user_profiles ADD COLUMN IF NOT EXISTS permissions text[] NOT NULL DEFAULT '{}';
 
 -- Rename in place so existing RLS policy dependencies remain valid. The legacy
 -- super_admin enum label is retained for PostgreSQL migration safety, but the
 -- constraint below makes it impossible to assign to a profile.
-ALTER TYPE platform_role RENAME VALUE 'logistics_provider' TO 'artisan';
-ALTER TYPE platform_role RENAME VALUE 'tenant_admin' TO 'admin';
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid=e.enumtypid WHERE t.typname='platform_role' AND e.enumlabel='logistics_provider')
+     AND NOT EXISTS (SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid=e.enumtypid WHERE t.typname='platform_role' AND e.enumlabel='artisan') THEN
+    ALTER TYPE public.platform_role RENAME VALUE 'logistics_provider' TO 'artisan';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid=e.enumtypid WHERE t.typname='platform_role' AND e.enumlabel='tenant_admin')
+     AND NOT EXISTS (SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid=e.enumtypid WHERE t.typname='platform_role' AND e.enumlabel='admin') THEN
+    ALTER TYPE public.platform_role RENAME VALUE 'tenant_admin' TO 'admin';
+  END IF;
+END $$;
+
+-- Handles databases where both the legacy and replacement label already exist.
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid=e.enumtypid WHERE t.typname='platform_role' AND e.enumlabel='logistics_provider')
+     AND EXISTS (SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid=e.enumtypid WHERE t.typname='platform_role' AND e.enumlabel='artisan') THEN
+    UPDATE public.user_profiles SET role='artisan'::public.platform_role WHERE role::text='logistics_provider';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid=e.enumtypid WHERE t.typname='platform_role' AND e.enumlabel='tenant_admin')
+     AND EXISTS (SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid=e.enumtypid WHERE t.typname='platform_role' AND e.enumlabel='admin') THEN
+    UPDATE public.user_profiles SET role='admin'::public.platform_role WHERE role::text='tenant_admin';
+  END IF;
+END $$;
 
 UPDATE public.user_profiles
-SET role = 'admin', admin_role = 'super_admin'
-WHERE role = 'super_admin';
+SET role = 'admin'::public.platform_role, admin_role = 'super_admin'::public.admin_role
+WHERE role::text = 'super_admin';
 
 UPDATE public.user_profiles
 SET admin_role = COALESCE(admin_role, CASE
   WHEN full_name ILIKE '%super%' THEN 'super_admin'::admin_role
   ELSE 'logistics_manager'::admin_role
 END)
-WHERE role = 'admin' AND admin_role IS NULL;
+WHERE role::text = 'admin' AND admin_role IS NULL;
 
+ALTER TABLE public.user_profiles DROP CONSTRAINT IF EXISTS user_profiles_admin_role_consistency;
 ALTER TABLE public.user_profiles ADD CONSTRAINT user_profiles_admin_role_consistency
 CHECK (
   role::text IN ('buyer', 'artisan', 'vendor', 'admin')
-  AND ((role = 'admin' AND admin_role IS NOT NULL)
-  OR (role <> 'admin' AND admin_role IS NULL))
+  AND ((role::text = 'admin' AND admin_role IS NOT NULL)
+  OR (role::text <> 'admin' AND admin_role IS NULL))
 );
 
 CREATE OR REPLACE FUNCTION public.permissions_for(p_role platform_role, p_admin_role admin_role)
@@ -130,6 +166,7 @@ CREATE POLICY "user_profiles_update_self"
 
 DROP POLICY IF EXISTS "user_profiles_update_tenant_admin" ON public.user_profiles;
 DROP POLICY IF EXISTS "user_profiles_insert_admin" ON public.user_profiles;
+DROP POLICY IF EXISTS "user_profiles_insert_super_admin" ON public.user_profiles;
 CREATE POLICY "user_profiles_insert_super_admin"
   ON public.user_profiles FOR INSERT
   WITH CHECK (public.is_super_admin());

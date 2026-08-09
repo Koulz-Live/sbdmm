@@ -66,7 +66,8 @@ export const config = {
     orgId: optional('OPENAI_ORG_ID', ''),
     maxTokensPerRequest: optionalInt('AI_MAX_TOKENS_PER_REQUEST', 2048),
     maxRequestsPerUserPerHour: optionalInt('AI_MAX_REQUESTS_PER_USER_PER_HOUR', 50),
-    allowedModels: optional('AI_ALLOWED_MODELS', 'gpt-4o-mini').split(',').map((m) => m.trim()),
+    allowedModels: optional('AI_ALLOWED_MODELS', 'gpt-5.6-sol,gpt-5.6-terra').split(',').map((m) => m.trim()),
+    bomModel: optional('AI_BOM_MODEL', 'gpt-5.6-sol'),
   },
 
   rateLimit: {

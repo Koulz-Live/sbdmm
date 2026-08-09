@@ -13,7 +13,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../lib/apiClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useAiProxy } from '../hooks/useAiProxy';
-import type { Order, OrderStatus, Quote, TradeDocument } from '@sbdmm/shared';
+import type { Order, OrderStatus, Quote, TradeDocument, ProductionJob } from '@sbdmm/shared';
 
 // ─── Status meta ──────────────────────────────────────────────────────────────
 
@@ -270,6 +270,7 @@ export default function OrderDetailPage(): React.JSX.Element {
 
   const [order, setOrder] = useState<Order | null>(null);
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [productionJob, setProductionJob] = useState<ProductionJob | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -293,9 +294,10 @@ export default function OrderDetailPage(): React.JSX.Element {
     setLoading(true);
     setError(null);
     try {
-      const [orderRes, quotesRes] = await Promise.all([
+      const [orderRes, quotesRes, jobsRes] = await Promise.all([
         api.get<Order>(`/api/v1/orders/${id}`),
         api.get<Quote[]>(`/api/v1/quotes?order_id=${id}&per_page=50`),
+        api.get<ProductionJob[]>('/api/v1/production/jobs'),
       ]);
       if (orderRes.success && orderRes.data) {
         setOrder(orderRes.data);
@@ -304,6 +306,7 @@ export default function OrderDetailPage(): React.JSX.Element {
         setError(orderRes.error?.message ?? 'Order not found.');
       }
       if (quotesRes.success && quotesRes.data) setQuotes(quotesRes.data);
+      if (jobsRes.success && jobsRes.data) setProductionJob(jobsRes.data.find(job => job.order_id === id) ?? null);
     } catch {
       setError('Failed to load order details.');
     } finally {
@@ -413,6 +416,17 @@ export default function OrderDetailPage(): React.JSX.Element {
 
         {/* ── Left column: order fields ── */}
         <div className="col-lg-7">
+
+          {productionJob && (
+            <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: 12, borderLeft: '4px solid #7c3aed' }}>
+              <div className="card-body p-4">
+                <div className="d-flex justify-content-between align-items-start gap-12">
+                  <div><h5 className="fw-semibold mb-6" style={{ fontSize: 15 }}><i className="ph ph-hammer me-2" style={{ color: '#7c3aed' }} />Production job</h5><p className="text-muted mb-0" style={{ fontSize: 13 }}>The approved design has an AI-generated draft BOM and is currently <strong>{productionJob.status.replace(/_/g,' ')}</strong>.</p></div>
+                  <span className="badge text-bg-light">{productionJob.artisan_id ? 'Artisan assigned' : 'Matching artisans'}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Shipment timeline */}
           <ShipmentTimeline status={order.status} />

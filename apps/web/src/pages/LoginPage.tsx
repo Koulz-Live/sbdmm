@@ -16,8 +16,8 @@ interface LocationState {
 
 function getRoleHome(role: PlatformRole): string {
   switch (role) {
+    case 'artisan': return '/artisan';
     case 'vendor':
-    case 'artisan':
       return '/provider/dashboard';
     case 'admin':
       return '/admin';

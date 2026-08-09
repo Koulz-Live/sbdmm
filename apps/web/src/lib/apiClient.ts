@@ -21,6 +21,7 @@
 
 import { supabase } from './supabaseClient';
 import type { ApiResponse } from '@sbdmm/shared';
+import axios, { AxiosError } from 'axios';
 
 // In production (Vercel) the API is same-origin (/api/* routes handled by @vercel/node).
 // In local dev the Express server runs on port 3001.
@@ -99,51 +100,17 @@ export async function apiClient<T = unknown>(
 
   const url = `${API_BASE_URL}${path}`;
 
-  // Build fetch init — use null instead of undefined for body (required by exactOptionalPropertyTypes + RequestInit)
-  const fetchInit: RequestInit = {
-    method,
-    headers,
-    credentials: 'omit',
-  };
-  if (body !== undefined) {
-    fetchInit.body = JSON.stringify(body);
-  }
-  if (signal !== undefined) {
-    fetchInit.signal = signal;
-  }
-
   try {
-    const response = await fetch(url, fetchInit);
-
-    // Parse response — always expect JSON
-    let json: ApiResponse<T>;
-    try {
-      json = (await response.json()) as ApiResponse<T>;
-    } catch {
-      // Non-JSON response from a proxy or serverless gateway.
-      return {
-        success: false,
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: response.ok
-            ? 'The server returned an invalid response. Please try again.'
-            : `The server is unavailable (HTTP ${response.status}). Please try again. Reference: ${requestId}`,
-        },
-        meta: { request_id: requestId, timestamp: new Date().toISOString() },
-      };
-    }
-
-    // Handle 401 — session might have expired; trigger re-auth
-    if (response.status === 401) {
-      await supabase.auth.signOut();
-      // Redirect to login will be handled by route guard
-    }
-
-    return json;
+    const response = await axios.request<ApiResponse<T>>({
+      url, method, headers, data: body, ...(signal ? { signal } : {}), timeout: 30_000,
+      withCredentials: false,
+    });
+    return response.data;
   } catch (err) {
-    // Network error (no connectivity, CORS, etc.)
-    // SECURITY: Never expose raw network error details to user
-    const isAborted = err instanceof DOMException && err.name === 'AbortError';
+    const axiosError = err as AxiosError<ApiResponse<T>>;
+    if (axiosError.response?.status === 401) await supabase.auth.signOut();
+    if (axiosError.response?.data?.error) return axiosError.response.data;
+    const isAborted = axios.isCancel(err) || axiosError.code === 'ERR_CANCELED';
 
     return {
       success: false,

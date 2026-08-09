@@ -38,6 +38,7 @@ import type {
   DesignConcept,
 } from '@sbdmm/shared';
 import OpenAI from 'openai';
+import { startProductionWorkflow } from '../services/productionWorkflow';
 
 const router = Router();
 router.use(requireAuth);
@@ -615,10 +616,14 @@ router.post('/sessions/:id/convert', async (req: Request, res: Response): Promis
     concept_index = 0,
     delivery_address,
     required_by_date,
+    delivery_latitude,
+    delivery_longitude,
   } = req.body as {
     concept_index?: number;
     delivery_address: string;
     required_by_date?: string;
+    delivery_latitude?: number;
+    delivery_longitude?: number;
   };
 
   if (!delivery_address?.trim()) {
@@ -701,6 +706,36 @@ router.post('/sessions/:id/convert', async (req: Request, res: Response): Promis
   if (orderErr) {
     log.error('[DESIGN] Failed to create order', { error: orderErr.message, session_id: id });
     throw new AppError('Failed to create carpentry order.', 500, ERROR_CODES.INTERNAL_ERROR);
+  }
+
+  // API-first handoff: an approved design immediately becomes a production
+  // job, receives an AI-generated draft BOM, and enters ranked artisan matching.
+  try {
+    await startProductionWorkflow({
+      tenantId: actor.tenant_id,
+      orderId: order.id as string,
+      designSessionId: id,
+      buyerId: actor.id,
+      design: {
+        concept,
+        room_type: session.room_type,
+        table_type: session.table_type,
+        style: session.style,
+        material_preference: session.material_preference,
+        seating_size: session.seating_size,
+        budget_min: session.budget_min,
+        budget_max: session.budget_max,
+        currency: session.budget_currency,
+        rationale: session.ai_design_rationale,
+      },
+      currency: String(session.budget_currency ?? concept.currency ?? 'ZAR'),
+      specialties: [String(session.table_type ?? 'custom_furniture'), String(session.material_preference ?? '')].filter(Boolean),
+      ...(Number.isFinite(delivery_latitude) ? { deliveryLatitude: delivery_latitude } : {}),
+      ...(Number.isFinite(delivery_longitude) ? { deliveryLongitude: delivery_longitude } : {}),
+    });
+  } catch (workflowError) {
+    await supabase.from('orders').delete().eq('id', order.id);
+    throw workflowError;
   }
 
   // Mark session as converted

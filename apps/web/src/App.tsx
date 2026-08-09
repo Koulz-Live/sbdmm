@@ -39,6 +39,8 @@ const LandingPage     = lazy(() => import('./pages/LandingPage'));
 const LoginPage       = lazy(() => import('./pages/LoginPage'));
 const DashboardPage   = lazy(() => import('./pages/DashboardPage'));
 const ProviderDashboardPage = lazy(() => import('./pages/ProviderDashboardPage'));
+const ArtisanWorkspacePage = lazy(() => import('./pages/ArtisanWorkspacePage'));
+const VendorSupplyRequestsPage = lazy(() => import('./pages/VendorSupplyRequestsPage'));
 const UnauthorizedPage = lazy(() => import('./pages/UnauthorizedPage'));
 const OrdersPage      = lazy(() => import('./pages/OrdersPage'));
 const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage'));
@@ -96,9 +98,16 @@ export default function App(): React.JSX.Element {
         </Route>
 
         {/* Protected — vendors and logistics providers: their own dashboard */}
-        <Route element={<ProtectedRoute roles={['vendor', 'artisan']} />}>
+        <Route element={<ProtectedRoute roles={['vendor']} />}>
           <Route element={<AppLayout />}>
             <Route path="/provider/dashboard" element={<ProviderDashboardPage />} />
+            <Route path="/supply-requests" element={<VendorSupplyRequestsPage />} />
+          </Route>
+        </Route>
+
+        <Route element={<ProtectedRoute roles={['artisan']} />}>
+          <Route element={<AppLayout />}>
+            <Route path="/artisan" element={<ArtisanWorkspacePage />} />
           </Route>
         </Route>
 
