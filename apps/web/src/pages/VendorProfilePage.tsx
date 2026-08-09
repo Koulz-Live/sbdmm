@@ -553,10 +553,9 @@ export default function VendorProfilePage() {
   const token: string = session?.access_token ?? '';
 
   const isAdmin =
-    profile?.role === 'super_admin' ||
-    profile?.role === 'tenant_admin' ||
+    profile?.role === 'admin' ||
     profile?.role === 'vendor' ||
-    profile?.role === 'logistics_provider';
+    profile?.role === 'artisan';
 
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [catalogue, setCatalogue] = useState<CatalogueItem[]>([]);

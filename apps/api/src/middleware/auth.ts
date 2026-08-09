@@ -21,7 +21,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { getAdminClient } from '../lib/supabaseAdmin';
 import { logger, createChildLogger } from '../lib/logger';
-import { PlatformRole, PLATFORM_ROLES, ERROR_CODES } from '@sbdmm/shared';
+import { PlatformRole, PlatformPermission, AdminRole, PLATFORM_ROLES, ERROR_CODES } from '@sbdmm/shared';
 import { perUserRateLimit } from './rateLimiter';
 import { processTenantOverride } from './tenantOverride';
 
@@ -39,6 +39,8 @@ export interface AuthenticatedUser {
   email: string;        // From Supabase auth
   tenant_id: string;    // From user_profiles table — authoritative
   role: PlatformRole;   // From user_profiles table — authoritative
+  admin_role: AdminRole | null;
+  permissions: PlatformPermission[];
   is_active: boolean;
 }
 
@@ -83,11 +85,11 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     // Load the authoritative user profile from the database
     // SECURITY: We do NOT trust role/tenant from the JWT claim. We read from DB.
     // This means role changes and account suspensions take effect immediately.
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('id, tenant_id, role, is_active')
-      .eq('id', user.id)
-      .single();
+    // Resolve authorization through the database-owned SECURITY DEFINER
+    // function. This keeps role and permission policy in one authoritative place.
+    const { data: authorizationRows, error: profileError } = await supabase
+      .rpc('get_user_authorization', { p_user_id: user.id });
+    const profile = Array.isArray(authorizationRows) ? authorizationRows[0] : authorizationRows;
 
     if (profileError || !profile) {
       log.warn('[AUTH] User profile not found', { user_id: user.id });
@@ -130,11 +132,13 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       email: user.email ?? '',
       tenant_id: profile.tenant_id as string,
       role: profile.role as PlatformRole,
+      admin_role: (profile.admin_role ?? null) as AdminRole | null,
+      permissions: (profile.permissions ?? []) as PlatformPermission[],
       is_active: profile.is_active as boolean,
     };
 
     // Apply tenant override if the X-Tenant-Override header is present.
-    // Only super_admin may use this; every use is audit-logged.
+    // Only an admin with super_admin scope may use this; every use is audit-logged.
     // processTenantOverride mutates req.user.tenant_id on success.
     const overrideResult = await processTenantOverride(req, res);
     if (overrideResult === false) return; // Response already sent by override handler
@@ -165,10 +169,11 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
  * SECURITY: Super admin routes are the highest privilege — treat with extreme care.
  */
 export function requireSuperAdmin(req: Request, res: Response, next: NextFunction): void {
-  if (!req.user || req.user.role !== 'super_admin') {
+  if (!req.user || req.user.role !== 'admin' || req.user.admin_role !== 'super_admin') {
     logger.warn('[AUTH] Non-super_admin attempted super_admin route', {
       user_id: req.user?.id,
       role: req.user?.role,
+      admin_role: req.user?.admin_role,
       path: req.path,
     });
     res.status(403).json({

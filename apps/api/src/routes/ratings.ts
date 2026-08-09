@@ -37,7 +37,7 @@ router.post(
 
     // Only buyers / tenant_admin can rate
     const role = req.user!.role;
-    if (role !== 'buyer' && role !== 'tenant_admin' && role !== 'super_admin') {
+    if (role !== 'buyer' && role !== 'admin') {
       throw new AppError('Only buyers can submit ratings.', 403);
     }
 

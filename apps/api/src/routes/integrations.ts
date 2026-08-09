@@ -30,7 +30,7 @@ const router = Router();
 router.use(requireAuth);
 
 // Only tenant_admin and super_admin can manage integrations
-router.use(requireRole(['tenant_admin', 'super_admin']));
+router.use(requireRole(['admin']));
 
 const integrationParamsSchema = z.object({ id: uuidSchema });
 

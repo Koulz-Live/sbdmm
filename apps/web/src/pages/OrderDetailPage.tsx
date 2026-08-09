@@ -285,9 +285,8 @@ export default function OrderDetailPage(): React.JSX.Element {
   const { loading: narrativeLoading, result: narrativeResult, error: narrativeError, run: narrativeRun, reset: narrativeReset } = useAiProxy();
 
   const canUpdateStatus =
-    profile?.role === 'tenant_admin' ||
-    profile?.role === 'super_admin' ||
-    profile?.role === 'logistics_provider';
+    profile?.role === 'admin' ||
+    profile?.role === 'artisan';
 
   const fetchOrder = useCallback(async (): Promise<void> => {
     if (!id) return;

@@ -245,13 +245,12 @@ function StatsSkeleton({ count }: { count: number }): React.JSX.Element {
 // ─── Role-specific banners ────────────────────────────────────────────────────
 function getBannerConfig(role: PlatformRole | undefined): { subtitle: string; ctaLabel: string; ctaTo: string } {
   switch (role) {
+    case 'artisan':
+      return { subtitle: 'Manufacture buyer-approved AI designs and manage each bill of materials.', ctaLabel: 'View Assigned Work', ctaTo: '/rfqs' };
     case 'vendor':
-    case 'logistics_provider':
-      return { subtitle: 'Seek out open RFQs worth bidding on and manage your catalogue diligently.', ctaLabel: 'Browse Open RFQs', ctaTo: '/rfqs' };
-    case 'tenant_admin':
+      return { subtitle: 'Review consolidated artisan bills of materials and prepare supply quotations.', ctaLabel: 'View Quote Requests', ctaTo: '/rfqs' };
+    case 'admin':
       return { subtitle: 'Shepherd your team, review those seeking to join your network, and keep your house in order.', ctaLabel: 'Open Admin Panel', ctaTo: '/admin' };
-    case 'super_admin':
-      return { subtitle: 'A comprehensive overview of every tenant and service entrusted to your care.', ctaLabel: 'Open Admin Panel', ctaTo: '/admin' };
     default: // buyer
       return { subtitle: 'Post a new order, steward your shipments, and compare quotes with due diligence.', ctaLabel: 'Post New Order', ctaTo: '/orders' };
   }
@@ -485,7 +484,7 @@ export default function DashboardPage(): React.JSX.Element {
       )}
 
       {/* Role-specific content */}
-      {(role === 'tenant_admin' || role === 'super_admin') ? (
+      {role === 'admin' ? (
         <AdminDashboard stats={stats} orders={recentOrders} loading={isLoading} />
       ) : (
         <BuyerDashboard stats={stats} orders={recentOrders} loading={isLoading} />

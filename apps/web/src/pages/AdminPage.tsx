@@ -105,8 +105,7 @@ function TenantStatusBadge({ status }: { status: string }): React.JSX.Element {
 }
 
 const ROLE_VARIANT: Record<string, string> = {
-  buyer: 'blue', vendor: 'purple', logistics_provider: 'cyan',
-  tenant_admin: 'amber', super_admin: 'red',
+  buyer: 'blue', artisan: 'cyan', vendor: 'purple', admin: 'red',
 };
 function RoleBadge({ role }: { role: string }): React.JSX.Element {
   const v = ROLE_VARIANT[role] ?? 'muted';
@@ -1856,7 +1855,7 @@ function VendorQueueTab(): React.JSX.Element {
 
 export default function AdminPage(): React.JSX.Element {
   const { profile } = useAuth();
-  const isSuperAdmin = profile?.role === 'super_admin';
+  const isSuperAdmin = profile?.role === 'admin' && profile.admin_role === 'super_admin';
 
   const [tab, setTab] = useState<AdminTab>('tenants');
   const [tenants, setTenants] = useState<TenantSummary[]>([]);

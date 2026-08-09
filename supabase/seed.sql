@@ -6,7 +6,7 @@
 --
 -- Creates:
 --   • 2 tenants (furniture importer + logistics firm)
---   • 8 auth users  (1 super_admin, 2 tenant_admins, 2 buyers, 3 vendors)
+--   • 8 auth users  (3 admins, 2 buyers, 2 artisans, 1 vendor)
 --   • 8 user_profiles linked to the above
 --   • 3 vendor records
 --   • 16 vendor_catalogue items (furniture logistics lanes, real categories)
@@ -82,15 +82,15 @@ ON CONFLICT (id) DO NOTHING;
 
 -- ─── 3. User Profiles ────────────────────────────────────────────────────────
 
-INSERT INTO public.user_profiles (id, tenant_id, full_name, role) VALUES
-  ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Sam Superadmin',     'super_admin'),
-  ('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', 'Alice Tenant Admin', 'tenant_admin'),
-  ('20000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000002', 'Erik Andersson',     'tenant_admin'),
-  ('20000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000001', 'Priya Naidoo',       'buyer'),
-  ('20000000-0000-0000-0000-000000000005', '10000000-0000-0000-0000-000000000001', 'James Obi',          'buyer'),
-  ('20000000-0000-0000-0000-000000000006', '10000000-0000-0000-0000-000000000001', 'Chen Wei Logistics', 'logistics_provider'),
-  ('20000000-0000-0000-0000-000000000007', '10000000-0000-0000-0000-000000000001', 'Maria Santos',       'vendor'),
-  ('20000000-0000-0000-0000-000000000008', '10000000-0000-0000-0000-000000000001', 'Tarek Mansour',      'logistics_provider')
+INSERT INTO public.user_profiles (id, tenant_id, full_name, role, admin_role) VALUES
+  ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Sam Superadmin',     'admin',   'super_admin'),
+  ('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', 'Alice Logistics',    'admin',   'logistics_manager'),
+  ('20000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000002', 'Erik Support',       'admin',   'tier2_support'),
+  ('20000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000001', 'Priya Naidoo',       'buyer',   NULL),
+  ('20000000-0000-0000-0000-000000000005', '10000000-0000-0000-0000-000000000001', 'James Obi',          'buyer',   NULL),
+  ('20000000-0000-0000-0000-000000000006', '10000000-0000-0000-0000-000000000001', 'Chen Wei Artisan',   'artisan', NULL),
+  ('20000000-0000-0000-0000-000000000007', '10000000-0000-0000-0000-000000000001', 'Maria Santos',       'vendor',  NULL),
+  ('20000000-0000-0000-0000-000000000008', '10000000-0000-0000-0000-000000000001', 'Tarek Artisan',      'artisan', NULL)
 ON CONFLICT (id) DO NOTHING;
 
 -- ─── 4. Vendors ───────────────────────────────────────────────────────────────

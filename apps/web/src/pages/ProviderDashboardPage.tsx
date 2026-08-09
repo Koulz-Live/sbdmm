@@ -61,7 +61,7 @@ function StatsSkeleton({ count }: { count: number }): React.JSX.Element {
 
 export default function ProviderDashboardPage(): React.JSX.Element {
   const { profile } = useAuth();
-  const isLogistics = profile?.role === 'logistics_provider';
+  const isLogistics = profile?.role === 'artisan';
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);

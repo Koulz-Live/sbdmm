@@ -100,7 +100,7 @@ const documentQuerySchema = z.object({
 // ─── GET /api/v1/documents ─────────────────────────────────────────────────────
 router.get(
   '/',
-  requireRole(['buyer', 'vendor', 'tenant_admin', 'logistics_provider', 'super_admin']),
+  requireRole(['buyer', 'vendor', 'admin', 'artisan', 'admin']),
   validate(documentQuerySchema, 'query'),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
@@ -137,7 +137,7 @@ router.get(
 // Returns a short-lived signed URL (60 seconds) — never a permanent public URL
 router.get(
   '/:id/download',
-  requireRole(['buyer', 'vendor', 'tenant_admin', 'logistics_provider', 'super_admin']),
+  requireRole(['buyer', 'vendor', 'admin', 'artisan', 'admin']),
   validate(documentParamsSchema, 'params'),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
@@ -189,7 +189,7 @@ router.get(
 // ─── POST /api/v1/documents/upload ────────────────────────────────────────────
 router.post(
   '/upload',
-  requireRole(['buyer', 'vendor', 'tenant_admin', 'logistics_provider']),
+  requireRole(['buyer', 'vendor', 'admin', 'artisan']),
   upload.single('file'),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
@@ -335,7 +335,7 @@ router.post(
 // Removes both the storage object and the metadata record
 router.delete(
   '/:id',
-  requireRole(['tenant_admin', 'super_admin']),
+  requireRole(['admin']),
   validate(documentParamsSchema, 'params'),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });

@@ -36,7 +36,7 @@ const updateVendorStatusSchema = z
 // ─── GET /api/v1/vendors ──────────────────────────────────────────────────────
 router.get(
   '/',
-  requireRole(['tenant_admin', 'super_admin', 'buyer', 'logistics_provider']),
+  requireRole(['admin', 'buyer', 'artisan']),
   validate(paginationSchema, 'query'),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
@@ -73,7 +73,7 @@ router.get(
 // This must be declared BEFORE /:id so Express doesn't treat "me" as a UUID.
 router.get(
   '/me',
-  requireRole(['vendor', 'logistics_provider']),
+  requireRole(['vendor', 'artisan']),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
     const supabase = getAdminClient();
@@ -111,7 +111,7 @@ router.get(
 // ─── GET /api/v1/vendors/:id ──────────────────────────────────────────────────
 router.get(
   '/:id',
-  requireRole(['tenant_admin', 'super_admin', 'buyer', 'logistics_provider', 'vendor']),
+  requireRole(['admin', 'buyer', 'artisan', 'vendor']),
   validate(vendorParamsSchema, 'params'),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
@@ -140,7 +140,7 @@ router.get(
 // ─── POST /api/v1/vendors/onboard ─────────────────────────────────────────────
 router.post(
   '/onboard',
-  requireRole(['tenant_admin']),
+  requireRole(['admin']),
   validate(vendorOnboardingSchema),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
@@ -206,7 +206,7 @@ router.post(
 // Only tenant_admin can approve/reject/suspend vendors
 router.patch(
   '/:id/status',
-  requireRole(['tenant_admin', 'super_admin']),
+  requireRole(['admin']),
   validate(vendorParamsSchema, 'params'),
   validate(updateVendorStatusSchema),
   async (req: Request, res: Response): Promise<void> => {
@@ -265,7 +265,7 @@ router.patch(
 // Soft-delete only — never hard delete (audit trail must be preserved)
 router.delete(
   '/:id',
-  requireRole(['tenant_admin', 'super_admin']),
+  requireRole(['admin']),
   validate(vendorParamsSchema, 'params'),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
@@ -317,7 +317,7 @@ router.delete(
 // Public within tenant — any authenticated user can browse a vendor's catalogue.
 router.get(
   '/:id/catalogue',
-  requireRole(['tenant_admin', 'super_admin', 'buyer', 'vendor', 'logistics_provider']),
+  requireRole(['admin', 'buyer', 'vendor', 'artisan']),
   validate(vendorParamsSchema, 'params'),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
@@ -378,7 +378,7 @@ const catalogueItemSchema = z.object({
 
 router.post(
   '/:id/catalogue',
-  requireRole(['vendor', 'logistics_provider', 'tenant_admin', 'super_admin']),
+  requireRole(['vendor', 'artisan', 'admin']),
   validate(vendorParamsSchema, 'params'),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
@@ -429,7 +429,7 @@ router.post(
 // ─── PATCH /api/v1/vendors/:id/catalogue/:itemId ──────────────────────────────
 router.patch(
   '/:id/catalogue/:itemId',
-  requireRole(['vendor', 'logistics_provider', 'tenant_admin', 'super_admin']),
+  requireRole(['vendor', 'artisan', 'admin']),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
     const supabase = getAdminClient();
@@ -464,7 +464,7 @@ router.patch(
 // ─── DELETE /api/v1/vendors/:id/catalogue/:itemId ─────────────────────────────
 router.delete(
   '/:id/catalogue/:itemId',
-  requireRole(['vendor', 'logistics_provider', 'tenant_admin', 'super_admin']),
+  requireRole(['vendor', 'artisan', 'admin']),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
     const supabase = getAdminClient();

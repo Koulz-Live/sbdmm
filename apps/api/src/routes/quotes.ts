@@ -39,7 +39,7 @@ const quoteActionSchema = z
 //   buyers/tenant_admins see quotes on their tenant's orders
 router.get(
   '/',
-  requireRole(['buyer', 'vendor', 'tenant_admin', 'super_admin']),
+  requireRole(['buyer', 'vendor', 'admin']),
   validate(paginationSchema, 'query'),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
@@ -82,7 +82,7 @@ router.get(
 // ─── GET /api/v1/quotes/:id ────────────────────────────────────────────────────
 router.get(
   '/:id',
-  requireRole(['buyer', 'vendor', 'tenant_admin', 'super_admin']),
+  requireRole(['buyer', 'vendor', 'admin']),
   validate(quoteParamsSchema, 'params'),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
@@ -216,7 +216,7 @@ router.post(
 // Buyers accept/reject; vendors withdraw their own
 router.post(
   '/:id/action',
-  requireRole(['buyer', 'vendor', 'tenant_admin']),
+  requireRole(['buyer', 'vendor', 'admin']),
   validate(quoteParamsSchema, 'params'),
   validate(quoteActionSchema),
   async (req: Request, res: Response): Promise<void> => {
@@ -258,7 +258,7 @@ router.post(
     if (action === 'accept' || action === 'reject') {
       const order = quote.orders as { created_by: string; tenant_id: string } | null;
       const isOrderOwner = order?.created_by === actor.id;
-      const isAdmin = actor.role === 'tenant_admin' || actor.role === 'super_admin';
+      const isAdmin = actor.role === 'admin';
       if (!isOrderOwner && !isAdmin) {
         res.status(403).json({
           success: false,
@@ -327,7 +327,7 @@ router.post(
 // Delegates to the same logic: only buyer (order owner) or tenant_admin can accept
 router.patch(
   '/:id/accept',
-  requireRole(['buyer', 'tenant_admin', 'super_admin']),
+  requireRole(['buyer', 'admin']),
   validate(quoteParamsSchema, 'params'),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
@@ -354,7 +354,7 @@ router.patch(
 
     const order = quote.orders as { created_by: string; tenant_id: string } | null;
     const isOrderOwner = order?.created_by === actor.id;
-    const isAdmin = actor.role === 'tenant_admin' || actor.role === 'super_admin';
+    const isAdmin = actor.role === 'admin';
 
     if (!isOrderOwner && !isAdmin) {
       res.status(403).json({
@@ -416,7 +416,7 @@ router.patch(
 // Delegates to the same logic: only buyer (order owner) or tenant_admin can reject
 router.patch(
   '/:id/reject',
-  requireRole(['buyer', 'tenant_admin', 'super_admin']),
+  requireRole(['buyer', 'admin']),
   validate(quoteParamsSchema, 'params'),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
@@ -447,7 +447,7 @@ router.patch(
 
     const order = quote.orders as { created_by: string; tenant_id: string } | null;
     const isOrderOwner = order?.created_by === actor.id;
-    const isAdmin = actor.role === 'tenant_admin' || actor.role === 'super_admin';
+    const isAdmin = actor.role === 'admin';
 
     if (!isOrderOwner && !isAdmin) {
       res.status(403).json({

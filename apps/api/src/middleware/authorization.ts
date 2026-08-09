@@ -16,12 +16,12 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { PlatformRole, ERROR_CODES } from '@sbdmm/shared';
+import { PlatformRole, PlatformPermission, ERROR_CODES } from '@sbdmm/shared';
 import { logger } from '../lib/logger';
 
 /**
  * requireRole — Ensures the authenticated user has one of the permitted roles.
- * Usage: router.get('/admin', requireAuth, requireRole(['tenant_admin', 'super_admin']), handler)
+ * Usage: router.get('/admin', requireAuth, requireRole(['admin']), handler)
  *
  * SECURITY: super_admin implicitly passes all role checks — they have platform-wide access.
  * If you need to EXCLUDE super_admin from a route, do so explicitly.
@@ -39,9 +39,7 @@ export function requireRole(allowedRoles: PlatformRole[]) {
       return;
     }
 
-    // super_admin passes all role checks (they have cross-tenant visibility)
-    // SECURITY: This is intentional. Document it. Audit super_admin actions separately.
-    if (user.role === 'super_admin' || allowedRoles.includes(user.role)) {
+    if (allowedRoles.includes(user.role)) {
       next();
       return;
     }
@@ -65,6 +63,22 @@ export function requireRole(allowedRoles: PlatformRole[]) {
   };
 }
 
+/** Permission checks use values resolved by the Supabase SECURITY DEFINER RBAC function. */
+export function requirePermission(permission: PlatformPermission) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const permissions = req.user?.permissions ?? [];
+    if (permissions.includes('*') || permissions.includes(permission)) {
+      next();
+      return;
+    }
+    res.status(403).json({
+      success: false,
+      error: { code: ERROR_CODES.FORBIDDEN, message: `Permission required: ${permission}.` },
+      meta: { request_id: req.requestId, timestamp: new Date().toISOString() },
+    });
+  };
+}
+
 /**
  * requireTenantMatch — Validates that a resource's tenant_id matches the authenticated user's tenant.
  * Prevents IDOR (Insecure Direct Object Reference) / BOLA attacks.
@@ -83,8 +97,8 @@ export function assertTenantOwnership(
 ): boolean {
   const user = req.user!;
 
-  // super_admin can access any tenant's resources
-  if (user.role === 'super_admin') return true;
+  // Super admins can access any tenant's resources.
+  if (user.role === 'admin' && user.admin_role === 'super_admin') return true;
 
   if (user.tenant_id !== resourceTenantId) {
     logger.warn('[AUTHZ] Tenant ownership check failed — possible IDOR attempt', {

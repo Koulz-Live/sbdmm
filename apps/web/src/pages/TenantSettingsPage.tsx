@@ -27,7 +27,7 @@ function SectionCard({ title, icon, children }: { title: string; icon: string; c
 
 export default function TenantSettingsPage(): React.JSX.Element {
   const { profile } = useAuth();
-  const isSuperAdmin = profile?.role === 'super_admin';
+  const isSuperAdmin = profile?.role === 'admin' && profile.admin_role === 'super_admin';
 
   return (
     <div style={{ maxWidth: 780 }}>

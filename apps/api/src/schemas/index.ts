@@ -84,9 +84,8 @@ export const inviteUserSchema = z
   .object({
     email: emailSchema,
     full_name: nameSchema,
-    role: z.enum(['buyer', 'vendor', 'logistics_provider', 'tenant_admin']),
-    // SECURITY: role 'super_admin' is intentionally excluded — super admins are
-    // provisioned through a separate, tightly controlled process
+    role: z.enum(['buyer', 'artisan', 'vendor']),
+    // Admin identities are provisioned through the super-admin API only.
   })
   .strict();
 

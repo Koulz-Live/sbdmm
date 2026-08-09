@@ -28,10 +28,9 @@ const POLL_MS    = 800;     // retry refreshProfile every 800 ms
 function getRoleHome(role: PlatformRole): string {
   switch (role) {
     case 'vendor':
-    case 'logistics_provider':
+    case 'artisan':
       return '/provider/dashboard';
-    case 'tenant_admin':
-    case 'super_admin':
+    case 'admin':
       return '/admin';
     default:
       return '/dashboard';

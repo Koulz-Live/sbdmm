@@ -87,7 +87,7 @@ export default function App(): React.JSX.Element {
         <Route path="/shared/:shareToken" element={<SharedCollectionPage />} />
 
         {/* Protected — buyer + admins: main dashboard, orders, documents */}
-        <Route element={<ProtectedRoute roles={['buyer', 'tenant_admin', 'super_admin']} />}>
+        <Route element={<ProtectedRoute roles={['buyer', 'admin']} />}>
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/orders"    element={<OrdersPage />} />
@@ -96,7 +96,7 @@ export default function App(): React.JSX.Element {
         </Route>
 
         {/* Protected — vendors and logistics providers: their own dashboard */}
-        <Route element={<ProtectedRoute roles={['vendor', 'logistics_provider']} />}>
+        <Route element={<ProtectedRoute roles={['vendor', 'artisan']} />}>
           <Route element={<AppLayout />}>
             <Route path="/provider/dashboard" element={<ProviderDashboardPage />} />
           </Route>
@@ -110,35 +110,35 @@ export default function App(): React.JSX.Element {
         </Route>
 
         {/* Protected — quotes: all authenticated users */}
-        <Route element={<ProtectedRoute roles={['buyer', 'vendor', 'logistics_provider', 'tenant_admin', 'super_admin']} />}>
+        <Route element={<ProtectedRoute roles={['buyer', 'vendor', 'artisan', 'admin']} />}>
           <Route element={<AppLayout />}>
             <Route path="/quotes" element={<QuotesPage />} />
           </Route>
         </Route>
 
         {/* Protected — vendor directory: buyers and admin-level roles */}
-        <Route element={<ProtectedRoute roles={['buyer', 'tenant_admin', 'super_admin']} />}>
+        <Route element={<ProtectedRoute roles={['buyer', 'admin']} />}>
           <Route element={<AppLayout />}>
             <Route path="/vendors" element={<VendorsPage />} />
           </Route>
         </Route>
 
         {/* Protected — /vendors/me: resolves vendor's own profile (MUST be before /:id) */}
-        <Route element={<ProtectedRoute roles={['vendor', 'logistics_provider']} />}>
+        <Route element={<ProtectedRoute roles={['vendor', 'artisan']} />}>
           <Route element={<AppLayout />}>
             <Route path="/vendors/me" element={<VendorMePage />} />
           </Route>
         </Route>
 
         {/* Protected — vendor profile: providers can view their own profile */}
-        <Route element={<ProtectedRoute roles={['buyer', 'vendor', 'logistics_provider', 'tenant_admin', 'super_admin']} />}>
+        <Route element={<ProtectedRoute roles={['buyer', 'vendor', 'artisan', 'admin']} />}>
           <Route element={<AppLayout />}>
             <Route path="/vendors/:id" element={<VendorProfilePage />} />
           </Route>
         </Route>
 
         {/* Protected — compliance: vendors + admins */}
-        <Route element={<ProtectedRoute roles={['vendor', 'logistics_provider', 'tenant_admin', 'super_admin']} />}>
+        <Route element={<ProtectedRoute roles={['vendor', 'artisan', 'admin']} />}>
           <Route element={<AppLayout />}>
             <Route path="/compliance" element={<CompliancePage />} />
           </Route>
@@ -146,7 +146,7 @@ export default function App(): React.JSX.Element {
 
         {/* Protected — admin panel: tenant_admin + super_admin */}
         {/* requireMfa gates super_admin users: must have verified TOTP before entering */}
-        <Route element={<ProtectedRoute roles={['tenant_admin', 'super_admin']} requireMfa />}>
+        <Route element={<ProtectedRoute roles={['admin']} requireMfa />}>
           <Route element={<AppLayout />}>
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/settings" element={<TenantSettingsPage />} />
@@ -154,15 +154,15 @@ export default function App(): React.JSX.Element {
         </Route>
 
         {/* Protected — RFQ feed: vendors and logistics providers */}
-        <Route element={<ProtectedRoute roles={['vendor', 'logistics_provider']} />}>
+        <Route element={<ProtectedRoute roles={['vendor', 'artisan']} />}>
           <Route element={<AppLayout />}>
             <Route path="/rfqs" element={<RfqFeedPage />} />
             <Route path="/my-catalogue" element={<MyCataloguePage />} />
           </Route>
         </Route>
 
-        {/* Protected — Design My Table: all authenticated users */}
-        <Route element={<ProtectedRoute roles={['buyer', 'vendor', 'logistics_provider', 'tenant_admin', 'super_admin']} />}>
+        {/* Buyers create AI-assisted furniture designs from room photos. */}
+        <Route element={<ProtectedRoute roles={['buyer']} />}>
           <Route element={<AppLayout />}>
             <Route path="/design" element={<DesignMyTablePage />} />
           </Route>

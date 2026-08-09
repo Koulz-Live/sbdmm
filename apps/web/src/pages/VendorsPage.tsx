@@ -45,7 +45,7 @@ const EMPTY_FORM: OnboardForm = {
 
 export default function VendorsPage(): React.JSX.Element {
   const { profile } = useAuth();
-  const isAdmin = profile?.role === 'tenant_admin' || profile?.role === 'super_admin';
+  const isAdmin = profile?.role === 'admin';
 
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);

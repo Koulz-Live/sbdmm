@@ -152,7 +152,7 @@ const CTX_ICONS: Record<string, string> = {
 
 export default function CompliancePage(): React.JSX.Element {
   const { profile } = useAuth();
-  const isAdmin = profile?.role === 'tenant_admin' || profile?.role === 'super_admin';
+  const isAdmin = profile?.role === 'admin';
 
   const [results, setResults] = useState<ComplianceListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);

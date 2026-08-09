@@ -262,8 +262,8 @@ export default function QuotesPage(): React.JSX.Element {
   const [actioning, setActioning] = useState(false);
   const [confirmedOrderId, setConfirmedOrderId] = useState<string | null>(null);
 
-  const isProvider = user?.role === 'vendor' || user?.role === 'logistics_provider';
-  const isAdmin = user?.role === 'tenant_admin' || user?.role === 'super_admin';
+  const isProvider = user?.role === 'vendor' || user?.role === 'artisan';
+  const isAdmin = user?.role === 'admin';
   const canBuyerAction = user?.role === 'buyer' || isAdmin;
   const canRankQuotes = user?.role === 'buyer' || isAdmin;
 

@@ -52,7 +52,7 @@ const userListQuerySchema = z.object({
   page:      z.coerce.number().int().min(1).default(1),
   per_page:  z.coerce.number().int().min(1).max(100).default(20),
   search:    z.string().max(200).trim().optional(),
-  role:      z.enum(['buyer', 'vendor', 'logistics_provider', 'tenant_admin', 'super_admin']).optional(),
+  role:      z.enum(['buyer', 'vendor', 'artisan', 'admin']).optional(),
   tenant_id: z.string().uuid().optional(),
   is_active: z.enum(['true', 'false']).optional(),
 });
@@ -60,7 +60,9 @@ const userListQuerySchema = z.object({
 // Update user schema — super_admin can change role (including to super_admin), name, active state
 const updateUserSchema = z.object({
   full_name: z.string().min(1).max(255).trim().optional(),
-  role:      z.enum(['buyer', 'vendor', 'logistics_provider', 'tenant_admin', 'super_admin']).optional(),
+  role:      z.enum(['buyer', 'vendor', 'artisan', 'admin']).optional(),
+  admin_role: z.enum(['tier1_support', 'tier2_support', 'tier3_security', 'logistics_manager', 'executive', 'super_admin']).nullable().optional(),
+  permissions: z.array(z.string().min(1).max(100)).max(50).optional(),
   is_active: z.boolean().optional(),
 }).strict().refine(d => Object.keys(d).length > 0, { message: 'At least one field must be provided.' });
 
@@ -68,12 +70,13 @@ const updateUserSchema = z.object({
 const adminInviteSchema = z.object({
   email:     z.string().email().max(255).toLowerCase().trim(),
   full_name: z.string().min(1).max(255).trim(),
-  role:      z.enum(['buyer', 'vendor', 'logistics_provider', 'tenant_admin', 'super_admin']),
+  role:      z.enum(['buyer', 'vendor', 'artisan', 'admin']),
+  admin_role: z.enum(['tier1_support', 'tier2_support', 'tier3_security', 'logistics_manager', 'executive', 'super_admin']).optional(),
   tenant_id: z.string().uuid().optional(), // if omitted, uses actor's tenant
 }).strict();
 
 function requireSuperAdmin(req: Request, res: Response, next: () => void): void {
-  if (req.user?.role !== 'super_admin') {
+  if (req.user?.role !== 'admin' || req.user.admin_role !== 'super_admin') {
     res.status(403).json({
       success: false,
       error: { code: ERROR_CODES.FORBIDDEN, message: 'Super-admin access required.' },
@@ -269,7 +272,7 @@ router.get(
 
     let query = supabase
       .from('user_profiles')
-      .select('id, tenant_id, full_name, role, is_active, created_at', { count: 'exact' })
+      .select('id, tenant_id, full_name, role, admin_role, permissions, is_active, created_at', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + per_page - 1);
 
@@ -306,7 +309,7 @@ router.get(
     const supabase = getAdminClient();
     const { data, error } = await supabase
       .from('user_profiles')
-      .select('id, tenant_id, full_name, role, is_active, created_at')
+      .select('id, tenant_id, full_name, role, admin_role, permissions, is_active, created_at')
       .eq('id', req.params['userId'])
       .single();
 
@@ -328,7 +331,7 @@ router.patch(
     const supabase = getAdminClient();
     const actor = req.user!;
     const targetUserId = req.params['userId'] ?? '';
-    const updates = req.body as { full_name?: string; role?: string; is_active?: boolean };
+    const updates = req.body as z.infer<typeof updateUserSchema>;
 
     // Prevent self-demotion or self-deactivation to avoid lockout
     if (targetUserId === actor.id && (updates.role !== undefined || updates.is_active === false)) {
@@ -346,13 +349,18 @@ router.patch(
     const patch: Record<string, unknown> = {};
     if (updates.full_name !== undefined) patch['full_name'] = updates.full_name;
     if (updates.role      !== undefined) patch['role']      = updates.role;
+    if (updates.admin_role !== undefined) patch['admin_role'] = updates.admin_role;
+    if (updates.permissions !== undefined) patch['permissions'] = updates.permissions;
+    if (updates.role !== undefined && updates.admin_role === undefined) {
+      patch['admin_role'] = updates.role === 'admin' ? 'tier1_support' : null;
+    }
     if (updates.is_active !== undefined) patch['is_active'] = updates.is_active;
 
     const { data, error } = await supabase
       .from('user_profiles')
       .update(patch)
       .eq('id', targetUserId)
-      .select('id, tenant_id, full_name, role, is_active, created_at')
+      .select('id, tenant_id, full_name, role, admin_role, permissions, is_active, created_at')
       .single();
 
     if (error) {
@@ -549,7 +557,7 @@ router.post(
     const log = createChildLogger({ request_id: req.requestId });
     const supabase = getAdminClient();
     const actor = req.user!;
-    const { email, full_name, role, tenant_id } = req.body as z.infer<typeof adminInviteSchema>;
+    const { email, full_name, role, admin_role, tenant_id } = req.body as z.infer<typeof adminInviteSchema>;
 
     const effectiveTenantId = tenant_id ?? actor.tenant_id;
 
@@ -565,7 +573,7 @@ router.post(
     }
 
     const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
-      data: { full_name, role, tenant_id: effectiveTenantId },
+      data: { full_name, role, admin_role, tenant_id: effectiveTenantId },
     });
 
     if (inviteError || !inviteData?.user) {
@@ -579,6 +587,7 @@ router.post(
       tenant_id: effectiveTenantId,
       full_name,
       role,
+      admin_role: role === 'admin' ? (admin_role ?? 'tier1_support') : null,
       is_active: true,
     }, { onConflict: 'id' });
 
@@ -589,14 +598,14 @@ router.post(
       target_type: 'user',
       target_id: inviteData.user.id,
       outcome: 'success',
-      details: { action: 'invited', email, role, tenant_id: effectiveTenantId },
+      details: { action: 'invited', email, role, admin_role, tenant_id: effectiveTenantId },
       ip_address: req.ip,
       request_id: req.requestId,
     });
 
     res.status(201).json({
       success: true,
-      data: { user_id: inviteData.user.id, email, role, tenant_id: effectiveTenantId },
+      data: { user_id: inviteData.user.id, email, role, admin_role, tenant_id: effectiveTenantId },
       meta: { request_id: req.requestId, timestamp: new Date().toISOString() },
     });
   },

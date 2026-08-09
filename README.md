@@ -217,15 +217,23 @@ npm run dev --workspace=apps/web
 7. Supabase: RLS policies enforce tenant isolation at DB layer (second enforcement)
 ```
 
-### Role Hierarchy
+### User groups and authorization
+
+Supabase Auth is the single identity entry point. Application authorization is
+resolved from `user_profiles` by the `get_user_authorization()` PostgreSQL
+`SECURITY DEFINER` function; JWT role claims are never used as authorization.
 
 ```
-super_admin      — Platform-wide access, all tenants
-tenant_admin     — Full access within own tenant
-logistics_provider — Manage shipments and routes
-vendor           — Manage own product listings
-buyer            — Create orders, view quotes
+buyer    — Create AI furniture designs from room photos and place artisan orders
+artisan  — Manufacture approved designs and maintain bills of materials
+vendor   — Review consolidated bills of materials and quote supply-chain admins
+admin    — Operational staff governed by an admin specialization and permissions
 ```
+
+Admin specializations are `tier1_support`, `tier2_support`, `tier3_security`,
+`logistics_manager`, `executive`, and `super_admin`. `super_admin` is not a fifth
+user group; it is the only Admin specialization with the wildcard permission and
+cross-tenant access. Admin accounts require MFA.
 
 ### Multi-Tenancy Isolation
 
@@ -346,7 +354,7 @@ supabase db push --db-url "postgresql://postgres:<password>@<host>:5432/postgres
 | Adding business logic to migration files | Keep migrations additive-only; logic belongs in the API |
 | Importing from `apps/api` in `apps/web` | Only import from `packages/shared` — never cross-app imports |
 | Creating a new DB client per request | Use the singleton pattern in `supabaseAdmin.ts` |
-| Adding `super_admin` as an invitable role | Controlled by migration/seed only — never by API invite |
+| Treating `super_admin` as a primary role | It is an Admin specialization provisioned only by an existing super admin |
 | Putting compliance checks in the frontend | Always enforce on the backend; frontend is UX only |
 | Returning raw Supabase errors to the client | Wrap in `AppError` — raw errors reveal schema details |
 

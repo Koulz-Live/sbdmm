@@ -6,9 +6,8 @@ import { useAuth } from '../contexts/AuthContext';
 function getRoleHome(role: PlatformRole): string {
   switch (role) {
     case 'vendor':
-    case 'logistics_provider': return '/provider/dashboard';
-    case 'tenant_admin':
-    case 'super_admin': return '/admin';
+    case 'artisan': return '/provider/dashboard';
+    case 'admin': return '/admin';
     default: return '/dashboard';
   }
 }

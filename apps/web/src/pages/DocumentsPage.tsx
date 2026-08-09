@@ -226,7 +226,7 @@ export default function DocumentsPage(): React.JSX.Element {
     }
   }
 
-  const isAdmin = user?.role === 'tenant_admin' || user?.role === 'super_admin';
+  const isAdmin = user?.role === 'admin';
 
   return (
     <div className="p-4" style={{ maxWidth: 1100 }}>

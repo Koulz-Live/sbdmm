@@ -12,7 +12,7 @@
  *
  * USAGE:
  *   <ProtectedRoute>                        → Any authenticated user
- *   <ProtectedRoute roles={['tenant_admin']}> → Only tenant_admin + super_admin
+ *   <ProtectedRoute roles={['admin']}> → Only tenant_admin + super_admin
  *   <ProtectedRoute roles={['buyer', 'vendor']}> → Buyers and vendors only
  *   <ProtectedRoute requireMfa>             → Must have verified TOTP factor
  */
@@ -45,7 +45,7 @@ export function ProtectedRoute({
   // Uses the Supabase client directly — no backend API required.
   useEffect(() => {
     if (!requireMfa) return;
-    if (!profile || profile.role !== 'super_admin') return;
+    if (!profile || profile.role !== 'admin') return;
     if (mfaStatus !== 'idle') return;
 
     setMfaStatus('checking');
@@ -74,8 +74,7 @@ export function ProtectedRoute({
   // Role check (UX layer — backend enforces this authoritatively)
   if (roles && roles.length > 0 && profile) {
     const userRole = profile.role;
-    // super_admin always passes role checks
-    const hasPermission = userRole === 'super_admin' || roles.includes(userRole);
+    const hasPermission = roles.includes(userRole);
     if (!hasPermission) {
       return <Navigate to="/unauthorized" replace />;
     }
@@ -91,7 +90,7 @@ export function ProtectedRoute({
   }
 
   // ─── MFA gate — only applies to super_admin + requireMfa routes ──────────
-  if (requireMfa && profile?.role === 'super_admin') {
+  if (requireMfa && profile?.role === 'admin') {
     if (mfaStatus === 'idle' || mfaStatus === 'checking') {
       return (
         <div aria-live="polite" aria-busy="true" style={{ padding: '2rem', textAlign: 'center' }}>

@@ -55,7 +55,7 @@ const reviewActionSchema = z
 // ─── POST /api/v1/compliance/evaluate ─────────────────────────────────────────
 router.post(
   '/evaluate',
-  requireRole(['tenant_admin', 'super_admin']),
+  requireRole(['admin']),
   validate(triggerEvaluationSchema),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
@@ -85,7 +85,7 @@ router.post(
 // Returns a paginated list of all compliance results for the tenant
 router.get(
   '/results',
-  requireRole(['tenant_admin', 'super_admin']),
+  requireRole(['admin']),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
     const supabase = getAdminClient();
@@ -94,7 +94,7 @@ router.get(
     const page = Math.max(Number(req.query['page'] ?? 1), 1);
     const offset = (page - 1) * perPage;
 
-    const tenantFilter = actor.role === 'super_admin'
+    const tenantFilter = actor.role === 'admin'
       ? supabase.from('compliance_results').select('*', { count: 'exact' })
       : supabase.from('compliance_results').select('*', { count: 'exact' }).eq('tenant_id', actor.tenant_id);
 
@@ -123,7 +123,7 @@ router.get(
 // Returns compliance results for an order (all checks)
 router.get(
   '/results/:orderId',
-  requireRole(['buyer', 'tenant_admin', 'super_admin', 'logistics_provider']),
+  requireRole(['buyer', 'admin', 'artisan']),
   validate(resultParamsSchema, 'params'),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
@@ -150,7 +150,7 @@ router.get(
     }
 
     // super_admin can see cross-tenant; others must match tenant
-    if (actor.role !== 'super_admin' && order.tenant_id !== actor.tenant_id) {
+    if (actor.role !== 'admin' && order.tenant_id !== actor.tenant_id) {
       throw new NotFoundError('Order not found.');
     }
 
@@ -178,7 +178,7 @@ router.get(
 // Latest compliance result for any context (vendor, document, quote, order)
 router.get(
   '/context/:contextId',
-  requireRole(['tenant_admin', 'super_admin']),
+  requireRole(['admin']),
   validate(contextParamsSchema, 'params'),
   async (req: Request, res: Response): Promise<void> => {
     const supabase = getAdminClient();
@@ -207,7 +207,7 @@ router.get(
 // Manually approve or reject a compliance result that requires manual_review
 router.post(
   '/context/:contextId/review',
-  requireRole(['tenant_admin', 'super_admin']),
+  requireRole(['admin']),
   validate(contextParamsSchema, 'params'),
   validate(reviewActionSchema),
   async (req: Request, res: Response): Promise<void> => {

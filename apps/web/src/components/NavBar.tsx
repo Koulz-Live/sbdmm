@@ -107,29 +107,27 @@ function TenantSwitcher({ collapsed }: { collapsed: boolean }): React.JSX.Elemen
 // Only affects the frontend — API calls still use the real JWT / real role.
 const ROLE_ICONS: Record<PlatformRole, string> = {
   buyer:              'ph ph-user',
+  artisan:            'ph ph-hammer',
   vendor:             'ph ph-storefront',
-  logistics_provider: 'ph ph-truck',
-  tenant_admin:       'ph ph-shield-check',
-  super_admin:        'ph ph-crown-simple',
+  admin:              'ph ph-shield-check',
 };
 
 const ROLE_LABELS: Record<PlatformRole, string> = {
   buyer:              'Buyer',
+  artisan:            'Artisan',
   vendor:             'Vendor',
-  logistics_provider: 'Logistics Provider',
-  tenant_admin:       'Tenant Admin',
-  super_admin:        'Super Admin (real)',
+  admin:              'Admin',
 };
 
 function RoleSwitcher({ collapsed }: { collapsed: boolean }): React.JSX.Element {
   const { simulatedRole, setSimulatedRole } = useAuth();
   const [open, setOpen] = useState(false);
 
-  const activeRole = simulatedRole ?? 'super_admin';
+  const activeRole = simulatedRole ?? 'admin';
   const isSimulating = simulatedRole !== null;
 
   const handleSelect = (role: PlatformRole): void => {
-    setSimulatedRole(role === 'super_admin' ? null : role);
+    setSimulatedRole(role === 'admin' ? null : role);
     setOpen(false);
   };
 
@@ -208,30 +206,30 @@ const NAV_ITEMS: NavItem[] = [
   // ── Shopping Cart: all authenticated users
   { to: '/cart',               label: 'Cart',         icon: 'ph ph-shopping-cart-simple' },
   // ── Buyer / Admin: main dashboard
-  { to: '/dashboard',          label: 'Dashboard',    icon: 'ph ph-chart-line-up', roles: ['buyer', 'tenant_admin', 'super_admin'] },
+  { to: '/dashboard',          label: 'Dashboard',    icon: 'ph ph-chart-line-up', roles: ['buyer', 'admin'] },
   // ── Provider: their own dashboard
-  { to: '/provider/dashboard', label: 'Dashboard',    icon: 'ph ph-chart-line-up', roles: ['vendor', 'logistics_provider'] },
+  { to: '/provider/dashboard', label: 'Dashboard',    icon: 'ph ph-chart-line-up', roles: ['vendor', 'artisan'] },
   // ── Buyer & admins: orders
-  { to: '/orders',             label: 'Orders',       icon: 'ph ph-package',       roles: ['buyer', 'tenant_admin', 'super_admin'] },
+  { to: '/orders',             label: 'Orders',       icon: 'ph ph-package',       roles: ['buyer', 'admin'] },
   // ── Providers: open RFQs they can bid on
-  { to: '/rfqs',               label: 'Open RFQs',    icon: 'ph ph-list-magnifying-glass', roles: ['vendor', 'logistics_provider'] },
+  { to: '/rfqs',               label: 'Open RFQs',    icon: 'ph ph-list-magnifying-glass', roles: ['vendor', 'artisan'] },
   // ── Buyer & admins: quotes
-  { to: '/quotes',             label: 'Quotes',       icon: 'ph ph-chat-dots',     roles: ['buyer', 'tenant_admin', 'super_admin'] },
+  { to: '/quotes',             label: 'Quotes',       icon: 'ph ph-chat-dots',     roles: ['buyer', 'admin'] },
   // ── Providers: their own quote history
-  { to: '/quotes',             label: 'My Quotes',    icon: 'ph ph-chat-dots',     roles: ['vendor', 'logistics_provider'] },
+  { to: '/quotes',             label: 'My Quotes',    icon: 'ph ph-chat-dots',     roles: ['vendor', 'artisan'] },
   // ── Providers: their catalogue
-  { to: '/my-catalogue',       label: 'My Catalogue', icon: 'ph ph-storefront',    roles: ['vendor', 'logistics_provider'] },
+  { to: '/my-catalogue',       label: 'My Catalogue', icon: 'ph ph-storefront',    roles: ['vendor', 'artisan'] },
   // ── Everyone: documents
   { to: '/documents',          label: 'Documents',    icon: 'ph ph-file-text' },
   // ── Buyer & admins: vendor directory
-  { to: '/vendors',            label: 'Vendors',      icon: 'ph ph-buildings',     roles: ['buyer', 'tenant_admin', 'super_admin'] },
+  { to: '/vendors',            label: 'Vendors',      icon: 'ph ph-buildings',     roles: ['buyer', 'admin'] },
   // ── Vendor & admins: compliance
-  { to: '/compliance',         label: 'Compliance',   icon: 'ph ph-shield-check',  roles: ['vendor', 'tenant_admin', 'super_admin'] },
+  { to: '/compliance',         label: 'Compliance',   icon: 'ph ph-shield-check',  roles: ['vendor', 'admin'] },
   // ── Buyer: AI furniture design wizard
   { to: '/design',             label: 'Design My Table', icon: 'ph ph-magic-wand', roles: ['buyer'] },
   // ── Admins only
-  { to: '/admin',              label: 'Admin Panel',  icon: 'ph ph-gear',          roles: ['tenant_admin', 'super_admin'] },
-  { to: '/settings',           label: 'Settings',     icon: 'ph ph-gear-six',      roles: ['tenant_admin', 'super_admin'] },
+  { to: '/admin',              label: 'Admin Panel',  icon: 'ph ph-gear',          roles: ['admin'] },
+  { to: '/settings',           label: 'Settings',     icon: 'ph ph-gear-six',      roles: ['admin'] },
 ];
 
 export function NavBar(): React.JSX.Element {
@@ -421,8 +419,8 @@ export function NavBar(): React.JSX.Element {
           </div>
         )}
         {/* Super-admin tools (always gated on real role, not simulated) */}
-        {realRole === 'super_admin' && <RoleSwitcher collapsed={collapsed} />}
-        {realRole === 'super_admin' && <TenantSwitcher collapsed={collapsed} />}
+        {realRole === 'admin' && <RoleSwitcher collapsed={collapsed} />}
+        {realRole === 'admin' && <TenantSwitcher collapsed={collapsed} />}
         <button
           onClick={() => { void handleSignOut(); }}
           disabled={signingOut}

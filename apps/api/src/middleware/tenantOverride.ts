@@ -54,7 +54,7 @@ export async function processTenantOverride(
   const user = req.user!;
 
   // SECURITY: Only super_admin may use tenant override
-  if (user.role !== 'super_admin') {
+  if (user.role !== 'admin' || user.admin_role !== 'super_admin') {
     log.warn('[TENANT OVERRIDE] Non-super_admin attempted tenant override', {
       user_id: user.id,
       role: user.role,

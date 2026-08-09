@@ -41,7 +41,7 @@ router.get('/profile', requireAuth, async (req: Request, res: Response): Promise
 
   const { data, error } = await supabase
     .from('user_profiles')
-    .select('id, tenant_id, email, full_name, role, is_active, created_at')
+    .select('id, tenant_id, email, full_name, role, admin_role, permissions, is_active, created_at')
     .eq('id', user.id)
     .single();
 
@@ -50,7 +50,11 @@ router.get('/profile', requireAuth, async (req: Request, res: Response): Promise
     throw new AppError('Profile not found', 404, 'NOT_FOUND');
   }
 
-  const profile: UserProfile = data as UserProfile;
+  const profile: UserProfile = {
+    ...(data as UserProfile),
+    admin_role: user.admin_role,
+    permissions: user.permissions,
+  };
 
   res.json({
     success: true,
@@ -107,7 +111,7 @@ router.post('/logout', requireAuth, async (req: Request, res: Response): Promise
 router.post(
   '/invite',
   requireAuth,
-  requireRole(['tenant_admin', 'super_admin']),
+  requireRole(['admin']),
   validate(inviteUserSchema),
   async (req: Request, res: Response): Promise<void> => {
     const actor = req.user!;

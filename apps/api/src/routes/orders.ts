@@ -33,7 +33,7 @@ router.use(requireAuth);
 // Returns all orders for the authenticated user's tenant
 router.get(
   '/',
-  requireRole(['buyer', 'vendor', 'logistics_provider', 'tenant_admin']),
+  requireRole(['buyer', 'vendor', 'artisan', 'admin']),
   validate(paginationSchema, 'query'),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
@@ -53,7 +53,7 @@ router.get(
       .range(offset, offset + per_page - 1);
 
     // Role-based visibility: logistics_providers only see assigned orders
-    if (req.user!.role === 'logistics_provider') {
+    if (req.user!.role === 'artisan') {
       query = query.eq('assigned_provider_id', req.user!.id);
     }
 
@@ -89,7 +89,7 @@ router.get(
 // ─── Get Single Order ─────────────────────────────────────────────────────────
 router.get(
   '/:orderId',
-  requireRole(['buyer', 'vendor', 'logistics_provider', 'tenant_admin']),
+  requireRole(['buyer', 'vendor', 'artisan', 'admin']),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
     const { orderId } = req.params as { orderId: string };
@@ -213,7 +213,7 @@ router.post(
 // ─── Update Order Status ───────────────────────────────────────────────────────
 router.patch(
   '/:orderId/status',
-  requireRole(['logistics_provider', 'tenant_admin']),
+  requireRole(['artisan', 'admin']),
   validate(updateOrderStatusSchema),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });

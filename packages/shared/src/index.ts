@@ -11,21 +11,52 @@
 // reviewing all role-based permission checks in the API.
 export type PlatformRole =
   | 'buyer'
+  | 'artisan'
   | 'vendor'
-  | 'logistics_provider'
-  | 'tenant_admin'
-  | 'super_admin';
+  | 'admin';
 
 export const PLATFORM_ROLES: PlatformRole[] = [
   'buyer',
+  'artisan',
   'vendor',
-  'logistics_provider',
-  'tenant_admin',
+  'admin',
+];
+
+export type AdminRole =
+  | 'tier1_support'
+  | 'tier2_support'
+  | 'tier3_security'
+  | 'logistics_manager'
+  | 'executive'
+  | 'super_admin';
+
+export const ADMIN_ROLES: AdminRole[] = [
+  'tier1_support',
+  'tier2_support',
+  'tier3_security',
+  'logistics_manager',
+  'executive',
   'super_admin',
 ];
 
-// Roles that require elevated security controls (MFA, stricter rate limits, full audit trail)
-export const PRIVILEGED_ROLES: PlatformRole[] = ['tenant_admin', 'super_admin'];
+export type PlatformPermission =
+  | 'design:create'
+  | 'order:create'
+  | 'order:fulfil'
+  | 'bom:read'
+  | 'bom:manage'
+  | 'quote:create'
+  | 'quote:manage'
+  | 'support:tier1'
+  | 'support:tier2'
+  | 'security:manage'
+  | 'logistics:manage'
+  | 'analytics:read'
+  | 'admin:manage'
+  | '*';
+
+// Admin accounts are privileged; higher-risk permissions are further gated by MFA.
+export const PRIVILEGED_ROLES: PlatformRole[] = ['admin'];
 
 // ─── Tenant ──────────────────────────────────────────────────────────────────
 export interface Tenant {
@@ -47,6 +78,8 @@ export interface UserProfile {
   email: string; // Minimise exposure — mask in logs
   full_name: string;
   role: PlatformRole;
+  admin_role?: AdminRole | null;
+  permissions?: PlatformPermission[];
   is_active: boolean;
   created_at: string;
 }

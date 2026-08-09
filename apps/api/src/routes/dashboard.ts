@@ -24,7 +24,7 @@ router.use(requireAuth);
 // ─── GET /api/v1/dashboard/stats ──────────────────────────────────────────────
 router.get(
   '/stats',
-  requireRole(['buyer', 'vendor', 'logistics_provider', 'tenant_admin', 'super_admin']),
+  requireRole(['buyer', 'vendor', 'artisan', 'admin']),
   async (req: Request, res: Response): Promise<void> => {
     const log = createChildLogger({ request_id: req.requestId });
     const supabase = getAdminClient();
@@ -51,7 +51,7 @@ router.get(
           // Buyers only see their own orders
           if (userRole === 'buyer') q = q.eq('created_by', userId);
           // Logistics providers only see assigned orders
-          if (userRole === 'logistics_provider') q = q.eq('assigned_provider_id', userId);
+          if (userRole === 'artisan') q = q.eq('assigned_provider_id', userId);
           return q;
         })(),
 
@@ -63,12 +63,12 @@ router.get(
             .eq('tenant_id', tenantId)
             .in('status', ['pending_quote', 'quoted', 'draft']);
           if (userRole === 'buyer') q = q.eq('created_by', userId);
-          if (userRole === 'logistics_provider') q = q.eq('assigned_provider_id', userId);
+          if (userRole === 'artisan') q = q.eq('assigned_provider_id', userId);
           return q;
         })(),
 
         // Active vendors (only visible to tenant_admin and super_admin)
-        userRole === 'tenant_admin' || userRole === 'super_admin'
+        userRole === 'admin'
           ? supabase
               .from('vendors')
               .select('id', { count: 'exact', head: true })
