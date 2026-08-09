@@ -6,13 +6,19 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import type { PlatformRole } from '@sbdmm/shared';
 
 interface LocationState {
   from?: { pathname: string };
 }
+
+const ROLE_CONTEXT = {
+  buyer: { label: 'Buyer', icon: 'ph-cube-focus', title: 'Design furniture for your space', copy: 'Continue to AI design, artisan matching, and order tracking.' },
+  artisan: { label: 'Artisan', icon: 'ph-hammer', title: 'Open your workshop', copy: 'Review timed job offers, production work, BOMs, and financial records.' },
+  vendor: { label: 'Vendor', icon: 'ph-storefront', title: 'Open your supply workspace', copy: 'Review material requests and manage competitive supply quotations.' },
+} as const;
 
 function getRoleHome(role: PlatformRole): string {
   switch (role) {
@@ -29,6 +35,7 @@ function getRoleHome(role: PlatformRole): string {
 export default function LoginPage(): React.JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { signIn, signInWithGoogle, isAuthenticated, isLoading, profile } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -40,6 +47,10 @@ export default function LoginPage(): React.JSX.Element {
 
   const locationState = location.state as LocationState | null;
   const from = locationState?.from?.pathname;
+  const requestedRole = searchParams.get('role');
+  const roleContext = requestedRole === 'buyer' || requestedRole === 'artisan' || requestedRole === 'vendor'
+    ? ROLE_CONTEXT[requestedRole]
+    : null;
 
   useEffect(() => {
     if (isAuthenticated && profile?.role) {
@@ -126,14 +137,20 @@ export default function LoginPage(): React.JSX.Element {
           <h1 className="fw-bold mb-4" style={{ color: '#ffffff', fontSize: 26 }}>
             SBDMM
           </h1>
-          <p style={{ color: '#94a3b8', fontSize: 14 }}>5PL Logistics Marketplace</p>
+          <p style={{ color: '#94a3b8', fontSize: 14 }}>Design · Make · Supply</p>
         </div>
 
         {/* Card */}
         <div className="card border-0 shadow-lg" style={{ borderRadius: 16, overflow: 'hidden' }}>
           <div className="card-body p-40">
-            <h2 className="fw-bold mb-8" style={{ fontSize: 20, color: '#0f172a' }}>Welcome back</h2>
-            <p className="text-muted mb-24" style={{ fontSize: 14 }}>Enter and continue your good work.</p>
+            {roleContext && (
+              <div className="d-flex align-items-center gap-12 mb-20" style={{ padding: 14, borderRadius: 12, background: '#eff8f2', border: '1px solid #d8ebdf' }}>
+                <span className="d-flex align-items-center justify-content-center" style={{ width: 42, height: 42, flexShrink: 0, borderRadius: 12, color: '#fff', background: '#299E60', fontSize: 21 }}><i className={`ph ${roleContext.icon}`} /></span>
+                <div><strong style={{ display: 'block', color: '#163d29', fontSize: 14 }}>{roleContext.label} workspace</strong><span style={{ color: '#587064', fontSize: 12 }}>One secure account powered by Supabase Auth</span></div>
+              </div>
+            )}
+            <h2 className="fw-bold mb-8" style={{ fontSize: 20, color: '#0f172a' }}>{roleContext?.title ?? 'Welcome back'}</h2>
+            <p className="text-muted mb-24" style={{ fontSize: 14 }}>{roleContext?.copy ?? 'Sign in to continue to your role-based workspace.'}</p>
 
             <form onSubmit={handleSubmit} noValidate>
               {error && (
@@ -316,6 +333,7 @@ export default function LoginPage(): React.JSX.Element {
         </div>
 
         <p className="text-center mt-20" style={{ fontSize: 12, color: '#475569' }}>
+          <Link to="/" style={{ color: '#94a3b8', textDecoration: 'none' }}><i className="ph ph-arrow-left" /> Back to the marketplace</Link><br />
           © {new Date().getFullYear()} SBDMM. All rights reserved.
         </p>
       </div>

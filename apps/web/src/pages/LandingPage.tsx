@@ -3,33 +3,64 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { PlatformRole } from '@sbdmm/shared';
 import { useAuth } from '../contexts/AuthContext';
 
+type PublicRole = 'buyer' | 'artisan' | 'vendor';
+
 function getRoleHome(role: PlatformRole): string {
-  switch (role) {
-    case 'artisan': return '/artisan';
-    case 'vendor': return '/provider/dashboard';
-    case 'admin': return '/admin';
-    default: return '/dashboard';
-  }
+  if (role === 'artisan') return '/artisan';
+  if (role === 'vendor') return '/provider/dashboard';
+  if (role === 'admin') return '/admin';
+  return '/dashboard';
 }
 
-const steps = [
-  { number: '01', icon: 'ph-camera', title: 'Show us your space', copy: 'Upload a room photo and share dimensions, style, material and budget.' },
-  { number: '02', icon: 'ph-sparkle', title: 'Explore tailored concepts', copy: 'Receive three design directions shaped around your room and preferences.' },
-  { number: '03', icon: 'ph-hammer', title: 'Build with confidence', copy: 'Compare verified craftspeople, approve a quote and follow every milestone.' },
+const journeys: Array<{
+  role: PublicRole;
+  label: string;
+  eyebrow: string;
+  title: string;
+  copy: string;
+  icon: string;
+  action: string;
+  features: string[];
+}> = [
+  {
+    role: 'buyer', label: 'For buyers', eyebrow: 'Imagine it', icon: 'ph-cube-focus',
+    title: 'Design furniture for your actual room.',
+    copy: 'Upload a room or kitchen photo, shape an AI concept, and place a build order with a highly rated local artisan.',
+    action: 'Start a design',
+    features: ['Room-aware AI concepts', 'Upfront design and build brief', 'Milestone order tracking'],
+  },
+  {
+    role: 'artisan', label: 'For artisans', eyebrow: 'Build it', icon: 'ph-hammer',
+    title: 'Turn qualified designs into production jobs.',
+    copy: 'Accept nearby work, refine the AI-generated bill of materials, choose sourcing, and track each job from workshop to handover.',
+    action: 'Join as an artisan',
+    features: ['15-minute job offers', 'Editable AI-generated BOM', 'IFRS-ready job records'],
+  },
+  {
+    role: 'vendor', label: 'For vendors', eyebrow: 'Supply it', icon: 'ph-storefront',
+    title: 'Quote against real material demand.',
+    copy: 'Review artisan supply requests and consolidated material demand, submit transparent quotes, and fulfil awarded orders.',
+    action: 'Join as a vendor',
+    features: ['Structured BOM requests', 'Consolidated demand visibility', 'Quote and award tracking'],
+  },
 ];
 
-const capabilities = [
-  { icon: 'ph-magic-wand', title: 'AI-assisted design', copy: 'Move from an idea to a clear, buildable furniture brief in minutes.' },
-  { icon: 'ph-seal-check', title: 'Verified makers', copy: 'Work with vetted carpenters and furniture specialists in your region.' },
-  { icon: 'ph-arrows-left-right', title: 'Transparent trade', copy: 'Compare quotes, timelines and materials before committing.' },
-  { icon: 'ph-package', title: 'Delivery visibility', copy: 'Track production and logistics through one connected workspace.' },
+const flow = [
+  { icon: 'ph-sparkle', title: 'AI creates the design', copy: 'The buyer approves a room-aware concept and converts it into an order.' },
+  { icon: 'ph-file-text', title: 'A buildable BOM follows', copy: 'AI prepares the initial bill of materials before the job reaches a local artisan.' },
+  { icon: 'ph-timer', title: 'Top artisans respond', copy: 'Each matched artisan has 15 minutes to accept before the offer moves on.' },
+  { icon: 'ph-handshake', title: 'Sourcing gets decided', copy: 'The artisan buys materials directly or requests competitive vendor quotations.' },
 ];
+
+function roleHref(role: PublicRole): string {
+  return `/login?role=${role}`;
+}
 
 function Brand(): React.JSX.Element {
   return (
     <Link to="/" className="marketing-brand" aria-label="SBDMM home">
       <span className="marketing-brand__mark">S</span>
-      <span><strong>SBDMM</strong><small>Furniture, made personal</small></span>
+      <span><strong>SBDMM</strong><small>Design · Make · Supply</small></span>
     </Link>
   );
 }
@@ -38,16 +69,14 @@ export default function LandingPage(): React.JSX.Element {
   const { isAuthenticated, isLoading, profile } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeRole, setActiveRole] = useState<PublicRole>('buyer');
+  const selected = journeys.find(item => item.role === activeRole)!;
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated && profile?.role) {
-      void navigate(getRoleHome(profile.role), { replace: true });
-    }
+    if (!isLoading && isAuthenticated && profile?.role) void navigate(getRoleHome(profile.role), { replace: true });
   }, [isAuthenticated, isLoading, navigate, profile]);
 
-  if (isLoading) {
-    return <div className="marketing-loading"><span className="spinner-border" /></div>;
-  }
+  if (isLoading) return <div className="marketing-loading"><span className="spinner-border" /></div>;
 
   return (
     <div className="marketing-page">
@@ -55,13 +84,13 @@ export default function LandingPage(): React.JSX.Element {
         <div className="marketing-shell marketing-nav">
           <Brand />
           <nav className={menuOpen ? 'marketing-links is-open' : 'marketing-links'} aria-label="Primary navigation">
-            <a href="#process" onClick={() => setMenuOpen(false)}>How it works</a>
-            <a href="#platform" onClick={() => setMenuOpen(false)}>Platform</a>
-            <a href="#makers" onClick={() => setMenuOpen(false)}>For makers</a>
+            <a href="#roles" onClick={() => setMenuOpen(false)}>Who it&apos;s for</a>
+            <a href="#workflow" onClick={() => setMenuOpen(false)}>How it works</a>
+            <a href="#trust" onClick={() => setMenuOpen(false)}>Why SBDMM</a>
           </nav>
           <div className="marketing-actions">
             <Link to="/login" className="button button--quiet">Sign in</Link>
-            <Link to="/login" className="button button--primary">Start designing <i className="ph ph-arrow-up-right" /></Link>
+            <Link to={roleHref(activeRole)} className="button button--primary">Get started <i className="ph ph-arrow-up-right" /></Link>
             <button className="marketing-menu" onClick={() => setMenuOpen(value => !value)} aria-label="Toggle navigation" aria-expanded={menuOpen}>
               <i className={menuOpen ? 'ph ph-x' : 'ph ph-list'} />
             </button>
@@ -70,78 +99,81 @@ export default function LandingPage(): React.JSX.Element {
       </header>
 
       <main>
-        <section className="marketing-hero">
+        <section className="marketing-hero marketing-hero--ecosystem">
           <div className="marketing-shell marketing-hero__grid">
             <div className="marketing-hero__copy">
-              <span className="eyebrow"><i className="ph ph-sparkle" /> Design intelligence, human craft</span>
-              <h1>Furniture that begins with <em>your space.</em></h1>
-              <p>Turn a room photo into a personalised furniture concept, then bring it to life with a verified local craftsperson.</p>
+              <span className="eyebrow"><i className="ph ph-sparkle" /> One connected furniture marketplace</span>
+              <h1>Designed by you.<br /><em>Built together.</em></h1>
+              <p>SBDMM connects buyers, skilled artisans, and material vendors in one accountable journey—from a room photo to a finished piece.</p>
+              <div className="role-tabs" role="tablist" aria-label="Choose your SBDMM journey">
+                {journeys.map(item => (
+                  <button key={item.role} type="button" role="tab" aria-selected={activeRole === item.role} className={activeRole === item.role ? 'role-tab is-active' : 'role-tab'} onClick={() => setActiveRole(item.role)}>
+                    <i className={`ph ${item.icon}`} /> {item.label}
+                  </button>
+                ))}
+              </div>
               <div className="marketing-hero__actions">
-                <Link to="/login" className="button button--primary button--large">Create your first design <i className="ph ph-arrow-right" /></Link>
-                <a href="#process" className="button button--outline button--large"><i className="ph ph-play-circle" /> See how it works</a>
+                <Link to={roleHref(activeRole)} className="button button--primary button--large">{selected.action} <i className="ph ph-arrow-right" /></Link>
+                <a href="#workflow" className="button button--outline button--large">See the full journey</a>
               </div>
               <div className="marketing-proof">
-                <span><i className="ph-fill ph-check-circle" /> No design experience needed</span>
-                <span><i className="ph-fill ph-check-circle" /> Clear quotes before you commit</span>
+                <span><i className="ph-fill ph-check-circle" /> Verified marketplace participants</span>
+                <span><i className="ph-fill ph-check-circle" /> One secure account</span>
               </div>
             </div>
 
-            <div className="concept-stage" aria-label="Example AI furniture concept">
-              <div className="concept-stage__glow" />
-              <div className="concept-card concept-card--main">
-                <div className="concept-card__top"><span>Concept 02</span><span className="concept-status"><i className="ph-fill ph-circle" /> Ready to refine</span></div>
-                <div className="concept-visual">
-                  <div className="table-object"><span className="table-object__top" /><span className="table-object__leg table-object__leg--one" /><span className="table-object__leg table-object__leg--two" /></div>
-                  <span className="concept-visual__label">Oak dining table · 6 seater</span>
-                </div>
-                <div className="concept-card__body">
-                  <div><span className="meta-label">Material</span><strong>Natural oak</strong></div>
-                  <div><span className="meta-label">Estimate</span><strong>R18k – R24k</strong></div>
-                  <button aria-label="Open concept"><i className="ph ph-arrow-up-right" /></button>
-                </div>
+            <div className={`ecosystem-stage ecosystem-stage--${activeRole}`} aria-live="polite">
+              <div className="ecosystem-stage__top"><span>{selected.eyebrow}</span><span className="ecosystem-live"><i className="ph-fill ph-circle" /> Connected workflow</span></div>
+              <div className="ecosystem-stage__icon"><i className={`ph ${selected.icon}`} /></div>
+              <span className="eyebrow">{selected.label}</span>
+              <h2>{selected.title}</h2>
+              <p>{selected.copy}</p>
+              <ul>{selected.features.map(feature => <li key={feature}><i className="ph ph-check" />{feature}</li>)}</ul>
+              <div className="ecosystem-stage__handoff">
+                {journeys.map(item => <span key={item.role} className={item.role === activeRole ? 'is-active' : ''}><i className={`ph ${item.icon}`} />{item.role}</span>)}
               </div>
-              <div className="concept-card concept-card--note"><i className="ph ph-sparkle" /><span><strong>Room-aware design</strong><small>Balanced for your light, palette and proportions.</small></span></div>
-              <div className="concept-card concept-card--maker"><span className="maker-avatar">TM</span><span><strong>Thabo Mokoena</strong><small>Verified carpenter · 4.9 rating</small></span><i className="ph-fill ph-seal-check" /></div>
             </div>
           </div>
         </section>
 
-        <section className="trust-strip" aria-label="Platform highlights">
-          <div className="marketing-shell trust-strip__grid">
-            <div><strong>3</strong><span>concepts per brief</span></div>
-            <div><strong>48h</strong><span>average maker response</span></div>
-            <div><strong>500+</strong><span>verified craftspeople</span></div>
-            <div><strong>98%</strong><span>customer satisfaction</span></div>
-          </div>
-        </section>
-
-        <section id="process" className="marketing-section">
+        <section id="roles" className="marketing-section role-section">
           <div className="marketing-shell">
-            <div className="section-heading"><span className="eyebrow">A simpler way to commission furniture</span><h2>From room to workshop in three clear steps.</h2><p>One connected process replaces scattered inspiration boards, vague briefs and uncertain quotes.</p></div>
-            <div className="process-grid">
-              {steps.map(step => <article key={step.number} className="process-card"><span className="process-card__number">{step.number}</span><span className="process-card__icon"><i className={`ph ${step.icon}`} /></span><h3>{step.title}</h3><p>{step.copy}</p></article>)}
+            <div className="section-heading"><span className="eyebrow">Three groups, one source of truth</span><h2>A focused workspace for every part of the job.</h2><p>Each account sees the actions, records, and decisions relevant to its role—without losing the shared project context.</p></div>
+            <div className="role-card-grid">
+              {journeys.map((item, index) => (
+                <article key={item.role} className={`role-card role-card--${item.role}`}>
+                  <div className="role-card__head"><span className="role-card__number">0{index + 1}</span><span className="role-card__icon"><i className={`ph ${item.icon}`} /></span></div>
+                  <span className="eyebrow">{item.eyebrow}</span><h3>{item.label}</h3><p>{item.copy}</p>
+                  <ul>{item.features.map(feature => <li key={feature}>{feature}</li>)}</ul>
+                  <Link to={roleHref(item.role)}>{item.action} <i className="ph ph-arrow-up-right" /></Link>
+                </article>
+              ))}
             </div>
           </div>
         </section>
 
-        <section id="platform" className="marketing-section marketing-section--tint">
-          <div className="marketing-shell platform-grid">
-            <div className="platform-copy"><span className="eyebrow">Designed for real decisions</span><h2>Beautiful concepts. Practical next steps.</h2><p>SBDMM keeps design, procurement and delivery in one place, so customers and makers always know what happens next.</p><Link to="/login" className="text-link">Explore the platform <i className="ph ph-arrow-right" /></Link></div>
-            <div className="capability-grid">{capabilities.map(item => <article key={item.title} className="capability-card"><i className={`ph ${item.icon}`} /><h3>{item.title}</h3><p>{item.copy}</p></article>)}</div>
+        <section id="workflow" className="marketing-section marketing-section--tint">
+          <div className="marketing-shell workflow-layout">
+            <div className="workflow-intro"><span className="eyebrow">From idea to installation</span><h2>Every handoff stays visible.</h2><p>The design, production job, BOM, sourcing decision, quotation, and financial events stay connected—so nobody works from an outdated brief.</p><Link to={roleHref('buyer')} className="text-link">Create a buyer account <i className="ph ph-arrow-right" /></Link></div>
+            <ol className="workflow-list">{flow.map((item, index) => <li key={item.title}><span>{index + 1}</span><i className={`ph ${item.icon}`} /><div><h3>{item.title}</h3><p>{item.copy}</p></div></li>)}</ol>
           </div>
         </section>
 
-        <section id="makers" className="marketing-section">
-          <div className="marketing-shell maker-banner">
-            <div><span className="eyebrow eyebrow--light">For furniture professionals</span><h2>Spend less time chasing leads. Build better briefs.</h2><p>Receive qualified requests with clear dimensions, style direction and budget expectations.</p></div>
-            <Link to="/login" className="button button--light button--large">Join as a maker <i className="ph ph-arrow-right" /></Link>
+        <section id="trust" className="marketing-section">
+          <div className="marketing-shell trust-panel">
+            <div><span className="eyebrow eyebrow--light">Designed for accountable trade</span><h2>Clear decisions before money moves.</h2><p>Artisans confirm the final job and choose their material sourcing route before payment. Vendors quote against versioned BOM data. Buyers follow the result through one order timeline.</p></div>
+            <div className="trust-panel__facts">
+              <span><strong>15 min</strong><small>per artisan job offer</small></span>
+              <span><strong>AI + human</strong><small>BOM generation and approval</small></span>
+              <span><strong>IFRS-ready</strong><small>artisan financial event trail</small></span>
+            </div>
           </div>
         </section>
 
-        <section className="marketing-cta"><div className="marketing-shell"><span className="eyebrow">Your next piece starts here</span><h2>Make the room feel like yours.</h2><p>Create a thoughtful brief in minutes and meet the craftsperson who can build it.</p><Link to="/login" className="button button--primary button--large">Start designing for free <i className="ph ph-arrow-right" /></Link></div></section>
+        <section className="marketing-cta"><div className="marketing-shell"><span className="eyebrow">Choose your place in the workflow</span><h2>Design it. Build it. Supply it.</h2><p>Use one secure SBDMM account to enter the workspace made for your role.</p><div className="cta-role-links">{journeys.map(item => <Link key={item.role} to={roleHref(item.role)} className={item.role === 'buyer' ? 'button button--primary button--large' : 'button button--outline button--large'}>{item.label} <i className="ph ph-arrow-right" /></Link>)}</div></div></section>
       </main>
 
-      <footer className="marketing-footer"><div className="marketing-shell marketing-footer__grid"><Brand /><p>AI-assisted furniture design and transparent local manufacturing.</p><div><Link to="/login">Sign in</Link><Link to="/login">Create account</Link><a href="mailto:hello@sbdmm.com">Contact</a></div><small>© {new Date().getFullYear()} SBDMM</small></div></footer>
+      <footer className="marketing-footer"><div className="marketing-shell marketing-footer__grid"><Brand /><p>AI-assisted design, local manufacturing, and transparent material supply.</p><div><a href="#roles">User groups</a><a href="#workflow">Workflow</a><Link to="/login">Sign in</Link></div><small>© {new Date().getFullYear()} SBDMM</small></div></footer>
     </div>
   );
 }
