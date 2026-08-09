@@ -392,7 +392,8 @@ function FeedCard({ item, onClickVendor: _onClickVendor, onOpenSave, isSaved, on
   const transit = `${item.transit_days_min}–${item.transit_days_max} days`;
 
   return (
-    <div
+    <article
+      className="marketplace-card"
       style={{
         breakInside: 'avoid',
         marginBottom: 16,
@@ -411,7 +412,7 @@ function FeedCard({ item, onClickVendor: _onClickVendor, onOpenSave, isSaved, on
       onClick={() => onClickItem(item.id)}
     >
       {/* Visual area — product image or gradient fallback */}
-      <div style={{ height: imgHeight, position: 'relative', overflow: 'hidden' }}>
+      <div className="marketplace-card__visual" style={{ height: imgHeight, position: 'relative', overflow: 'hidden' }}>
         {item.media_urls?.[0] ? (
           <img
             src={item.media_urls[0]}
@@ -431,7 +432,7 @@ function FeedCard({ item, onClickVendor: _onClickVendor, onOpenSave, isSaved, on
         )}
 
         {/* Service mode badge */}
-        <div style={{
+        <div className="marketplace-card__mode" style={{
           position: 'absolute',
           top: 10,
           left: 10,
@@ -452,7 +453,7 @@ function FeedCard({ item, onClickVendor: _onClickVendor, onOpenSave, isSaved, on
 
         {/* Price badge — top right (when item has a price) */}
         {item.base_price_amount != null && (
-          <div style={{
+          <div className="marketplace-card__price" style={{
             position: 'absolute',
             top: 10,
             right: 10,
@@ -473,6 +474,7 @@ function FeedCard({ item, onClickVendor: _onClickVendor, onOpenSave, isSaved, on
           onMouseEnter={() => setCartHovered(true)}
           onMouseLeave={() => setCartHovered(false)}
           title={cartAdded ? 'Added to cart' : 'Add to cart'}
+          className="marketplace-card__action marketplace-card__action--cart"
           style={{
             position: 'absolute',
             bottom: 8,
@@ -504,6 +506,7 @@ function FeedCard({ item, onClickVendor: _onClickVendor, onOpenSave, isSaved, on
           onMouseEnter={() => setBookmarkHovered(true)}
           onMouseLeave={() => setBookmarkHovered(false)}
           title={isSaved ? 'Saved to a collection' : 'Save to collection'}
+          className="marketplace-card__action marketplace-card__action--save"
           style={{
             position: 'absolute',
             bottom: 8,
@@ -531,9 +534,9 @@ function FeedCard({ item, onClickVendor: _onClickVendor, onOpenSave, isSaved, on
       </div>
 
       {/* Content */}
-      <div style={{ padding: '14px 16px 16px' }}>
+      <div className="marketplace-card__content" style={{ padding: '14px 16px 16px' }}>
         {/* Title */}
-        <div style={{
+        <div className="marketplace-card__title" style={{
           fontSize: 14,
           fontWeight: 700,
           color: '#0f172a',
@@ -548,7 +551,7 @@ function FeedCard({ item, onClickVendor: _onClickVendor, onOpenSave, isSaved, on
         </div>
 
         {/* Vendor name */}
-        <div style={{
+        <div className="marketplace-card__vendor" style={{
           fontSize: 12,
           color: '#299E60',
           fontWeight: 600,
@@ -562,7 +565,7 @@ function FeedCard({ item, onClickVendor: _onClickVendor, onOpenSave, isSaved, on
         </div>
 
         {/* Route */}
-        <div style={{
+        <div className="marketplace-card__route" style={{
           fontSize: 12,
           color: '#64748b',
           marginBottom: 6,
@@ -577,7 +580,7 @@ function FeedCard({ item, onClickVendor: _onClickVendor, onOpenSave, isSaved, on
         </div>
 
         {/* Transit + price row */}
-        <div style={{
+        <div className="marketplace-card__meta" style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -595,7 +598,7 @@ function FeedCard({ item, onClickVendor: _onClickVendor, onOpenSave, isSaved, on
 
         {/* Tags */}
         {item.tags.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 10 }}>
+          <div className="marketplace-card__tags" style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 10 }}>
             {item.tags.slice(0, 4).map(tag => (
               <span key={tag} style={{
                 fontSize: 10,
@@ -616,7 +619,7 @@ function FeedCard({ item, onClickVendor: _onClickVendor, onOpenSave, isSaved, on
           </div>
         )}
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -728,7 +731,7 @@ export default function FurnitureFeedPage(): React.JSX.Element {
   const hasSocialSignals = signals && signals.total_saves > 0;
 
   return (
-    <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 0 48px' }}>
+    <div className="marketplace-page" style={{ maxWidth: 1400, margin: '0 auto', padding: '0 0 48px' }}>
       {/* ── Sticky header bar ─────────────────────────────────────────────── */}
       <style>{`
         @keyframes pulse {
@@ -746,7 +749,7 @@ export default function FurnitureFeedPage(): React.JSX.Element {
         .load-more-btn:hover { background: #1e7a49 !important; }
       `}</style>
 
-      <div style={{
+      <div className="marketplace-toolbar" style={{
         position: 'sticky',
         top: 0,
         zIndex: 50,
@@ -757,7 +760,7 @@ export default function FurnitureFeedPage(): React.JSX.Element {
         marginBottom: 24,
       }}>
         {/* Hero headline */}
-        <div style={{ marginBottom: 14 }}>
+        <div className="marketplace-toolbar__intro" style={{ marginBottom: 14 }}>
           <h2 style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
             <i className="ph ph-storefront me-2" style={{ color: '#299E60' }} />
             Furniture Marketplace
@@ -768,9 +771,9 @@ export default function FurnitureFeedPage(): React.JSX.Element {
         </div>
 
         {/* Search + sort row */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+        <div className="marketplace-toolbar__controls" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
           {/* Search box */}
-          <div style={{ position: 'relative', flex: '1 1 260px', minWidth: 200 }}>
+          <div className="marketplace-search" style={{ position: 'relative', flex: '1 1 260px', minWidth: 200 }}>
             <i className="ph ph-magnifying-glass" style={{
               position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
               color: '#94a3b8', fontSize: 16,
@@ -804,7 +807,7 @@ export default function FurnitureFeedPage(): React.JSX.Element {
           </div>
 
           {/* Sort button group */}
-          <div style={{ display: 'flex', gap: 4, background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: 3, flexShrink: 0 }}>
+          <div className="marketplace-sort" style={{ display: 'flex', gap: 4, background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: 3, flexShrink: 0 }}>
             {SORT_OPTIONS.map(o => (
               <button
                 key={o.key}
@@ -834,7 +837,7 @@ export default function FurnitureFeedPage(): React.JSX.Element {
         </div>
 
         {/* ── Row 1: Furniture category chips ──────────────────────────────── */}
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 7 }}>
+        <div className="marketplace-categories" style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 7 }}>
           {/* All — clears category filter */}
           <button
             className={`feed-chip${activeTag === '' ? ' feed-chip-active' : ''}`}
@@ -995,7 +998,7 @@ export default function FurnitureFeedPage(): React.JSX.Element {
       ) : (
         <>
           {/* Pinterest-style CSS masonry */}
-          <div style={{
+          <div className="marketplace-grid" style={{
             columns: '4 220px',
             columnGap: 16,
           }}>

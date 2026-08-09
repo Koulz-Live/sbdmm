@@ -1,6 +1,7 @@
 // MarketPro template SCSS — resolved from the public/sass folder
 // (animate.css and slick CSS are imported in main.tsx to avoid @charset conflicts)
 @import "../public/sass/main.scss";
+@import "./styles/modern-pages";
 
 // App-level overrides / additions
 :root {
